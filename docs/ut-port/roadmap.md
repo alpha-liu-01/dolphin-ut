@@ -176,6 +176,24 @@ Planned steps:
 
 Exit: one game runs on screen in each backend. Resizing or rotating, and leaving and re-entering fullscreen, do not crash.
 
+#### Status (2026-11-14): imported (merge `8b7f0ebab3`); both backends and the main UI with a separate render window work on screen; Render to Main Window to be avoided on Lomiri
+
+Notes: `stage2-wayland.md`.
+
+| Step | Result |
+| --- | --- |
+| 1 Import | Branch `ut/wayland`. #14962 at `5003b700ff` merged with `git merge --no-ff --no-commit`, no conflicts, 61 files staged. A merge instead of cherry-picks: the PR's 17 commits stay unedited with their authors, the user makes the commits, and `AGENTS.md`'s 🤖 rule is not at odds with "do not edit them". **Not committed yet**; the commit order is in `stage2-wayland.md` |
+| 2 Build | "Wayland support enabled", "Wayland keyboard and mouse input enabled". Clean build 2 min 40 s. Adds `libwayland-client` and `libxkbcommon` (on the phone) |
+| 3 Qt platform | Port fix in `DolphinQt/Main.cpp` drops `ubuntumirclient` from `QT_QPA_PLATFORM`. Checked: started with the session's value, Dolphin loads `libqwayland.so` + xdg-shell |
+| 4 GLES, Vulkan | Both run the game through Qt's Wayland window on the phone (screen off): GLES 3.2 via `eglplatform_wayland.so`, Vulkan via `VK_KHR_wayland_surface`. Port fix in `VKSwapChain.cpp`: always use the window size on Wayland (libhybris reports `currentExtent` 1x1). The missing content-type protocol is handled. On screen: S2-M1/M2 |
+| 5–6 Quirks, PR bugs | S2-M1 (OpenGL ES): picture right, colors good, fullscreen covers the panel, rotation follows; speed about 45 %. Fixed: landscape at launch (`RenderWidget.cpp`); the volume keys (`PULSE_PROP`) and the media volume being reset to 100 % at every start (`CubebStream.cpp`). S2-M2 (Vulkan): swap chain re-creation hung inside libhybris; fixed by rebuilding the `VkSurface` on Wayland (`VKSwapChain.cpp`); passes, 55–110 % speed. S2-M3 (main UI, separate render window): **passes**, including fullscreen and Stop. S2-M4 (Render to Main Window): one intermittent SIGSEGV on fullscreen (not repeated in two re-runs; crash capture in the launcher), fullscreen shows as a second app (DolphinQt's design), and after Stop Lomiri kept the destroyed subsurface's last frame on screen (the client side is correct). **Decision: avoid Render to Main Window on Lomiri** (keep `RenderToMain = False`) rather than fix it; no subsurfaces for the game picture in the QML frontend either. The Wii Remote mapping window is larger than the screen: deferred to the QML frontend |
+| 7 Fallback | Not needed so far |
+
+Found:
+- Stopping waits on Qt's **Confirm on Stop** dialog: it is not a hang. Stage 3 decides stop and pause behavior.
+- **Screensaver inhibit fails** (`org.freedesktop.ScreenSaver` has no `Inhibit` on Ubuntu Touch): the display may dim during play (stage 3).
+- **Volume keys:** Dolphin's PulseAudio stream had no media role, so Ubuntu Touch's role-based volume (the keys change the multimedia role) never applied, and it played loud. Fixed with `PULSE_PROP="media.role=multimedia"` in the launcher; the click launcher must set it too (stage 5).
+
 ### 3. Usable on a phone
 
 Goal: someone can pick up the phone and play, without a keyboard and mouse.
@@ -183,10 +201,10 @@ Goal: someone can pick up the phone and play, without a keyboard and mouse.
 Planned steps:
 1. **Controllers.** evdev and SDL3 for Bluetooth and USB gamepads, with default mappings. USB OTG works on this phone. A DualShock 4 clone is rejected by the 5.4 kernel's `hid-sony` (stage 1); try SDL3's HIDAPI over libusb for it, or leave it to a stone-ut kernel patch. The input nodes need `android_input`: phablet has it, but a confined click app does not (stage 5).
 2. **Touch controls.** An on-screen GameCube controller (and later Wiimote) overlay drawn by the frontend. It feeds Dolphin's existing `InputOverrider` / Touch device, the same C++ the Android overlay uses. The Android Kotlin overlay is the design reference, not code to copy.
-3. **Window and lifecycle.** Landscape lock while a game runs. Keep the display on. Pause emulation when the app loses focus: Lomiri suspends unfocused confined apps, so a suspended emulator must not lose audio or time sync badly. Handle the on-screen keyboard (maliit) for the few text fields.
+3. **Window and lifecycle.** Landscape lock while a game runs. Keep the display on: Dolphin's D-Bus screensaver inhibit fails on Ubuntu Touch (stage 2), so use Lomiri's own keep-display-on interface. Decide stop behavior: Qt's Confirm on Stop dialog pauses emulation until answered (stage 2). Pause emulation when the app loses focus: Lomiri suspends unfocused confined apps, so a suspended emulator must not lose audio or time sync badly. Handle the on-screen keyboard (maliit) for the few text fields.
 4. **UI scaling.** Make the Qt Widgets UI usable at 1080×2400 and 440 dpi (`QT_SCALE_FACTOR`, larger hit targets in the game list). It is a stopgap until the QML frontend (stage 6). The user tested the stock UI over Xwayland (stage 1 S1-M3): it works with touch but is far too small to ship.
 5. **Files.** Where games, saves and the user directory live (`~/.local/share/<app id>/` inside confinement). How games get there (content-hub import, MTP into an app folder, microSD).
-6. **Default settings for this phone.** Ship a default `Dolphin.ini` with `CPUThread = True` (dual core). Upstream enables it by default only on Android. Leave everything that changes emulated behavior to the user.
+6. **Default settings for this phone.** Ship a default `Dolphin.ini` with `CPUThread = True` (dual core) and `RenderToMain = False` (stage 2: Render to Main Window puts the game in a Wayland subsurface, which crashed once on fullscreen and leaves a stale frame on Lomiri). Upstream enables it by default only on Android. Leave everything that changes emulated behavior to the user.
 
 Exit: a game can be started, played with touch or a gamepad, paused by switching apps, and resumed.
 
@@ -209,7 +227,7 @@ Goal: an installable click package.
 Planned steps:
 1. A clickable project (`clickable.yaml`, CMake builder, arm64, framework `ubuntu-touch-24.04-1.x` or whatever the phone reports). Bundle Dolphin's `Sys/` data and the libraries the system does not provide. That includes Qt 6's `wayland-shell-integration/libxdg-shell.so` and `libQt6WlShellIntegration.so.6` from UBports' `libqt6wlshellintegration6` (same Qt 6.10.2), with `QT_PLUGIN_PATH` set by the launcher. The system has no Qt 6 shell plugin (stage 0).
 2. AppArmor. Likely policy groups: `audio`, `keep-display-on`, `content_exchange`, plus OpenGL/Wayland, which the default template allows. Gamepad access to `/dev/input/event*` is not in any policy group. Options: the `unconfined` template (OpenStore allows it with a justification), or a narrower custom rule. Decide after stage 3 shows exactly what is needed. Check whether the JIT's RWX/`mprotect` use triggers any denial.
-3. Desktop file: `X-Lomiri-Touch=true`, and a lifecycle exemption if one is needed for audio while paused.
+3. Desktop file: `X-Lomiri-Touch=true`, and a lifecycle exemption if one is needed for audio while paused. The launcher must export `PULSE_PROP="media.role=multimedia"` (stage 2: otherwise the volume keys do not apply) and `QT_PLUGIN_PATH` for the bundled xdg-shell plugin.
 4. GPL compliance: link to the exact source commit of this fork in the package and on the OpenStore page.
 5. OpenStore submission, after testing on a second Ubuntu Touch 24.04 device if one is available. Other devices will have other Adreno or Mali blobs and other libhybris builds.
 
@@ -217,6 +235,7 @@ Exit: the click installs from a file on a clean user account, and games run with
 
 ### 6. Later (optional)
 
+- **Design constraint from stage 2:** give the game picture its own top-level Wayland surface, not a subsurface of the QML window (Lomiri/Mir 1.8 mishandles subsurfaces: a stale frame after destroy, and a crash when the surface moved). Draw on-screen controls and an in-game menu (like the Android app's) into the game picture with Dolphin's on-screen UI, or in the same top-level window, not as a separate subsurface.
 - **Required (user decision, 2026-11-14): a QML (Qt Quick) touch-first frontend** for the game list, settings and in-game controls, so it is no longer optional. It would reuse `UICommon` and `Core`, with Qt Widgets kept for advanced settings until replaced. Prerequisite: clear Qt 6's `Cannot find EGLConfig` / `EGL error 0x3005` on this phone, probably by forcing an OpenGL ES default `QSurfaceFormat`. Qt Quick renders through that path (stage 1 S1-M2).
 - Wii Remote support: Bluetooth passthrough is unlikely on a Halium BlueZ stack. Emulated Wiimote with the touch overlay and motion from the phone's sensors (sensorfw) is the practical route.
 - A newer Vulkan, if Dolphin features need it. The A619 gets Vulkan 1.3 from newer Adreno drivers, but replacing vendor GPU blobs is risky (`roadmap-hardware-2.md` item 10). Mesa turnip with the KGSL backend is a research project of its own.
