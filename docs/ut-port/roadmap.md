@@ -114,7 +114,7 @@ Notes, logs and the probe: `stage0-probe.md` and `ut/phone-debug/wayland-probe.p
 | 4 Vulkan | **Yes.** `VK_KHR_wayland_surface`, swapchain and acquire work. API 1.1.128. No `logicOp`, no fragment-stage subgroups, no BC textures, no `VK_EXT_memory_budget` | **`currentExtent` is 1x1, not `0xFFFFFFFF`**: #14962 would create a 1x1 swapchain. Port fix in stage 2. `test_vulkan` presents on screen (M2) |
 | 5 Gamepads | A Bluetooth BETOP T6 (Xbox mode, `045e:02e0`) binds `hid-microsoft`: joystick-tagged, rumble, and phablet can open it (M3). Buttons come through as generic `BTN_A`…`BTN_TR2` + `KEY_MENU`. USB not tested. `hid-wiimote` is built in | Default mappings in stage 3 (SDL3's database knows `045e:02e0`). `/dev/input` access for a confined click remains a stage 5 question |
 
-Still open from stage 0: the Qt 6 Widgets window (stage 1 step 5), a wired USB controller (needs a way to keep adb, for example adb over Wi-Fi), and which physical button gives which code on the BETOP T6 (stage 3).
+Still open from stage 0: the Qt 6 Widgets window (stage 1 step 5), a wired USB controller (Ubuntu Touch has no wireless adb, so it needs the phone's Terminal app; see `stage1-build.md`), and which physical button gives which code on the BETOP T6 (stage 3).
 
 ### 1. Build environment and a CPU-only run
 
@@ -128,6 +128,26 @@ Planned steps:
 5. **Qt 6 Widgets test program** (left over from stage 0 step 1). Build a small Qt 6 Widgets program with one `QOpenGLWidget`. Run it on the phone with `QT_QPA_PLATFORM=wayland` and `QT_PLUGIN_PATH` pointing at the unpacked `libxdg-shell.so` (`/home/phablet/dolphin-ut-probe/qt6w/`). Check that it maps, renders through GLES and takes touch input. Also check a second top-level window and a native child widget (a subsurface).
 
 Exit: a game boots headless on the phone, and the JIT runs with no faults. The Qt 6 Widgets test window works, or the NoGUI fallback (stage 2 step 7) becomes the plan.
+
+#### Status (2026-11-14): done
+
+Notes: `stage1-build.md`.
+
+| Step | Result |
+| --- | --- |
+| 1 Build route | Our own cross container, `ut/docker/` (amd64 Ubuntu 24.04 + arm64 multiarch + UBports **24.04-2.x**, pinned as on the phone). clickable's 24.04 image follows 24.04-1.x, and an emulated arm64 build would be much slower. GCC 13.3, CMake 3.28.3, Qt 6.10.2 (the phone's exact build) |
+| 2 Configure | `ut/build.sh`, `USE_SYSTEM_LIBS=OFF` (all optional deps from `Externals/`). Qt, X11, EGL, evdev/udev, ALSA, PulseAudio and BlueZ from the system |
+| 3 Run on the phone | **A Wii game boots headless and runs** (S1-M1): arm64 JIT, IOS, apploader, the game's OS reports, AXWii audio through Cubeb/PulseAudio, a save written, no faults. Headless OpenGL ES on the Adreno renders the game correctly (checked from dumped frames). **All 1055 Dolphin unit tests pass on the phone**, including the arm64 JIT emitter and the page-fault handler fastmem needs. DolphinQt's UI works over Xwayland with touch, but it is far too small to ship (S1-M3) |
+| 4 Build facts | Clean build 2 min 40 s. Binaries 34/28/28 MB, package 40 MB (106 MB unpacked). Every `NEEDED` library is already on the phone |
+| 5 Qt 6 Widgets | Works on native Wayland with the bundled xdg-shell plugin (S1-M2): widgets drawn, touch and the maliit keyboard work, a fullscreen second window covers the whole 1080x2400 panel, and DolphinQt's `wl_display`/`wl_surface` lookup works. Qt's own GL logs EGL config errors but still draws |
+
+Also found: apps outside the Lomiri session need `GLIBC_TUNABLES=glibc.rtld.optional_static_tls=4096` and `LD_PRELOAD=libtls-padding.so`, or libhybris fails to load (`ut/phone-debug/ut-env.sh`). Qualcomm `core_ctl` parks idle little cores; the A78s are always available.
+
+Carried forward:
+- Dual core (`CPUThread`) is on by default only on Android. The port's default `Dolphin.ini` should set it (stage 3).
+- The GPU sat at 266 MHz while 100 % busy in one run (stage 4).
+- Before a QML frontend: clear Qt's EGL config errors (stage 6).
+- Wired controllers: **USB OTG works** (Type-C source with 5 V/1.5 A, xHCI host, the pad enumerates). The second pad is a DualShock 4 clone (`054c:05c4`) that the 5.4 kernel's `hid-sony` rejects: it does not answer feature report `0x81` (the MAC address), so no input device is created (confirmed from the kernel log). Options: a `hid-sony` kernel patch in stone-ut, SDL3's HIDAPI PS4 driver over libusb (stage 3), or an X-input or Bluetooth pad. Bluetooth pads work.
 
 ### 2. Wayland rendering, from upstream PR #14962
 
@@ -161,11 +181,12 @@ Exit: one game runs on screen in each backend. Resizing or rotating, and leaving
 Goal: someone can pick up the phone and play, without a keyboard and mouse.
 
 Planned steps:
-1. **Controllers.** evdev and SDL3 for Bluetooth and USB gamepads, with default mappings. The input nodes need `android_input`: phablet has it, but a confined click app does not (stage 5).
+1. **Controllers.** evdev and SDL3 for Bluetooth and USB gamepads, with default mappings. USB OTG works on this phone. A DualShock 4 clone is rejected by the 5.4 kernel's `hid-sony` (stage 1); try SDL3's HIDAPI over libusb for it, or leave it to a stone-ut kernel patch. The input nodes need `android_input`: phablet has it, but a confined click app does not (stage 5).
 2. **Touch controls.** An on-screen GameCube controller (and later Wiimote) overlay drawn by the frontend. It feeds Dolphin's existing `InputOverrider` / Touch device, the same C++ the Android overlay uses. The Android Kotlin overlay is the design reference, not code to copy.
 3. **Window and lifecycle.** Landscape lock while a game runs. Keep the display on. Pause emulation when the app loses focus: Lomiri suspends unfocused confined apps, so a suspended emulator must not lose audio or time sync badly. Handle the on-screen keyboard (maliit) for the few text fields.
-4. **UI scaling.** Make the Qt Widgets UI usable at 1080×2400 and 440 dpi (`QT_SCALE_FACTOR`, larger hit targets in the game list). It is a stopgap until stage 6.
+4. **UI scaling.** Make the Qt Widgets UI usable at 1080×2400 and 440 dpi (`QT_SCALE_FACTOR`, larger hit targets in the game list). It is a stopgap until the QML frontend (stage 6). The user tested the stock UI over Xwayland (stage 1 S1-M3): it works with touch but is far too small to ship.
 5. **Files.** Where games, saves and the user directory live (`~/.local/share/<app id>/` inside confinement). How games get there (content-hub import, MTP into an app folder, microSD).
+6. **Default settings for this phone.** Ship a default `Dolphin.ini` with `CPUThread = True` (dual core). Upstream enables it by default only on Android. Leave everything that changes emulated behavior to the user.
 
 Exit: a game can be started, played with touch or a gamepad, paused by switching apps, and resumed.
 
@@ -196,7 +217,7 @@ Exit: the click installs from a file on a clean user account, and games run with
 
 ### 6. Later (optional)
 
-- A touch-first frontend (Qt Quick / Lomiri components) for the game list and settings. It would reuse `UICommon` and `Core`, with Qt Widgets kept for advanced settings.
+- **Required (user decision, 2026-11-14): a QML (Qt Quick) touch-first frontend** for the game list, settings and in-game controls, so it is no longer optional. It would reuse `UICommon` and `Core`, with Qt Widgets kept for advanced settings until replaced. Prerequisite: clear Qt 6's `Cannot find EGLConfig` / `EGL error 0x3005` on this phone, probably by forcing an OpenGL ES default `QSurfaceFormat`. Qt Quick renders through that path (stage 1 S1-M2).
 - Wii Remote support: Bluetooth passthrough is unlikely on a Halium BlueZ stack. Emulated Wiimote with the touch overlay and motion from the phone's sensors (sensorfw) is the practical route.
 - A newer Vulkan, if Dolphin features need it. The A619 gets Vulkan 1.3 from newer Adreno drivers, but replacing vendor GPU blobs is risky (`roadmap-hardware-2.md` item 10). Mesa turnip with the KGSL backend is a research project of its own.
 - Feeding Ubuntu Touch findings back to #14962 (or its successor): as reports by the user on the PR, not as agent pull requests.
