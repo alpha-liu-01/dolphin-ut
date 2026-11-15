@@ -338,7 +338,9 @@ bool SwapChain::CreateSwapChain()
   // Determine the dimensions of the swap chain. Values of -1 indicate the size we specify here
   // determines window size?
   VkExtent2D size = surface_capabilities.currentExtent;
-  if (size.width == UINT32_MAX)
+  // libhybris reports a currentExtent of 1x1 for Wayland surfaces instead of the special value, so
+  // on Wayland always use the size the window reported.
+  if (size.width == UINT32_MAX || m_wsi.type == WindowSystemType::Wayland)
   {
     // The surface doesn't know its size (Wayland), so use the size the window reported.
     size.width = std::max(m_wsi.render_surface_width, 1);
@@ -566,6 +568,21 @@ bool SwapChain::ResizeSwapChain()
 
 bool SwapChain::RecreateSwapChain()
 {
+  // libhybris' Wayland platform (Ubuntu Touch and other Halium systems) keeps the buffers of a
+  // destroyed swap chain attached to the window until the compositor releases them, and a new swap
+  // chain on the same VkSurface dequeues all of its images up front. The compositor only releases
+  // the buffer on screen when a new one is committed, so vkCreateSwapchainKHR waits forever.
+  // A new VkSurface gets a new native window with its own buffers, so recreate the surface.
+  if (m_wsi.type == WindowSystemType::Wayland)
+  {
+    if (!RecreateSurface(m_wsi.render_surface))
+    {
+      PanicAlertFmt("Failed to re-create the Wayland surface and swap chain, this is fatal");
+      return false;
+    }
+    return true;
+  }
+
   DestroySwapChainImages();
   DestroySwapChain();
   if (!CreateSwapChain() || !SetupSwapChainImages())

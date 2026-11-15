@@ -47,6 +47,8 @@ private:
   };
 
   bool m_stereo = false;
+  // Whether Dolphin has set the stream's volume yet (see SetVolume).
+  bool m_volume_set = false;
   std::shared_ptr<cubeb> m_ctx;
   cubeb_stream* m_stream = nullptr;
   std::array<WiimoteStreamData, 4> m_wiimote_stream_data{};

@@ -174,6 +174,26 @@ int main(int argc, char* argv[])
   const bool replace_qt_platform = current_qt_platform != nullptr &&
                                    Common::CaseInsensitiveContains(current_qt_platform, "wayland");
   setenv("QT_QPA_PLATFORM", "xcb", replace_qt_platform);
+#else
+  // Ubuntu Touch sessions list Qt's "ubuntumirclient" platform first
+  // (QT_QPA_PLATFORM=ubuntumirclient;wayland-egl;xcb). Dolphin has no window system type for it,
+  // so drop it and let Qt take the next entry.
+  if (const char* qt_platforms = getenv("QT_QPA_PLATFORM"))
+  {
+    std::string kept;
+    for (const std::string& platform : SplitString(qt_platforms, ';'))
+    {
+      if (platform.empty() || Common::CaseInsensitiveContains(platform, "ubuntumirclient"))
+        continue;
+      if (!kept.empty())
+        kept += ';';
+      kept += platform;
+    }
+    if (kept.empty())
+      unsetenv("QT_QPA_PLATFORM");
+    else
+      setenv("QT_QPA_PLATFORM", kept.c_str(), true);
+  }
 #endif
 #endif
 

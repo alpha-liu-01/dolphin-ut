@@ -85,10 +85,24 @@ RenderWidget::RenderWidget(QWidget* parent) : QWidget(parent)
     resize(w / dpr, h / dpr);
   });
 
-  connect(&Settings::Instance(), &Settings::EmulationStateChanged, this, [this](Core::State state) {
-    if (state == Core::State::Running)
-      SetPresenterKeyMap();
-  });
+  connect(&Settings::Instance(), &Settings::EmulationStateChanged, this,
+          [this, previous_state = Core::State::Uninitialized](Core::State state) mutable {
+            if (state == Core::State::Running)
+              SetPresenterKeyMap();
+
+            // A wl_surface can't report its size, so the presenter only learns it from resize
+            // events. One that arrives while the game is starting (before the presenter exists),
+            // such as the compositor's first configure, is lost, and the picture keeps the size
+            // the window had before. Send the current size again once the game is running (or
+            // paused, with Boot to Pause); the video backend is ready by then.
+            if (QtUtils::IsWayland() && previous_state == Core::State::Starting &&
+                (state == Core::State::Running || state == Core::State::Paused))
+            {
+              const float dpr = devicePixelRatio();
+              emit SizeChanged(width() * dpr, height() * dpr, dpr);
+            }
+            previous_state = state;
+          });
 
   // We have to use Qt::DirectConnection here because we don't want those signals to get queued
   // (which results in them not getting called)

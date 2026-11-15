@@ -292,6 +292,14 @@ CubebStream::~CubebStream()
 
 void CubebStream::SetVolume(int volume)
 {
+  // A new stream already plays at full volume, so there is nothing to set until Dolphin's volume
+  // differs from 100 %. Setting it anyway overrides the volume the sound server restored for the
+  // stream: on Ubuntu Touch, PulseAudio gives media streams the media volume the volume keys
+  // control, and setting 100 % here started every game at full volume.
+  if (!m_volume_set && volume == 100)
+    return;
+  m_volume_set = true;
+
 #ifdef _WIN32
   if (!m_coinit_success)
     return;
