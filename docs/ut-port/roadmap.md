@@ -144,8 +144,8 @@ Notes: `stage1-build.md`.
 Also found: apps outside the Lomiri session need `GLIBC_TUNABLES=glibc.rtld.optional_static_tls=4096` and `LD_PRELOAD=libtls-padding.so`, or libhybris fails to load (`ut/phone-debug/ut-env.sh`). Qualcomm `core_ctl` parks idle little cores; the A78s are always available.
 
 Carried forward:
-- Dual core (`CPUThread`) is on by default only on Android. Whether the port's default `Dolphin.ini` should set it is measured in 3.0 (S3.0-M6): `dolphin-ut` ran Newer SMB at 60 fps in single core.
-- The GPU sat at 266 MHz while 100 % busy in one run (stage 4). The first suspect for Need for Speed's 50–60 % (3.0).
+- Dual core (`CPUThread`) is on by default only on Android. 3.0 measured it: dual core beats single core on this phone (79 % against 41 % in a Need for Speed race, with the CPU boost), so the port's default `Dolphin.ini` sets it (3.8; decided by the user).
+- The GPU sat at 266 MHz while 100 % busy in one run (stage 4). In 3.0's benchmark the CPU clock turned out to be the first limit, and the GPU reached its top clocks once the CPU was boosted.
 - Before a QML frontend: clear Qt's EGL config errors (stage 6).
 - Wired controllers: **USB OTG works** (Type-C source with 5 V/1.5 A, xHCI host, the pad enumerates). The second pad is a DualShock 4 clone (`054c:05c4`) that the 5.4 kernel's `hid-sony` rejects: it does not answer feature report `0x81` (the MAC address), so no input device is created (confirmed from the kernel log). Options: a `hid-sony` kernel patch in stone-ut, SDL3's HIDAPI PS4 driver over libusb (stage 3), or an X-input or Bluetooth pad. Bluetooth pads work.
 
@@ -214,13 +214,23 @@ Goal: someone can pick up the phone and play, without a keyboard and mouse, in a
 
 Removed from the old stage 3: Widgets UI scaling, `RenderToMain` as a shipped default, Confirm on Stop handling. Deferred to after stage 3: cheats, Riivolution, Skylanders and Infinity Base, NetPlay, achievements, GBA link, disc conversion, system update, TV layout, translations of the new strings.
 
-Status (2026-11-15): 3.0 nearly done (`stage3.0-foundations.md`).
-- Spike A (the overlay drawn by Dolphin's ImGui on-screen UI, no subsurface) passed the on-screen tests with both backends: touch controls, landscape, pause on app switch, screen kept on, one spread entry, Exit. **A is recommended for the user's decision.**
-- Fixed and waiting for a re-test:
-  - the Wii D-pad was 90° off (the profile has desktop Dolphin's default Nunchuk); the overlay now follows the configured extension;
-  - Vibrate, now through hfd-service, as there is no Qt 6 haptics plugin.
-- The user prefers the native Ubuntu Touch look (Lomiri Components) over Material.
-- Newer SMB runs at a steady 60 fps on Vulkan in single core; Need for Speed: Most Wanted at 50–60 % (stage 4). A save-state-based single vs dual core measurement is open (S3.0-M6).
+Status (2026-11-15): **3.0 done** (`stage3.0-foundations.md`). Next: 3.1 (game library).
+- **Window architecture A, decided by the user:** Dolphin's renderer draws the touch overlay; no subsurface. The condition: the Android overlay customization UX is reimplemented (3.3). Portrait gets its own default layout, as on Android.
+- On screen, everything works:
+  - touch controls, including the Wii Remote + Nunchuk layout and the D-pad;
+  - landscape kept, pause on app switch, screen kept on, one spread entry, Exit;
+  - vibration (hfd-service).
+- Benchmark from a Need for Speed race save state (screen on, no input):
+  - the CPU clock was the limit: schedutil holds the big cores near 1228 MHz;
+  - uclamp_min on the emulation threads (no root needed) doubled the speed (41 % → 79 % Vulkan, 86 % OpenGL ES);
+  - dual core beats single core;
+  - OpenGL ES beat Vulkan in this game, while Vulkan looked better with Newer SMB.
+- User decisions:
+  - a CPU boost setting, on by default (heat is not an issue);
+  - dual core by default;
+  - per-game settings are required;
+  - expose all of the Android app's features, or more;
+  - the native Ubuntu Touch look (Lomiri Components) for the app screens.
 
 Exit: from a fresh install, a GameCube and a Wii game start from the library, play with touch and with a Bluetooth gamepad, survive switching apps and rotation, save and load states from the in-game menu, and exit to the library, with no stale frames, hangs or crashes.
 
@@ -231,7 +241,13 @@ Goal: know what runs well, and why the rest does not.
 Planned steps:
 1. Compare GLES and Vulkan on a fixed set of games and scenes at 1× internal resolution, each scene started from a save state (`dolphin-ut --state-slot N`, with the `perf:` log line every 5 s; 3.0). Single vs dual core (`-C Dolphin.Core.CPUThread=…`) on the same scenes. First data point: Need for Speed: Most Wanted (GameCube) at 50–60 % in races on Vulkan, single core, where Dolphin MMJ on Android reached full speed some years ago. Measure frame time, shader stutter (ubershaders, asynchronous compilation, the shader cache across runs), CPU and GPU clocks, and temperature over 15 minutes. `../stone-ut/tools/phone-debug/fps-panel.py` already reads panel vsync and KGSL load.
 2. Frame pacing: 60 Hz games on a 120 Hz Mir output, and the 60 Hz system setting (`stone-refresh-rate 60`), compared.
-3. CPU placement: whether the CPU and GPU threads land on the A78 cores, and whether the scheduler or the GPU governor (`mod_percent`) needs a hint while a game runs.
+3. CPU placement and clocks. **3.0 found this is the main limit** (`stage3.0-foundations.md`):
+   - Left alone, the threads run at 70–83 % busy, just under the big cluster's `hispeed_load` of 85 %. The A78s stay at 1228–1516 MHz, and dual-core threads drift to the little cores.
+   - uclamp_min 1024 on the threads (allowed without root) gives about 1950 MHz and twice the speed.
+   - To do here:
+     - settle the boost value (1024 in 3.0; heat is not an issue on this phone, per the user; record temperature and battery over 15 minutes anyway);
+     - check whether the GPU governor (`mod_percent`) needs a hint too (the GPU reached 685–700 MHz, 66 % busy, once the CPU was boosted);
+     - check Lomiri's cgroup for a launched app (the tests ran in adbd's).
 4. GPU driver workarounds: list where this phone's blob shows the bugs that `DriverDetails.cpp` guards only on Android (risk 6). Report results to the user, who decides whether and how the fork changes those entries.
 
 Exit: a results table per game and backend, and a recommended default backend and settings for this phone.

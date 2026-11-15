@@ -227,11 +227,11 @@ So single core may be at least as fast as dual core on this phone, which would c
 - `-C <System>.<Section>.<Key>=<Value>` on the `dolphin-ut` command line, handed to Dolphin's own parser as in `dolphin-emu-nogui`;
 - **Save** and **Load** on the overlay (top left, next to Exit; state slot 1), and `--state-slot N` to load a state once the game runs. Every run can then start from the same in-game point.
 
-A first try ran screen off for 75 s from boot. For Need for Speed it only measured the PAL intro videos and menus (100 % speed, 50 VPS, 25–50 fps), so it was not usable. The race measurement waits for a save state (S3.0-M6).
+A first try ran 75 s from boot. For Need for Speed it only measured the PAL intro videos and menus (100 % speed, 50 VPS, 25–50 fps), so it was not usable. The race measurement waits for a save state (S3.0-M6).
 
 Need for Speed's 50–60 % in races goes to stage 4 along with the CPU-thread result. The likely limits are the GPU frequency (stuck low, stone-ut docs) and the CPU-thread setting. As the user notes, the old Android number came from Dolphin MMJ, a fork with its own speed hacks, a couple of years ago.
 
-## Next manual tests (stopped here)
+## Manual tests S3.0-M5/M6
 
 The build with the fixes is on the phone. Screen on, phone unlocked:
 
@@ -250,3 +250,64 @@ GAME='/home/phablet/dolphin-ut-games/Need for Speed - Most Wanted.iso' sh run-do
 ```
 
 A save state of Newer Super Mario Bros. inside a level would allow the same comparison for a Wii game.
+
+### Results of S3.0-M5/M6 (2026-11-15)
+
+- **Vibrate works** (hfd-service).
+- A save state of Need for Speed: Most Wanted (`GOWP69.s01`, PAL) at the start of a race: map and cars rendered. The race starts on its own, so the runs need no input.
+- The GameCube overlay has **no analog L and R**, which the game uses for throttle and brake (checked with a physical controller). Left for 3.3, which redoes the overlay and the mapping UI anyway. The Android app maps the digital and analog trigger together by default.
+
+## Benchmark: Need for Speed: Most Wanted from the save state
+
+Each run boots the game, loads slot 1 (`--state-slot 1`) and plays 70–90 s with the sound muted (`-C Dolphin.DSP.Volume=0`). The speed is the mean of Dolphin's `perf:` lines after the first 10 s. Vulkan unless noted. **Screen on** (the user turned it on before the first run and left it on), with no touch input.
+
+Tools (in `ut/phone-debug/`):
+- `bench.sh NAME SECONDS CPUS|- [dolphin-ut args]` prints the mean speed, the big cluster's mean clock (`policy6/stats/time_in_state`) and the GPU's mean clock and load. `UCLAMP=N` sets uclamp_min on all threads.
+- `threads.py PID` gives per-thread CPU use and core.
+- `uclamp.py PID N` sets uclamp_min on every thread (`sched_setattr`, no root needed).
+
+| Run | Speed (mean, range) | Big cores (mean clock) | GPU |
+| --- | --- | --- | --- |
+| Single core | 28–32 % (22–40) | | 390–700 MHz, about 40 % busy |
+| Single core, pinned to cpu6–7 (`taskset`) | 38 % (31–45) | | |
+| Single core, pinned, uclamp_min 1024 | 41 % (36–47) | | |
+| Dual core | 40–41 % (26–59) | 1090 MHz | 650 MHz, 41 % busy |
+| Dual core, pinned to cpu6–7 | 59–60 % (52–71) | | |
+| Dual core, uclamp_min 512 | 65 % (58–73) | | 685 MHz, 60 % busy |
+| **Dual core, uclamp_min 1024** | **78–80 % (72–92)** | **1953 MHz** | 685 MHz, 66 % busy |
+| Dual core, pinned + uclamp_min 1024 | 79 % (70–92) | | |
+| OpenGL ES, dual core | 75 % (65–82) | 1761 MHz | 684 MHz, 60 % busy |
+| **OpenGL ES, dual core, uclamp_min 1024** | **86 % (77–92)** | 1969 MHz | 685 MHz, 67 % busy |
+
+What the runs show:
+- **Neither the CPU nor the GPU was the limit by itself; the CPU clock was.** Without help, the emulation threads run 70–83 % of the time, and in dual core they hop between the big cores (A78, cpu6–7, up to 2016 MHz) and the little ones (cpu0–5, often at 576 MHz). The big cluster's schedutil goes to `hispeed_freq` (1228 MHz) at `hispeed_load` 85 %, and the threads stay just under it. So the big cores mostly sat at 1228–1516 MHz. There was no thermal throttling: about 39 °C, and no cooling device engaged.
+- On Android, the power HAL and the game's cgroup (top-app, boosted) take care of this. Ubuntu Touch has neither, and the app ran in adbd's cgroup.
+- **uclamp_min raises both the placement and the clock**, and an app can set it on its own threads without root (`CONFIG_UCLAMP_TASK=y`, a WALT kernel). At 1024 the big cores run near their top clock and the speed doubles.
+- **Dual core beats single core** at every setting (79 % against 41 % when boosted). The 3.8 default should be dual core, as on Android.
+- **OpenGL ES was faster than Vulkan here** (86 % against 79 % boosted; 75 % against 41 % without the boost, because the GL driver keeps the CPU busier and so clocked higher). With Newer SMB, the user found Vulkan the better of the two, so the best backend depends on the game: a case for per-game settings.
+- Next limit: with the boost, the GPU is at 685–700 MHz (its top) and 66 % busy, and the remaining gap to 100 % is somewhere between the two. Stage 4 work.
+- Audio: PulseAudio's client thread (`threaded-ml`) used 15–24 % of a little core even with the volume at 0. Small, but noted for stage 4.
+
+Caveats:
+- No input. The user's own single-core play in S3.0-M4 felt like 50–60 %, against about 30 % here. A likely reason is that Qualcomm's input boost raises the CPU clocks on touches, and the user was driving. That points the same way: the clock is what limits the speed.
+- Boosting costs battery. The user reports that heat is not an issue on this phone; stage 4 still records the temperature over its 15-minute runs.
+
+**For the frontend:** a "CPU boost" setting that sets uclamp_min on the emulation threads (or on the whole process) while a game runs, and drops it at pause and stop. It is a host-side scheduling hint, not a change to the emulated console. The user approved it (below).
+
+## Decisions after the benchmark (user, 2026-11-15)
+
+1. **A CPU boost option: yes.** Heat is not an issue on this phone.
+   - The user's approach on Android for this game was the emulated CPU clock override at about 85 %, which reaches high frame rates most of the time. That is Dolphin's existing `Core.Overclock` / `OverclockEnable` setting. The port exposes it, as the Android app does (3.6), and does not change its default.
+   - Goal restated: **expose all of the Android app's features (or more where needed)**.
+   - **Per-game settings are required.** Desktop and Android Dolphin already have them, and the results call for them: Newer SMB looked better on Vulkan, Need for Speed ran faster on OpenGL ES.
+2. **Dual core is the default** (3.8).
+3. No screen-on re-run: these benchmarks already ran with the screen on.
+
+## Stage 3.0 closed (user, 2026-11-15)
+
+- **The Wii Remote + Nunchuk layout works, and the D-pad direction is fixed** (S3.0-M5 done).
+- **Window architecture: option A, decided by the user.** The condition: the Android app's overlay customization UX must be reimplemented. That means edit mode (drag controls), scale, opacity, showing or hiding individual controls, and reset (3.3). Nothing in A stands in the way:
+  - dragging uses the same touch path on the game window as playing, with a control moved instead of pressed;
+  - positions, scale and opacity are the overlay's own data, saved per layout;
+  - the dialogs come from the in-game menu (3.4).
+- **The default layout looks odd in portrait.** The spike uses one set of positions for both orientations. The Android app has separate portrait defaults (`*_PORTRAIT_X/Y` in its resources) and saves edits per orientation (`-Portrait` keys, `InputOverlay.kt`). 3.3 takes both. Redefining the portrait layout later does not affect the choice of A.

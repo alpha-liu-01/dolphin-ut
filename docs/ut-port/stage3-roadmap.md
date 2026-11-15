@@ -79,7 +79,7 @@ Steps:
 
 Exit: the shell runs on the phone, and the window architecture is decided and recorded here.
 
-#### Status (2026-11-15): on-screen tests done; option A passed; fixes for the D-pad and haptics waiting for a re-test
+#### Status (2026-11-15): done. Option A decided by the user
 
 Notes: `stage3.0-foundations.md`.
 - Build: `ENABLE_UT_FRONTEND`, target `dolphin-ut` in `Source/Core/DolphinUT/`, Qt Quick 6.10.2 in the container.
@@ -87,18 +87,30 @@ Notes: `stage3.0-foundations.md`.
 - **Spike A works without any `VideoCommon` change.** The overlay hooks `before_present_event` and draws with ImGui into the open on-screen-UI frame (0.2–0.28 ms of video-thread CPU per frame); touches go to `InputOverrider`. A Vulkan crash (several draws into one frame) was fixed by drawing once per ImGui frame.
 - On-screen results (S3.0-M1…M4):
   - Passed: readable launcher; keyboard; fullscreen game with immediate touch controls; landscape kept; pause and resume on app switch; one spread entry; screen kept on; Exit; OpenGL ES works (slower); Newer SMB at a steady 60 fps on Vulkan.
-  - Failed, now fixed and waiting for S3.0-M5:
+  - Failed, then fixed (S3.0-M5):
     - **Wii D-pad 90° off.** The profile has desktop Dolphin's default Nunchuk attached, so the game reads the remote upright. The overlay layout now follows the configured extension, with a new Wii Remote + Nunchuk layout.
-    - **Vibrate.** There is no Qt 6 haptics plugin; it now goes through hfd-service.
-- **Window architecture: A recommended for the decision** (every check passed; B and C not needed). Recorded below; the decision is the user's.
+    - **Vibrate.** There is no Qt 6 haptics plugin; it now goes through hfd-service. Confirmed working.
+    - The Nunchuk layout with Newer SMB works, and the D-pad direction is right.
+- **Window architecture: A, decided by the user**, on condition that the Android overlay customization UX is reimplemented (3.3). The default layout looks odd in portrait; 3.3 adds portrait defaults as Android has.
 - Style: the user wants the native Ubuntu Touch look (see "Visual style" below).
-- Speed: Need for Speed: Most Wanted runs at 50–60 % in races (stage 4). `dolphin-ut` currently runs single core (upstream's Linux default). Added for measuring:
+- Vibrate works through hfd-service (S3.0-M5).
+- Speed, benchmarked from a Need for Speed: Most Wanted race save state (screen on, no input; `stage3.0-foundations.md`). The tools for it:
   - a `perf:` log line;
   - `-C` overrides;
   - overlay Save and Load (slot 1);
-  - `--state-slot`.
-  The single vs dual core comparison runs from a save state (S3.0-M6).
-- Still to check: the GameCube layout (stick, A/B/X/Y, triggers, Start) was used with Need for Speed but not reported on item by item.
+  - `--state-slot`;
+  - `ut/phone-debug/bench.sh`.
+  The results:
+  - **The big cores' clock was the limit.** schedutil kept them at 1228–1516 MHz, and dual-core threads drifted onto the little cores.
+  - **uclamp_min 1024 on the emulation threads** (no root needed) doubled the speed: 41 % → 79 % on Vulkan, 86 % on OpenGL ES.
+  - **Dual core beats single core** at every setting.
+  - OpenGL ES came out faster than Vulkan in this scene; Vulkan looked better with Newer SMB. The best backend depends on the game.
+- **User decisions (2026-11-15):**
+  - a CPU boost setting (heat is not an issue);
+  - dual core by default;
+  - per-game settings are required;
+  - expose all of the Android app's features, or more where needed (for example the emulated CPU clock override, which the user sets to about 85 % for this game on Android).
+- The GameCube layout lacks analog L and R (throttle and brake in Need for Speed); left for 3.3.
 
 ### 3.1 Game library (medium)
 
@@ -145,10 +157,10 @@ Steps:
    - Wii Remote + Nunchuk;
    - the Classic Controller.
 
-   Default positions are taken from the Android app's defaults (the `InputOverlay` default layout code), scaled to 2400x1080 / 2305 px.
-2. Controls: buttons, the D-pad, analog sticks (with gate radius from `InputOverrider::GetGateRadiusAtAngle`), analog triggers, and the IR pointer by touch for the Wii Remote. All feed `InputOverrider::SetControlState()`, registered per controller with `Register{GameCube,Wii}InputOverrider`, as the Android JNI does.
+   Default positions are taken from the Android app's defaults (the `InputOverlay` default layout code), scaled to 2400x1080 / 2305 px, **separately for landscape and portrait** (Android's `*_PORTRAIT_X/Y` resources). Edits are saved per orientation, as Android's `-Portrait` keys. The 3.0 spike used one layout for both, which looks odd in portrait.
+2. Controls: buttons, the D-pad, analog sticks (with gate radius from `InputOverrider::GetGateRadiusAtAngle`), analog triggers (the 3.0 spike has digital L/R only; racing games need the analog ones, which the Android app presses together with the digital ones by default), and the IR pointer by touch for the Wii Remote. All feed `InputOverrider::SetControlState()`, registered per controller with `Register{GameCube,Wii}InputOverrider`, as the Android JNI does.
 3. Graphics: the Android PNGs (`gcpad_*`, `wiimote_*`, `nunchuk_*`, `classic_*`, pressed and normal, `drawable-xxhdpi` for this screen's density).
-4. Overlay settings: show or hide, scale, opacity, show or hide individual controls, edit mode (drag to move), reset to defaults, haptic feedback on press (hfd-service `vibrate(ms)`, as in 3.0; KTactileFeedback has no Qt 6 backend on the phone).
+4. Overlay settings, **the Android customization UX reimplemented** (the user's condition for option A): show or hide, scale, opacity, show or hide individual controls, edit mode (drag to move; on the game window's touch path, moving a control instead of pressing it), reset to defaults, haptic feedback on press (hfd-service `vibrate(ms)`, as in 3.0; KTactileFeedback has no Qt 6 backend on the phone).
 5. The layout follows the controller's configured extension and the "Sideways Wii Remote" option, as the Android app does (3.0 found the D-pad off by 90° with the wrong assumption).
 6. Which controller the overlay drives (port 1 by default) and whether it hides when a gamepad is in use.
 7. Multi-touch: several controls at once, including stick and buttons together; check that `fts_ts` reports enough points (10 in stage 1's Qt log).
@@ -160,7 +172,10 @@ Exit: the GameCube test game and a Wii game are playable with touch only, with t
 Goal: Android's `MenuFragment`.
 
 Steps:
-1. A side panel or sheet over the paused game, opened by back / Escape / a two-finger tap / an overlay button.
+1. A side panel or sheet over the paused game, opened by back / Escape / a two-finger tap / an overlay button. With option A, it cannot be a subsurface over the game. Ways to try:
+   - another top-level QML window, perhaps showing the paused frame behind it;
+   - drawn into the game picture like the overlay.
+   The same choice applies to the overlay settings dialogs (3.3).
 2. Entries: pause/resume, screenshot, quick save, quick load, save state slots and load state slots (with timestamps, as `SaveLoadStateFragment`), overlay controls (the 3.3 settings), settings (3.6), refresh Wii Remotes, change disc, reset, **exit** (stops and returns to the library; no separate Confirm on Stop dialog).
 3. Not now: Skylanders and Infinity Base portals (deferred with the figures UI).
 
@@ -181,14 +196,14 @@ Exit: a Bluetooth gamepad plays the test games with default mappings, and a rema
 
 ### 3.6 Settings (large, in two passes)
 
-Goal: the settings that matter on a phone, in the Android layout. The rest stays reachable through the INI files or DolphinQt.
+Goal: the settings that matter on a phone, in the Android layout. The aim is everything the Android app exposes, or more where needed (user, 3.0). Until the second pass covers it, the rest stays reachable through the INI files or DolphinQt.
 
 Steps:
 1. A generic settings model over Dolphin's `Config::Info` (bool, int, float, string, choice): reads layers, writes the base layer, applies per-game overrides like Android's `NativeConfig`.
 2. **First pass:**
-   - Config: General (dual core, speed limit, ...), Interface (OSD and FPS display, overlay defaults), Audio (backend, volume, stretching), Paths, GameCube (language, memory cards), Wii (language, aspect ratio, sensor bar position, widescreen);
+   - Config: General (dual core, speed limit, **CPU boost** (the port's own: uclamp_min on the emulation threads while a game runs, from the 3.0 benchmark), the emulated CPU clock override (`Core.Overclock`, exposed as on Android; default unchanged), ...), Interface (OSD and FPS display, overlay defaults), Audio (backend, volume, stretching), Paths, GameCube (language, memory cards), Wii (language, aspect ratio, sensor bar position, widescreen);
    - Graphics: backend (Vulkan, OpenGL ES), internal resolution, aspect ratio, vsync, shader compilation mode, async shaders, anisotropic filtering, a few enhancements;
-   - per-game settings for the same subset (long press in the library → Game settings).
+   - per-game settings for the same subset (long press in the library → Game settings). **Required** (user, 3.0): the best backend differs by game (Newer SMB: Vulkan; Need for Speed: OpenGL ES), and the CPU clock override is per game. The CPU boost is per game too.
 3. Second pass (after stage 4 shows what is useful on this phone): more Graphics enhancements and hacks, advanced options, log settings.
 4. The menu structure follows Android's `SettingsFragmentPresenter.kt`, so users of the Android app find things in the same place.
 
@@ -211,9 +226,10 @@ Exit: a game copied from a PC over MTP, or shared from the File Manager, shows u
 Goal: a first launch that plays well without visiting the settings.
 
 Shipped default `Dolphin.ini` / `GFX.ini` (base layer; the user can change all of it):
-- `CPUThread`: dual core as on Android, **or single core** if the S3.0-M6 measurement shows single core is as fast on this phone (3.0 ran Newer SMB at 60 fps single core). The user decides once the numbers are in;
+- `CPUThread = True` (dual core, as on Android). **Decided by the user (3.0)**; in the 3.0 benchmark dual core beat single core at every setting (79 % against 41 % with the CPU boost);
+- the CPU boost on (heat is not an issue, user 3.0), at the uclamp_min value stage 4 settles on (1024 in the 3.0 benchmark);
 - Wii Remote 1's extension in the default profile: none (Android; the sideways overlay) or Nunchuk (desktop default). A controller default, the user's call;
-- graphics backend Vulkan (faster than OpenGL ES in stage 2), with OpenGL ES as the fallback when Vulkan fails to start;
+- graphics backend Vulkan (faster than OpenGL ES in stage 2 and with Newer SMB in 3.0; slower in the 3.0 Need for Speed benchmark), with OpenGL ES as the fallback when Vulkan fails to start, and per-game overrides (3.6) for games that run better on OpenGL ES. The global default is checked against stage 4's game list;
 - the OSD FPS display off;
 - no Confirm on Stop (the menu's Exit replaces it);
 - `RenderToMain` is not needed (the frontend has no main window to render into).
@@ -258,7 +274,10 @@ No stale frames, no hangs, no crashes along the way.
 
 | Decision | Options | Recommendation |
 | --- | --- | --- |
-| Window architecture (3.0) | A: overlay drawn by Dolphin's renderer; B: QML overlay in a subsurface; C: game rendered into Qt Quick | **A**: the spike passed every on-screen check (S3.0-M2/M3). Waiting for the user's confirmation |
+| Window architecture (3.0) | A: overlay drawn by Dolphin's renderer; B: QML overlay in a subsurface; C: game rendered into Qt Quick | **Decided (user, 2026-11-15): A**, on condition that the Android overlay customization UX is reimplemented (3.3) |
 | Visual style | QtQuick Controls Material (closest to the Android app), or Lomiri Components / Suru (native Ubuntu Touch look) | **User preference (S3.0): the native Ubuntu Touch look.** Lomiri Components (`qml6-module-lomiri-components`, on the phone) for the app screens from 3.1 on; the Android app's layout is kept, only the styling changes. The in-game overlay is drawn by Dolphin (option A), so the style does not apply to it |
+| CPU boost while a game runs (3.0 benchmark) | none (schedutil alone: about 41 %); uclamp_min on the emulation threads at 512 (65 %) or 1024 (79 %), dropped at pause and stop | **Decided (user, 2026-11-15): a setting (3.6), on by default (3.8), per game too.** Heat is not an issue on this phone |
+| Dual core default (3.8) | upstream's Linux default (single core) or dual core as on Android | **Decided (user, 2026-11-15): dual core** |
+| Per-game settings (3.6) | | **Required (user, 2026-11-15)**: the best backend differs by game |
 | DolphinQt in the click package | ship it as an "advanced" second app, or leave it out | leave it out; keep it for debugging over adb |
 | Where the code lives | `Source/Core/DolphinUT/` (a new frontend) or `ut/frontend/` | `Source/Core/DolphinUT/` |
