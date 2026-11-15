@@ -5,6 +5,8 @@
 #   sh run-dolphin.sh MODE [SECONDS] [extra dolphin args...]
 #
 # MODE:  ogl | ogl-fs | vk | vk-fs   the test game in batch mode (-b), windowed or fullscreen
+#        ut                          the QML frontend (stage 3); ut-start boots the test game in it
+#                                    (extra args: --backend OGL, --state-slot N, -C System.Section.Key=Value)
 #        ui                          the main window, nothing started (start the game by tapping it)
 #        ui-main                     the main window with "Render to Main Window"
 # SECONDS defaults to 60. The log goes to /home/phablet/dolphin-ut-user-w/run-MODE.log; the
@@ -32,6 +34,8 @@ case "$mode" in
   vk-fs)   set -- $common -b -v Vulkan -C Dolphin.Interface.ConfirmStop=False -C Dolphin.Display.Fullscreen=True "$@" -e "$G" ;;
   ui)      set -- $common -C Dolphin.Display.RenderToMain=False "$@" ;;
   ui-main) set -- $common -C Dolphin.Display.RenderToMain=True "$@" ;;
+  ut)      set -- -u $U "$@" ;;                        # the QML frontend (stage 3); pass --start "$G" [--backend OGL] to boot
+  ut-start) set -- -u $U --start "$G" "$@" ;;
   *) echo "unknown mode $mode" >&2; exit 2 ;;
 esac
 log="$U/run-$mode.log"
@@ -42,8 +46,9 @@ rm -f "$maps" core core.*
 # saved every 2 s, to place a crashing PC in a library (crash-resolve.py).
 ulimit -c unlimited 2>/dev/null
 echo 0x11 > /proc/self/coredump_filter 2>/dev/null
-echo "running: dolphin-emu $* (for ${secs}s, log $log)"
-./dolphin-emu "$@" > "$log" 2>&1 &
+echo "running: $mode: $* (for ${secs}s, log $log)"
+case "$mode" in ut*) bin=./dolphin-ut ;; *) bin=./dolphin-emu ;; esac
+$bin "$@" > "$log" 2>&1 &
 p=$!
 ( while kill -0 $p 2>/dev/null; do cp /proc/$p/maps "$maps.tmp" 2>/dev/null && mv "$maps.tmp" "$maps"; sleep 2; done ) &
 i=0; while [ $i -lt "$secs" ] && kill -0 $p 2>/dev/null; do sleep 1; i=$((i+1)); done

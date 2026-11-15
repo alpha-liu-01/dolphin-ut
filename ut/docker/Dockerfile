@@ -35,12 +35,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       crossbuild-essential-arm64 \
       gettext libwayland-bin wayland-protocols \
       qt6-base-dev qt6-base-dev-tools \
+      qt6-declarative-dev qt6-declarative-dev-tools \
  && rm -rf /var/lib/apt/lists/*
 
 # Target libraries (arm64). Everything else comes from Dolphin's Externals (USE_SYSTEM_LIBS=OFF),
 # because the phone lacks most of the optional system libraries.
+# qt6-declarative-dev is for the QML frontend (stage 3, Source/Core/DolphinUT).
 RUN apt-get update && apt-get install -y --no-install-recommends \
       qt6-base-dev:arm64 qt6-base-private-dev:arm64 qt6-svg-dev:arm64 \
+      qt6-declarative-dev:arm64 \
       libegl-dev:arm64 libgl-dev:arm64 libgles-dev:arm64 \
       libx11-dev:arm64 libxi-dev:arm64 libxrandr-dev:arm64 \
       libwayland-dev:arm64 libxkbcommon-dev:arm64 \

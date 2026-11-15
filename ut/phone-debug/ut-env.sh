@@ -10,6 +10,11 @@ export GLIBC_TUNABLES=glibc.rtld.optional_static_tls=4096
 export LD_PRELOAD=/usr/lib/aarch64-linux-gnu/libtls-padding.so
 export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 export QT_IM_MODULE=maliit
+# Lomiri's scaling and style for apps (GRID_UNIT_PX is per device: 21 on the Redmi Note 12 5G).
+export GRID_UNIT_PX=21
+export QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough
+export QT_QUICK_CONTROLS_STYLE=Suru
+export QT_QUICK_CONTROLS_MOBILE=1
 
 # Qt 6 has no xdg-shell plugin on the phone; use the copy unpacked from libqt6wlshellintegration6 in stage 0.
 ut_qt6_wayland() {

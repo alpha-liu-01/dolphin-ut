@@ -38,6 +38,7 @@ docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$root:/src" -w /src "$im
       -DENABLE_TESTS=OFF -DENABLE_LLVM=OFF \
       -DENABLE_AUTOUPDATE=OFF -DENABLE_ANALYTICS=OFF -DUSE_DISCORD_PRESENCE=OFF \
       -DENCODE_FRAMEDUMPS=OFF \
+      -DENABLE_UT_FRONTEND=ON \
       ${DOLPHIN_CMAKE_ARGS:-}
   fi
   ninja -C $build
@@ -47,7 +48,7 @@ if [ "$package" = 1 ]; then
   out="$root/build-ut/dolphin-ut-arm64"
   rm -rf "$out"
   mkdir -p "$out"
-  for b in dolphin-emu dolphin-emu-nogui dolphin-tool; do
+  for b in dolphin-ut dolphin-emu dolphin-emu-nogui dolphin-tool; do
     [ -f "$root/$build/Binaries/$b" ] && cp "$root/$build/Binaries/$b" "$out/"
   done
   cp -r "$root/Data/Sys" "$out/Sys"

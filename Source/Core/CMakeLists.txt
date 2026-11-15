@@ -19,6 +19,10 @@ if(ENABLE_QT)
   add_subdirectory(DolphinQt)
 endif()
 
+if(ENABLE_UT_FRONTEND)
+  add_subdirectory(DolphinUT)
+endif()
+
 if (APPLE OR WIN32)
   add_subdirectory(UpdaterCommon)
 endif()

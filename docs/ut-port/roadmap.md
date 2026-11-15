@@ -52,7 +52,7 @@ Evidence that this path works on this phone:
 | Input | Touch overlay (Java) → `InputOverrider` (C++, `InputCommon/ControllerInterface/Touch`) | evdev, SDL3, Xlib | Gamepads: evdev/SDL3. Touch overlay: new frontend code driving the same `InputOverrider` |
 | Audio | OpenSL ES / cubeb | PulseAudio, ALSA, cubeb | PulseAudio or cubeb (pulse) |
 | GPU driver quirks | `DriverDetails.cpp`: `OS_ANDROID` + `VENDOR_QUALCOMM` entries | `OS_LINUX` | The blob is the Android one, but Dolphin will report `OS_LINUX`. See risk 6 |
-| Frontend | Kotlin app, touch-first | Qt Widgets, mouse and keyboard | Qt Widgets first (scaled), touch-first frontend later |
+| Frontend | Kotlin app, touch-first | Qt Widgets, mouse and keyboard | A Qt Quick (QML) reimplementation of the Android layout (stage 3). DolphinQt kept for debugging |
 
 ## How the port is put together
 
@@ -144,8 +144,8 @@ Notes: `stage1-build.md`.
 Also found: apps outside the Lomiri session need `GLIBC_TUNABLES=glibc.rtld.optional_static_tls=4096` and `LD_PRELOAD=libtls-padding.so`, or libhybris fails to load (`ut/phone-debug/ut-env.sh`). Qualcomm `core_ctl` parks idle little cores; the A78s are always available.
 
 Carried forward:
-- Dual core (`CPUThread`) is on by default only on Android. The port's default `Dolphin.ini` should set it (stage 3).
-- The GPU sat at 266 MHz while 100 % busy in one run (stage 4).
+- Dual core (`CPUThread`) is on by default only on Android. Whether the port's default `Dolphin.ini` should set it is measured in 3.0 (S3.0-M6): `dolphin-ut` ran Newer SMB at 60 fps in single core.
+- The GPU sat at 266 MHz while 100 % busy in one run (stage 4). The first suspect for Need for Speed's 50–60 % (3.0).
 - Before a QML frontend: clear Qt's EGL config errors (stage 6).
 - Wired controllers: **USB OTG works** (Type-C source with 5 V/1.5 A, xHCI host, the pad enumerates). The second pad is a DualShock 4 clone (`054c:05c4`) that the 5.4 kernel's `hid-sony` rejects: it does not answer feature report `0x81` (the MAC address), so no input device is created (confirmed from the kernel log). Options: a `hid-sony` kernel patch in stone-ut, SDL3's HIDAPI PS4 driver over libusb (stage 3), or an X-input or Bluetooth pad. Bluetooth pads work.
 
@@ -176,7 +176,7 @@ Planned steps:
 
 Exit: one game runs on screen in each backend. Resizing or rotating, and leaving and re-entering fullscreen, do not crash.
 
-#### Status (2026-11-14): imported (merge `8b7f0ebab3`); both backends and the main UI with a separate render window work on screen; Render to Main Window to be avoided on Lomiri
+#### Status (2026-11-14): done (closed by the user). Both backends and the main UI with a separate render window work on screen; Render to Main Window is avoided on Lomiri
 
 Notes: `stage2-wayland.md`.
 
@@ -194,26 +194,42 @@ Found:
 - **Screensaver inhibit fails** (`org.freedesktop.ScreenSaver` has no `Inhibit` on Ubuntu Touch): the display may dim during play (stage 3).
 - **Volume keys:** Dolphin's PulseAudio stream had no media role, so Ubuntu Touch's role-based volume (the keys change the multimedia role) never applied, and it played loud. Fixed with `PULSE_PROP="media.role=multimedia"` in the launcher; the click launcher must set it too (stage 5).
 
-### 3. Usable on a phone
+### 3. A touch-first QML frontend (replaces "Usable on a phone")
 
-Goal: someone can pick up the phone and play, without a keyboard and mouse.
+Goal: someone can pick up the phone and play, without a keyboard and mouse, in a frontend modeled on the Android app.
 
-Planned steps:
-1. **Controllers.** evdev and SDL3 for Bluetooth and USB gamepads, with default mappings. USB OTG works on this phone. A DualShock 4 clone is rejected by the 5.4 kernel's `hid-sony` (stage 1); try SDL3's HIDAPI over libusb for it, or leave it to a stone-ut kernel patch. The input nodes need `android_input`: phablet has it, but a confined click app does not (stage 5).
-2. **Touch controls.** An on-screen GameCube controller (and later Wiimote) overlay drawn by the frontend. It feeds Dolphin's existing `InputOverrider` / Touch device, the same C++ the Android overlay uses. The Android Kotlin overlay is the design reference, not code to copy.
-3. **Window and lifecycle.** Landscape lock while a game runs. Keep the display on: Dolphin's D-Bus screensaver inhibit fails on Ubuntu Touch (stage 2), so use Lomiri's own keep-display-on interface. Decide stop behavior: Qt's Confirm on Stop dialog pauses emulation until answered (stage 2). Pause emulation when the app loses focus: Lomiri suspends unfocused confined apps, so a suspended emulator must not lose audio or time sync badly. Handle the on-screen keyboard (maliit) for the few text fields.
-4. **UI scaling.** Make the Qt Widgets UI usable at 1080×2400 and 440 dpi (`QT_SCALE_FACTOR`, larger hit targets in the game list). It is a stopgap until the QML frontend (stage 6). The user tested the stock UI over Xwayland (stage 1 S1-M3): it works with touch but is far too small to ship.
-5. **Files.** Where games, saves and the user directory live (`~/.local/share/<app id>/` inside confinement). How games get there (content-hub import, MTP into an app folder, microSD).
-6. **Default settings for this phone.** Ship a default `Dolphin.ini` with `CPUThread = True` (dual core) and `RenderToMain = False` (stage 2: Render to Main Window puts the game in a Wayland subsurface, which crashed once on fullscreen and leaves a stale frame on Lomiri). Upstream enables it by default only on Android. Leave everything that changes emulated behavior to the user.
+**Changed 2026-11-14 (user decision):** the desktop Widgets UI is not adapted. A reimplementation of the Android app's layout in Qt Quick (QML) replaces it, and the QML item of stage 6 moves here. Full sub-roadmap: **`stage3-roadmap.md`**.
 
-Exit: a game can be started, played with touch or a gamepad, paused by switching apps, and resumed.
+| Phase | What |
+| --- | --- |
+| 3.0 Foundations and window spike | `Source/Core/DolphinUT/` (new frontend, target `dolphin-ut`), QML shell with an OpenGL ES surface format, `Host_*` functions; decide how the game picture and the touch overlay share the screen without a Wayland subsurface (recommended: overlay drawn by Dolphin's on-screen UI); Lomiri checks (orientation, keep-display-on, app state, haptics, keyboard) |
+| 3.1 Game library | cover grid with platform tabs, details, folders, over `UICommon::GameFileCache` |
+| 3.2 Emulation screen and lifecycle | boot, resize and rotation, landscape lock, keep-display-on, pause on suspend, resume |
+| 3.3 Touch overlay | GameCube, Wii Remote, Nunchuk, Classic layouts with the Android button graphics, through `InputOverrider`; edit mode, scale, opacity, haptics |
+| 3.4 In-game menu | Android's `MenuFragment`: pause, screenshot, save/load states, overlay, settings, Wii Remotes, disc, reset, exit (no Confirm on Stop) |
+| 3.5 Controllers and mapping | SDL3 and evdev, default mappings for known pads, an Android-style mapping UI and profiles |
+| 3.6 Settings | a settings model over `Config::Info`; a first pass of the settings that matter on a phone, in the Android menu structure; per-game settings |
+| 3.7 Files and storage | confined user folder, game import through content-hub, MTP and microSD |
+| 3.8 Defaults for this phone | dual core, Vulkan (OpenGL ES fallback), launcher environment; settings that change emulated behavior stay upstream's |
+
+Removed from the old stage 3: Widgets UI scaling, `RenderToMain` as a shipped default, Confirm on Stop handling. Deferred to after stage 3: cheats, Riivolution, Skylanders and Infinity Base, NetPlay, achievements, GBA link, disc conversion, system update, TV layout, translations of the new strings.
+
+Status (2026-11-15): 3.0 nearly done (`stage3.0-foundations.md`).
+- Spike A (the overlay drawn by Dolphin's ImGui on-screen UI, no subsurface) passed the on-screen tests with both backends: touch controls, landscape, pause on app switch, screen kept on, one spread entry, Exit. **A is recommended for the user's decision.**
+- Fixed and waiting for a re-test:
+  - the Wii D-pad was 90° off (the profile has desktop Dolphin's default Nunchuk); the overlay now follows the configured extension;
+  - Vibrate, now through hfd-service, as there is no Qt 6 haptics plugin.
+- The user prefers the native Ubuntu Touch look (Lomiri Components) over Material.
+- Newer SMB runs at a steady 60 fps on Vulkan in single core; Need for Speed: Most Wanted at 50–60 % (stage 4). A save-state-based single vs dual core measurement is open (S3.0-M6).
+
+Exit: from a fresh install, a GameCube and a Wii game start from the library, play with touch and with a Bluetooth gamepad, survive switching apps and rotation, save and load states from the in-game menu, and exit to the library, with no stale frames, hangs or crashes.
 
 ### 4. Performance and correctness on Adreno 619
 
 Goal: know what runs well, and why the rest does not.
 
 Planned steps:
-1. Compare GLES and Vulkan on a fixed set of games and scenes at 1× internal resolution. Measure frame time, shader stutter (ubershaders, asynchronous compilation, the shader cache across runs), CPU and GPU clocks, and temperature over 15 minutes. `../stone-ut/tools/phone-debug/fps-panel.py` already reads panel vsync and KGSL load.
+1. Compare GLES and Vulkan on a fixed set of games and scenes at 1× internal resolution, each scene started from a save state (`dolphin-ut --state-slot N`, with the `perf:` log line every 5 s; 3.0). Single vs dual core (`-C Dolphin.Core.CPUThread=…`) on the same scenes. First data point: Need for Speed: Most Wanted (GameCube) at 50–60 % in races on Vulkan, single core, where Dolphin MMJ on Android reached full speed some years ago. Measure frame time, shader stutter (ubershaders, asynchronous compilation, the shader cache across runs), CPU and GPU clocks, and temperature over 15 minutes. `../stone-ut/tools/phone-debug/fps-panel.py` already reads panel vsync and KGSL load.
 2. Frame pacing: 60 Hz games on a 120 Hz Mir output, and the 60 Hz system setting (`stone-refresh-rate 60`), compared.
 3. CPU placement: whether the CPU and GPU threads land on the A78 cores, and whether the scheduler or the GPU governor (`mod_percent`) needs a hint while a game runs.
 4. GPU driver workarounds: list where this phone's blob shows the bugs that `DriverDetails.cpp` guards only on Android (risk 6). Report results to the user, who decides whether and how the fork changes those entries.
@@ -225,7 +241,7 @@ Exit: a results table per game and backend, and a recommended default backend an
 Goal: an installable click package.
 
 Planned steps:
-1. A clickable project (`clickable.yaml`, CMake builder, arm64, framework `ubuntu-touch-24.04-1.x` or whatever the phone reports). Bundle Dolphin's `Sys/` data and the libraries the system does not provide. That includes Qt 6's `wayland-shell-integration/libxdg-shell.so` and `libQt6WlShellIntegration.so.6` from UBports' `libqt6wlshellintegration6` (same Qt 6.10.2), with `QT_PLUGIN_PATH` set by the launcher. The system has no Qt 6 shell plugin (stage 0).
+1. A clickable project (`clickable.yaml`, CMake builder, arm64, framework `ubuntu-touch-24.04-1.x` or whatever the phone reports). The app it launches is the QML frontend `dolphin-ut` (stage 3); DolphinQt is not shipped. Bundle Dolphin's `Sys/` data and the libraries the system does not provide. That includes Qt 6's `wayland-shell-integration/libxdg-shell.so` and `libQt6WlShellIntegration.so.6` from UBports' `libqt6wlshellintegration6` (same Qt 6.10.2), with `QT_PLUGIN_PATH` set by the launcher. The system has no Qt 6 shell plugin (stage 0).
 2. AppArmor. Likely policy groups: `audio`, `keep-display-on`, `content_exchange`, plus OpenGL/Wayland, which the default template allows. Gamepad access to `/dev/input/event*` is not in any policy group. Options: the `unconfined` template (OpenStore allows it with a justification), or a narrower custom rule. Decide after stage 3 shows exactly what is needed. Check whether the JIT's RWX/`mprotect` use triggers any denial.
 3. Desktop file: `X-Lomiri-Touch=true`, and a lifecycle exemption if one is needed for audio while paused. The launcher must export `PULSE_PROP="media.role=multimedia"` (stage 2: otherwise the volume keys do not apply) and `QT_PLUGIN_PATH` for the bundled xdg-shell plugin.
 4. GPL compliance: link to the exact source commit of this fork in the package and on the OpenStore page.
@@ -235,8 +251,7 @@ Exit: the click installs from a file on a clean user account, and games run with
 
 ### 6. Later (optional)
 
-- **Design constraint from stage 2:** give the game picture its own top-level Wayland surface, not a subsurface of the QML window (Lomiri/Mir 1.8 mishandles subsurfaces: a stale frame after destroy, and a crash when the surface moved). Draw on-screen controls and an in-game menu (like the Android app's) into the game picture with Dolphin's on-screen UI, or in the same top-level window, not as a separate subsurface.
-- **Required (user decision, 2026-11-14): a QML (Qt Quick) touch-first frontend** for the game list, settings and in-game controls, so it is no longer optional. It would reuse `UICommon` and `Core`, with Qt Widgets kept for advanced settings until replaced. Prerequisite: clear Qt 6's `Cannot find EGLConfig` / `EGL error 0x3005` on this phone, probably by forcing an OpenGL ES default `QSurfaceFormat`. Qt Quick renders through that path (stage 1 S1-M2).
+- The QML frontend moved to stage 3 (`stage3-roadmap.md`). The deferred Android features (cheats, Riivolution, Skylanders and Infinity Base, NetPlay, achievements, GBA link, disc conversion, system update, TV layout) are listed there.
 - Wii Remote support: Bluetooth passthrough is unlikely on a Halium BlueZ stack. Emulated Wiimote with the touch overlay and motion from the phone's sensors (sensorfw) is the practical route.
 - A newer Vulkan, if Dolphin features need it. The A619 gets Vulkan 1.3 from newer Adreno drivers, but replacing vendor GPU blobs is risky (`roadmap-hardware-2.md` item 10). Mesa turnip with the KGSL backend is a research project of its own.
 - Feeding Ubuntu Touch findings back to #14962 (or its successor): as reports by the user on the PR, not as agent pull requests.
@@ -264,7 +279,7 @@ Exit: the click installs from a file on a clean user account, and games run with
 | Build | top-level `CMakeLists.txt`, `CMake/FindWayland.cmake`, `CMake/WaylandProtocols.cmake`, `Externals/wayland-protocols/` | #14962 |
 | Qt platform | `Source/Core/DolphinQt/Main.cpp`, `MainWindow.cpp`, `RenderWidget.cpp` | #14962, plus a port commit for `ubuntumirclient` |
 | NoGUI Wayland window (fallback only) | `Source/Core/DolphinNoGUI/PlatformWayland.cpp` | ported from ROCKNIX 015 if needed |
-| Touch overlay, scaling, lifecycle | new frontend code under `Source/Core/DolphinQt/` (or a separate frontend), using `InputCommon/ControllerInterface/Touch` | port |
+| QML frontend: library, emulation screen, touch overlay, in-game menu, mapping, settings | new `Source/Core/DolphinUT/` (target `dolphin-ut`), using `UICommon`, `Core`, `InputCommon/ControllerInterface/Touch` (`InputOverrider`); possibly a small overlay renderer in `VideoCommon` (stage 3.0 decision) | port |
 | Packaging | new `ut/` directory: clickable config, AppArmor, desktop file, build scripts | port |
 | Docs | this folder | port |
 
