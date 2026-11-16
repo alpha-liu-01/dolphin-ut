@@ -3,7 +3,8 @@
 //     [--test-arg GAME_PATH] --grab /home/phablet/dolphin-ut-probe/page.png --grab-after 6000
 // NAME: details (needs GAME_PATH), folders, picker, developer, controllers, gcport, wiimote,
 // mapping-gc, mapping-wii, settings:<MENU TAG>, game-settings (--test-arg GAMEID),
-// settings-roundtrip; anything else shows the library.
+// settings-roundtrip, file-picker, import, userdata, paths-roundtrip, sd-roundtrip; anything else
+// shows the library.
 import QtQuick
 import QtQuick.Window
 import Lomiri.Components
@@ -57,6 +58,27 @@ Window {
             }
             else if (page === "wiimote") stack.push(base + "WiimotePage.qml", { wiimote: 0 })
             else if (page === "mapping-gc") stack.push(base + "MappingPage.qml", { mapping: controllers.mapping("gcpad", 0) })
+            else if (page === "file-picker") stack.push(base + "FolderPickerPage.qml", { title: "Open File", pickFiles: true, extensions: ["iso", "rvz", "wbfs", "gcm"], startFolder: arg })
+            else if (page === "import") stack.push(base + "ImportPage.qml")
+            else if (page === "userdata") stack.push(base + "UserDataPage.qml")
+            else if (page === "paths-roundtrip") {
+                // A path setting (3.7): set, read back, reset (--test-arg FOLDER).
+                const name = "StringSetting.MAIN_DUMP_PATH"
+                console.log("PATHS default " + settingsModel.value(name))
+                settingsModel.setValue(name, arg)
+                console.log("PATHS set " + settingsModel.value(name) + " frames folder " + storage.exists(arg + "/Frames"))
+                settingsModel.setValue(name, "")
+                console.log("PATHS reset " + settingsModel.value(name))
+                console.log("PATHS sd image " + settingsModel.value("StringSetting.MAIN_WII_SD_CARD_IMAGE_PATH") + " places " + JSON.stringify(storage.places().map(p => p.name)))
+            }
+            else if (page === "sd-roundtrip") {
+                // The Wii SD card actions: pack the sync folder into the image, then unpack it.
+                settingsModel.actionFinished.connect(function (action, ok) {
+                    console.log("SD " + action + " " + ok)
+                    if (action === "sd_pack") settingsModel.runAction("sd_unpack")
+                })
+                console.log("SD start " + settingsModel.runAction("sd_pack"))
+            }
             else if (page.startsWith("settings:")) stack.push(base + "SettingsPage.qml", { menuTag: page.substring(9) })
             else if (page === "game-settings") {
                 // --test-arg GAMEID: that game's settings

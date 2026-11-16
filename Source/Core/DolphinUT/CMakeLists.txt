@@ -24,6 +24,8 @@ add_executable(dolphin-ut
   SettingsModel.cpp
   SettingsModel.h
   SettingsTable.inc
+  Storage.cpp
+  Storage.h
   OverlayLayout.h
   OverlayDefaults.inc
   TouchOverlay.cpp
@@ -78,6 +80,8 @@ qt_add_qml_module(dolphin-ut
     qml/WiimotePage.qml
     qml/MappingPage.qml
     qml/SettingsPage.qml
+    qml/ImportPage.qml
+    qml/UserDataPage.qml
 )
 
 target_include_directories(dolphin-ut PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS})

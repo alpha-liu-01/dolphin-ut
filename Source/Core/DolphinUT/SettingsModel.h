@@ -6,6 +6,7 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <thread>
 
 #include <QJsonObject>
 #include <QObject>
@@ -24,6 +25,7 @@ class SettingsModel : public QObject
   // Bumped on every change, so QML bindings that read values re-evaluate.
   Q_PROPERTY(int revision READ GetRevision NOTIFY changed)
   Q_PROPERTY(QString gameId READ GetGameId NOTIFY gameChanged)
+  Q_PROPERTY(bool busy READ IsBusy NOTIFY busyChanged)
 
 public:
   // game: the game's layer (LocalGame); otherwise the base layer, or the current run's when a
@@ -37,6 +39,7 @@ public:
   };
 
   explicit SettingsModel(QObject* parent = nullptr);
+  ~SettingsModel() override;
 
   int GetRevision() const { return m_revision; }
   QString GetGameId() const { return m_game_id; }
@@ -57,9 +60,16 @@ public:
   // The Android app's "Clear Game Settings": deletes the user's GameSettings/<ID>.ini.
   Q_INVOKABLE bool clearGameSettings(const QString& game_id);
 
+  // The menus' actions (stage 3.7): "sd_pack", "sd_unpack" (the Wii SD card image and its sync
+  // folder). On a worker thread; actionFinished reports the result.
+  Q_INVOKABLE bool runAction(const QString& action);
+  bool IsBusy() const { return m_busy; }
+
 signals:
   void changed();
   void gameChanged();
+  void busyChanged();
+  void actionFinished(const QString& action, bool ok);
 
 private:
   void Changed();
@@ -68,4 +78,6 @@ private:
   std::map<std::string, Binding> m_bindings;
   QString m_game_id;
   int m_revision = 0;
+  bool m_busy = false;
+  std::thread m_action_thread;
 };

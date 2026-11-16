@@ -25,6 +25,7 @@
 #include "DolphinUT/Emulator.h"
 #include "DolphinUT/GameList.h"
 #include "DolphinUT/SettingsModel.h"
+#include "DolphinUT/Storage.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
 
@@ -134,20 +135,23 @@ int main(int argc, char** argv)
   // scale factor on top of that scales everything twice (docs/ut-port/stage3.1-library.md).
   UseOpenGLES();
 
-  QCoreApplication::setOrganizationName(QStringLiteral("Dolphin Emulator"));
-  QCoreApplication::setOrganizationDomain(QStringLiteral("dolphin-emu.org"));
-  QCoreApplication::setApplicationName(QStringLiteral("dolphin-ut"));
+  // Started by Lomiri (APP_ID set): Qt's settings and caches, and Dolphin's user folder, go to the
+  // app's own folders, which a confined click may write (stage 3.7).
+  Storage::ConfigureApplication();
   QGuiApplication app(argc, argv);
 
   Common::RegisterMsgAlertHandler(OnMsgAlert);
   AddCommandLineConfigLayer(argc, argv);
-  UICommon::SetUserDirectory(ArgumentValue(argc, argv, "-u", "--user"));
+  UICommon::SetUserDirectory(Storage::UserFolder(ArgumentValue(argc, argv, "-u", "--user")));
   UICommon::CreateDirectories();
   UICommon::Init();
 
   LomiriIntegration lomiri;
   Emulator emulator(&lomiri);
 
+  // Shared folders, the screenshot folder, and the games folder in the library (before its scan).
+  Storage::SetUp();
+  Storage storage;
   GameListModel game_list;
   Controllers controllers;
   SettingsModel settings_model;
@@ -162,6 +166,7 @@ int main(int argc, char** argv)
   engine.rootContext()->setContextProperty(QStringLiteral("controllers"), &controllers);
   engine.rootContext()->setContextProperty(QStringLiteral("settingsModel"), &settings_model);
   engine.rootContext()->setContextProperty(QStringLiteral("lomiri"), &lomiri);
+  engine.rootContext()->setContextProperty(QStringLiteral("storage"), &storage);
   // Development: --qml FILE loads that file instead of the app's UI (the phone has no Qt 6 qml
   // runtime), with the same context objects.
   const std::string qml_file = ArgumentValue(argc, argv, nullptr, "--qml");

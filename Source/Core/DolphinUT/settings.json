@@ -79,6 +79,12 @@
      "type": "submenu",
      "title": "Debug",
      "menu": "DEBUG"
+    },
+    {
+     "type": "page",
+     "title": "User Data",
+     "page": "UserDataPage.qml",
+     "globalOnly": true
     }
    ],
    "title": "Config"
@@ -257,6 +263,69 @@
      "title": "Search Subfolders for Game Files",
      "description": "",
      "inverted": false
+    },
+    {
+     "type": "file",
+     "setting": "StringSetting.MAIN_DEFAULT_ISO",
+     "title": "Default ISO",
+     "description": "",
+     "extensions": [
+      "gcm",
+      "tgc",
+      "bin",
+      "iso",
+      "ciso",
+      "gcz",
+      "wbfs",
+      "wia",
+      "rvz",
+      "nfs",
+      "wad",
+      "dol",
+      "elf",
+      "json"
+     ],
+     "globalOnly": true
+    },
+    {
+     "type": "folder",
+     "setting": "StringSetting.MAIN_FS_PATH",
+     "title": "Wii NAND Root",
+     "description": "",
+     "extensions": [],
+     "globalOnly": true
+    },
+    {
+     "type": "folder",
+     "setting": "StringSetting.MAIN_DUMP_PATH",
+     "title": "Dump Path",
+     "description": "",
+     "extensions": [],
+     "globalOnly": true
+    },
+    {
+     "type": "folder",
+     "setting": "StringSetting.MAIN_LOAD_PATH",
+     "title": "Load Path",
+     "description": "",
+     "extensions": [],
+     "globalOnly": true
+    },
+    {
+     "type": "folder",
+     "setting": "StringSetting.MAIN_RESOURCEPACK_PATH",
+     "title": "Resource Pack Path",
+     "description": "",
+     "extensions": [],
+     "globalOnly": true
+    },
+    {
+     "type": "folder",
+     "setting": "StringSetting.MAIN_WFS_PATH",
+     "title": "WFS Path",
+     "description": "",
+     "extensions": [],
+     "globalOnly": true
     }
    ],
    "title": "Paths"
@@ -363,6 +432,40 @@
     {
      "type": "header",
      "title": "GBA Settings"
+    },
+    {
+     "type": "file",
+     "setting": "StringSetting.MAIN_GBA_BIOS_PATH",
+     "title": "BIOS",
+     "description": "",
+     "extensions": [
+      "bin"
+     ],
+     "globalOnly": true
+    },
+    {
+     "type": "file",
+     "setting": "StringSetting.MAIN_GB_PLAYER_ROM",
+     "title": "Game Boy Player ROM",
+     "description": "",
+     "extensions": [
+      "gba",
+      "gbc",
+      "gb",
+      "agb",
+      "mb",
+      "rom",
+      "bin"
+     ],
+     "globalOnly": true
+    },
+    {
+     "type": "folder",
+     "setting": "StringSetting.MAIN_GBA_SAVES_PATH",
+     "title": "Saves",
+     "description": "",
+     "extensions": [],
+     "globalOnly": true
     }
    ],
    "title": "GameCube"
@@ -471,6 +574,40 @@
      "title": "Automatically Sync with Folder",
      "description": "Synchronizes the SD Card with the SD Sync Folder when starting and ending emulation.",
      "inverted": false
+    },
+    {
+     "type": "file",
+     "setting": "StringSetting.MAIN_WII_SD_CARD_IMAGE_PATH",
+     "title": "SD Card Path",
+     "description": "",
+     "extensions": [
+      "raw"
+     ],
+     "globalOnly": true
+    },
+    {
+     "type": "folder",
+     "setting": "StringSetting.MAIN_WII_SD_CARD_SYNC_FOLDER_PATH",
+     "title": "SD Sync Folder",
+     "description": "",
+     "extensions": [],
+     "globalOnly": true
+    },
+    {
+     "type": "action",
+     "action": "sd_pack",
+     "title": "Pack SD Card Now",
+     "description": "",
+     "confirmation": "You are about to pack the content of the SD sync folder into the SD card file. All current content of the file will be deleted. Are you sure you want to continue?",
+     "globalOnly": true
+    },
+    {
+     "type": "action",
+     "action": "sd_unpack",
+     "title": "Unpack SD Card Now",
+     "description": "",
+     "confirmation": "You are about to unpack the content of the SD card file into the SD sync folder. All current content of the folder will be deleted. Are you sure you want to continue?",
+     "globalOnly": true
     },
     {
      "type": "header",
@@ -2984,6 +3121,66 @@
    "expression": "0x58",
    "core": true
   },
+  "StringSetting.MAIN_DEFAULT_ISO": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "DefaultISO",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "StringSetting.MAIN_DUMP_PATH": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "General",
+   "key": "DumpPath",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "StringSetting.MAIN_FS_PATH": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "General",
+   "key": "NANDRootPath",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "StringSetting.MAIN_GBA_BIOS_PATH": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "GBA",
+   "key": "BIOS",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "StringSetting.MAIN_GBA_SAVES_PATH": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "GBA",
+   "key": "SavesPath",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "StringSetting.MAIN_GB_PLAYER_ROM": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "GBA",
+   "key": "GBPlayerRom",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
+   "core": false
+  },
   "StringSetting.MAIN_GFX_BACKEND": {
    "type": "string",
    "file": "Dolphin",
@@ -2992,6 +3189,56 @@
    "default": null,
    "dynamic": true,
    "expression": "NativeLibrary.GetDefaultGraphicsBackendConfigName()",
+   "core": true
+  },
+  "StringSetting.MAIN_LOAD_PATH": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "General",
+   "key": "LoadPath",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "StringSetting.MAIN_RESOURCEPACK_PATH": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "General",
+   "key": "ResourcePackPath",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "StringSetting.MAIN_WFS_PATH": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "General",
+   "key": "WFSPath",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "StringSetting.MAIN_WII_SD_CARD_IMAGE_PATH": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "General",
+   "key": "WiiSDCardPath",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "StringSetting.MAIN_WII_SD_CARD_SYNC_FOLDER_PATH": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "General",
+   "key": "WiiSDCardSyncFolder",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
    "core": true
   },
   "Virtual.CPU_BOOST": {
@@ -3047,11 +3294,6 @@
  },
  "skipped": [
   {
-   "menu": "CONFIG",
-   "kind": "RunRunnable",
-   "title": "User Data"
-  },
-  {
    "menu": "CONFIG_GENERAL",
    "kind": "RunRunnable",
    "title": "Generate a New Statistics Identity"
@@ -3075,71 +3317,6 @@
    "menu": "CONFIG_INTERFACE",
    "kind": "SwitchSetting",
    "title": "Use Black Backgrounds"
-  },
-  {
-   "menu": "CONFIG_PATHS",
-   "kind": "FilePicker",
-   "title": "Default ISO"
-  },
-  {
-   "menu": "CONFIG_PATHS",
-   "kind": "DirectoryPicker",
-   "title": "Wii NAND Root"
-  },
-  {
-   "menu": "CONFIG_PATHS",
-   "kind": "DirectoryPicker",
-   "title": "Dump Path"
-  },
-  {
-   "menu": "CONFIG_PATHS",
-   "kind": "DirectoryPicker",
-   "title": "Load Path"
-  },
-  {
-   "menu": "CONFIG_PATHS",
-   "kind": "DirectoryPicker",
-   "title": "Resource Pack Path"
-  },
-  {
-   "menu": "CONFIG_PATHS",
-   "kind": "DirectoryPicker",
-   "title": "WFS Path"
-  },
-  {
-   "menu": "CONFIG_GAME_CUBE",
-   "kind": "FilePicker",
-   "title": "BIOS"
-  },
-  {
-   "menu": "CONFIG_GAME_CUBE",
-   "kind": "FilePicker",
-   "title": "Game Boy Player ROM"
-  },
-  {
-   "menu": "CONFIG_GAME_CUBE",
-   "kind": "DirectoryPicker",
-   "title": "Saves"
-  },
-  {
-   "menu": "CONFIG_WII",
-   "kind": "FilePicker",
-   "title": "SD Card Path"
-  },
-  {
-   "menu": "CONFIG_WII",
-   "kind": "DirectoryPicker",
-   "title": "SD Sync Folder"
-  },
-  {
-   "menu": "CONFIG_WII",
-   "kind": "RunRunnable",
-   "title": "Pack SD Card Now"
-  },
-  {
-   "menu": "CONFIG_WII",
-   "kind": "RunRunnable",
-   "title": "Unpack SD Card Now"
   },
   {
    "menu": "CONFIG_ACHIEVEMENTS",

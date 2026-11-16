@@ -155,6 +155,22 @@ def number(arg):
     return value
 
 
+# The file filters of the Android app's pickers (SettingsActivityResultLaunchers, FileBrowserHelper).
+PICKER_EXTENSIONS = {
+    "requestGameFile": ["gcm", "tgc", "bin", "iso", "ciso", "gcz", "wbfs", "wia", "rvz", "nfs",
+                        "wad", "dol", "elf", "json"],
+    "requestGbaRomFile": ["gba", "gbc", "gb", "agb", "mb", "rom", "bin"],
+    "requestBinFile": ["bin"],
+    "requestRawFile": ["raw"],
+    "requestDirectory": [],
+}
+# Actions the port implements (SettingsModel::runAction), or the page it opens instead.
+RUNNABLE_ACTIONS = {
+    "UserDataActivity.launch": "UserDataPage.qml",
+    "syncSdFolderToSdImage": "sd_pack",
+    "syncSdImageToSdFolder": "sd_unpack",
+}
+
 presenter = (settings_dir / "ui/SettingsFragmentPresenter.kt").read_text()
 tags = dict(re.findall(r"MenuTag\.(\w+) -> (add\w+Settings)\(sl\)", presenter))
 
@@ -180,8 +196,10 @@ for tag, function in tags.items():
     items = []
     for add in re.finditer(r"sl\.add\(\s*(\w+)\(", body):
         kind = add.group(1)
-        args_text, _ = balanced(body, body.index("(", add.end() - 1))
+        args_text, args_end = balanced(body, body.index("(", add.end() - 1))
         args = split_args(args_text)
+        # RunRunnable's action is a trailing lambda: `RunRunnable(...) { ... })`.
+        trailing = body[args_end + 1:body.find("\n        sl.add", args_end)]
         setting = next((a for a in args if re.fullmatch(r"(Boolean|Int|Float|String)Setting\.\w+", a)),
                        None)
         item = None
@@ -217,6 +235,21 @@ for tag, function in tags.items():
                 item = {"type": "submenu", "title": res_string(args[1]), "menu": target.group(1)}
         elif kind == "HeaderSetting" and len(args) >= 2:
             item = {"type": "header", "title": res_string(args[1])}
+        elif kind in ("FilePicker", "DirectoryPicker") and setting and len(args) >= 5:
+            # Paths (stage 3.7): the port's file browser; global only, as paths do not belong to a game.
+            launcher = args[4].rsplit(".", 1)[-1]
+            item = {"type": "folder" if kind == "DirectoryPicker" else "file", "setting": setting,
+                    "title": res_string(args[2]), "description": res_string(args[3]),
+                    "extensions": PICKER_EXTENSIONS.get(launcher, []), "globalOnly": True}
+        elif kind == "RunRunnable" and len(args) >= 4:
+            action = next((a for key, a in RUNNABLE_ACTIONS.items() if key in trailing), None)
+            if action and action.endswith(".qml"):
+                item = {"type": "page", "title": res_string(args[1]), "page": action,
+                        "globalOnly": True}
+            elif action:
+                item = {"type": "action", "action": action, "title": res_string(args[1]),
+                        "description": res_string(args[2]), "confirmation": res_string(args[3]),
+                        "globalOnly": True}
         if item is None:
             skipped.append({"menu": tag, "kind": kind,
                             "title": next((res_string(a) for a in args if a.startswith("R.string.")), "")})

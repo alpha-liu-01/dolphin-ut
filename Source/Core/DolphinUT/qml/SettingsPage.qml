@@ -26,6 +26,13 @@ Page {
         subtitle: page.gameMode ? "Game settings: " + (page.gameTitle || settingsModel.gameId) : ""
     }
 
+    // Only the page that started an action shows its result (the menus above it are pages too).
+    property bool waitingForAction: false
+    function runAction(action) {
+        if (settingsModel.runAction(action))
+            waitingForAction = true
+    }
+
     function valueOf(name) {
         settingsModel.revision  // re-evaluate on changes
         return settingsModel.value(name)
@@ -85,6 +92,9 @@ Page {
                         case "choice": return choiceItem
                         case "slider": return sliderItem
                         case "text": return textItem
+                        case "file": return pathItem
+                        case "folder": return pathItem
+                        case "action": return actionItem
                         }
                         return null
                     }
@@ -253,6 +263,134 @@ Page {
                     onAccepted: settingsModel.setValue(entry.setting, text)
                 }
             }
+        }
+    }
+
+    // A path (stage 3.7): the port's file browser. Press and hold goes back to Dolphin's default.
+    Component {
+        id: pathItem
+        SettingItem {
+            id: pathRow
+            readonly property string path: String(page.valueOf(entry.setting))
+            height: pathLayout.height + (divider.visible ? divider.height : 0)
+            onClicked: {
+                const slash = pathRow.path.lastIndexOf("/")
+                const start = entry.type === "folder" ? pathRow.path : (slash > 0 ? pathRow.path.substring(0, slash) : "")
+                const picker = pageStack.push(Qt.resolvedUrl("FolderPickerPage.qml"), {
+                    title: entry.title,
+                    pickFiles: entry.type === "file",
+                    extensions: entry.extensions || [],
+                    startFolder: storage.exists(start) ? start : "",
+                    hint: entry.type === "file" ? "Open the folder with the file, then tap it." :
+                                                  "Open the folder, then tap ✓ to use it."
+                })
+                picker.picked.connect(function (chosen) { settingsModel.setValue(entry.setting, chosen) })
+            }
+            onPressAndHold: PopupUtils.open(resetPathDialog, page, { entry: entry })
+            ListItemLayout {
+                id: pathLayout
+                title.text: entry.title
+                subtitle.text: (pathRow.path !== "" ? pathRow.path : "Not set") +
+                               (entry.description ? "\n" + entry.description : "")
+                subtitle.maximumLineCount: 4
+                subtitle.wrapMode: Text.WrapAnywhere
+                ProgressionSlot {}
+            }
+        }
+    }
+
+    Component {
+        id: resetPathDialog
+        Dialog {
+            id: dialog
+            property var entry
+            title: entry.title
+            text: "Go back to the default?"
+            Button {
+                text: "Reset"
+                color: theme.palette.normal.negative
+                onClicked: {
+                    settingsModel.setValue(dialog.entry.setting, "")
+                    PopupUtils.close(dialog)
+                }
+            }
+            Button {
+                text: "Cancel"
+                onClicked: PopupUtils.close(dialog)
+            }
+        }
+    }
+
+    // An action (the Android app's RunRunnable items): a confirmation, then a result.
+    Component {
+        id: actionItem
+        ListItem {
+            readonly property var entry: parent ? parent.entry : ({})
+            height: actionLayout.height + (divider.visible ? divider.height : 0)
+            enabled: !settingsModel.busy
+            onClicked: {
+                if (entry.confirmation)
+                    PopupUtils.open(confirmActionDialog, page, { entry: entry })
+                else
+                    page.runAction(entry.action)
+            }
+            ListItemLayout {
+                id: actionLayout
+                title.text: entry.title
+                subtitle.text: entry.description
+                subtitle.wrapMode: Text.Wrap
+                ActivityIndicator {
+                    SlotsLayout.position: SlotsLayout.Trailing
+                    running: settingsModel.busy
+                    visible: running
+                }
+            }
+        }
+    }
+
+    Component {
+        id: confirmActionDialog
+        Dialog {
+            id: dialog
+            property var entry
+            title: entry.title
+            text: entry.confirmation
+            Button {
+                text: "Yes"
+                color: theme.palette.normal.positive
+                onClicked: {
+                    page.runAction(dialog.entry.action)
+                    PopupUtils.close(dialog)
+                }
+            }
+            Button {
+                text: "No"
+                onClicked: PopupUtils.close(dialog)
+            }
+        }
+    }
+
+    Component {
+        id: actionResultDialog
+        Dialog {
+            id: dialog
+            property bool ok
+            title: ok ? "Done" : "Failed"
+            text: ok ? "" : "See the log on the Developer page."
+            Button {
+                text: "OK"
+                onClicked: PopupUtils.close(dialog)
+            }
+        }
+    }
+
+    Connections {
+        target: settingsModel
+        function onActionFinished(action, ok) {
+            if (!page.waitingForAction)
+                return
+            page.waitingForAction = false
+            PopupUtils.open(actionResultDialog, page, { ok: ok })
         }
     }
 

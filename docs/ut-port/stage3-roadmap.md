@@ -330,6 +330,18 @@ Steps:
 
 Exit: a game copied from a PC over MTP, or shared from the File Manager, shows up in the library and runs, all inside confinement (with stage 5's AppArmor profile, or `unconfined` while developing).
 
+#### Status (2026-11-16): done (on-screen tests passed); a re-test of the single-instance fix is open
+
+Notes: `stage3.7-storage.md`.
+- **On-screen tests passed** (M1–M7), a microSD card included. Two findings: the save state items need Enable Savestates, which the new user folder had off (expected; the 3.8 decision); and the development entry started a new copy on each launch or Share, fixed with `X-Lomiri-Single-Instance=true`.
+- **~/Documents is the shared folder:** MTP shows it, and a click may read and write it with `document_files` (also `<card>/Documents`). Nothing lets a click read ~/Downloads. Games go in **~/Documents/Dolphin/Games**, created and added to the library once.
+- **User folder:** `~/.local/share/<package>/` when Lomiri starts the app (`APP_ID`), one folder as on Android. Qt's settings go in `~/.config/<package>/`. `-u` still wins.
+- **Screenshots:** ~/Pictures/Dolphin/<game ID>/, for the Gallery.
+- **content-hub, both ways:** Import Games in the library, and Share in the File Manager. A file on the same storage arrives as a hard link, so it takes no time or extra space.
+- **Pickers:** a general file and folder browser with places (games, Documents, Downloads, home, cards), and Open File. The 3.6 path settings, Pack/Unpack SD Card and User Data are now in Settings.
+- **Development install:** `dev-install.sh` puts "Dolphin (dev)" in the app drawer and registers it with content-hub, ahead of stage 5's click.
+- Deferred: checking under the real AppArmor profile (stage 5), export and the zip import/export of user data, and the Wii file actions (Install WAD and others).
+
 ### 3.8 Defaults for this phone (small)
 
 Goal: a first launch that plays well without visiting the settings.

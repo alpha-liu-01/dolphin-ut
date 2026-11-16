@@ -13,7 +13,10 @@ Page {
         trailingActionBar.actions: Action {
             iconName: "add"
             text: "Add Folder"
-            onTriggered: pageStack.push(Qt.resolvedUrl("FolderPickerPage.qml"))
+            onTriggered: {
+                const picker = pageStack.push(Qt.resolvedUrl("FolderPickerPage.qml"))
+                picker.picked.connect(function (path) { gameList.addFolder(path) })
+            }
         }
     }
 
@@ -72,9 +75,11 @@ Page {
             padding: units.gu(2)
             wrapMode: Text.Wrap
             color: theme.palette.normal.backgroundSecondaryText
-            text: list.count === 0 ?
-                      "No folders yet. Add the folder with your games (ISO, GCM, RVZ, WBFS, WIA, GCZ, CISO, WAD, DOL, ELF)." :
-                      "Swipe a folder to the right to remove it. The games stay on the phone."
+            text: (list.count === 0 ?
+                       "No folders yet. Add the folder with your games (ISO, GCM, RVZ, WBFS, WIA, GCZ, CISO, WAD, DOL, ELF)." :
+                       "Swipe a folder to the right to remove it. The games stay on the phone.") +
+                  "\n\nFrom a computer, copy games over USB into Documents/Dolphin/Games on the phone (" +
+                  storage.gamesFolder + "). From other apps, use Import Games in the library."
         }
     }
 }

@@ -93,7 +93,7 @@ The generator lists what the generic page cannot show (`settings.json` → `skip
   - Default ISO, BIOS, Game Boy Player ROM, SD Card Path;
   - the Wii NAND root, Dump, Load, Resource Pack, WFS, GameCube saves and SD sync folders.
 
-  They belong with 3.7 (files and confinement). The ISO folders are already on the Game Folders page.
+  They belong with 3.7 (files and confinement). The ISO folders are already on the Game Folders page. **Done in 3.7**, with Pack/Unpack SD Card and User Data (`stage3.7-storage.md`).
 - **Others:**
   - log Verbosity (its list depends on the build);
   - the Real Balance Board switch;

@@ -29,6 +29,17 @@ Page {
 
     header: searching ? searchHeader : mainHeader
 
+    // The Android app's Open File: start a game file without adding its folder.
+    function openFile() {
+        const picker = pageStack.push(Qt.resolvedUrl("FolderPickerPage.qml"), {
+            title: "Open File",
+            pickFiles: true,
+            extensions: ["gcm", "tgc", "bin", "iso", "ciso", "gcz", "wbfs", "wia", "rvz", "nfs",
+                         "wad", "dol", "elf", "json"]
+        })
+        picker.picked.connect(function (path) { emulator.start(path) })
+    }
+
     PageHeader {
         id: mainHeader
 
@@ -60,6 +71,16 @@ Page {
                     iconName: "view-grid-symbolic"
                     text: "Grid Options"
                     onTriggered: PopupUtils.open(gridOptionsDialog, page)
+                },
+                Action {
+                    iconName: "import"
+                    text: "Import Games"
+                    onTriggered: pageStack.push(Qt.resolvedUrl("ImportPage.qml"))
+                },
+                Action {
+                    iconName: "document-open"
+                    text: "Open File"
+                    onTriggered: page.openFile()
                 },
                 Action {
                     iconName: "input-gaming-symbolic"
@@ -203,9 +224,16 @@ Page {
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.Wrap
             visible: !page.searching
-            text: gameList.folders.length === 0 ?
-                      "Add the folder with your GameCube and Wii games." :
-                      "Games in other formats or folders can be added in Game Folders."
+            text: (gameList.folders.length === 0 ?
+                       "Add the folder with your GameCube and Wii games." :
+                       "Games in other formats or folders can be added in Game Folders.") +
+                  " From a computer, copy games over USB into Documents/Dolphin/Games."
+        }
+        Button {
+            anchors.horizontalCenter: parent.horizontalCenter
+            visible: !page.searching
+            text: "Import Games"
+            onClicked: pageStack.push(Qt.resolvedUrl("ImportPage.qml"))
         }
         Button {
             anchors.horizontalCenter: parent.horizontalCenter

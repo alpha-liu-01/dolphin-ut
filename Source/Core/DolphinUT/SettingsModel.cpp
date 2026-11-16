@@ -11,6 +11,7 @@
 #include <QJsonDocument>
 
 #include "Common/CommonTypes.h"
+#include "Common/FatFsUtil.h"
 #include "Common/FileUtil.h"
 #include "Core/Config/AchievementSettings.h"
 #include "Core/Config/GraphicsSettings.h"
@@ -22,6 +23,8 @@
 #include "Core/System.h"
 #include "DolphinUT/CpuBoost.h"
 #include "DolphinUT/Emulator.h"
+#include "DolphinUT/Storage.h"
+#include "UICommon/UICommon.h"
 
 namespace
 {
@@ -153,6 +156,83 @@ void AddVirtualSettings(std::map<std::string, Binding>& bindings)
   bindings["Virtual.MEM1_MB"] = megabytes(Config::MAIN_MEM1_SIZE);
   bindings["Virtual.MEM2_MB"] = megabytes(Config::MAIN_MEM2_SIZE);
 }
+// The paths (Config → Paths, GameCube, Wii; stage 3.7). Most are also Dolphin's user paths, which
+// UICommon::Init sets from these settings at start; a change applies them at once, as DolphinQt's
+// ConfigUserPath does. Empty means Dolphin's default folder under the user folder.
+struct PathSetting
+{
+  const char* name;
+  const Config::Info<std::string>& info;
+  int user_path;  // -1: only the setting
+};
+const PathSetting PATH_SETTINGS[] = {
+    {"StringSetting.MAIN_DEFAULT_ISO", Config::MAIN_DEFAULT_ISO, -1},
+    {"StringSetting.MAIN_FS_PATH", Config::MAIN_FS_PATH, D_WIIROOT_IDX},
+    {"StringSetting.MAIN_DUMP_PATH", Config::MAIN_DUMP_PATH, D_DUMP_IDX},
+    {"StringSetting.MAIN_LOAD_PATH", Config::MAIN_LOAD_PATH, D_LOAD_IDX},
+    {"StringSetting.MAIN_RESOURCEPACK_PATH", Config::MAIN_RESOURCEPACK_PATH, D_RESOURCEPACK_IDX},
+    {"StringSetting.MAIN_WFS_PATH", Config::MAIN_WFS_PATH, D_WFSROOT_IDX},
+    {"StringSetting.MAIN_WII_SD_CARD_IMAGE_PATH", Config::MAIN_WII_SD_CARD_IMAGE_PATH,
+     F_WIISDCARDIMAGE_IDX},
+    {"StringSetting.MAIN_WII_SD_CARD_SYNC_FOLDER_PATH", Config::MAIN_WII_SD_CARD_SYNC_FOLDER_PATH,
+     D_WIISDCARDSYNCFOLDER_IDX},
+    {"StringSetting.MAIN_GBA_BIOS_PATH", Config::MAIN_GBA_BIOS_PATH, F_GBABIOS_IDX},
+    {"StringSetting.MAIN_GBA_SAVES_PATH", Config::MAIN_GBA_SAVES_PATH, D_GBASAVES_IDX},
+    {"StringSetting.MAIN_GB_PLAYER_ROM", Config::MAIN_GBA_ROM_PATHS[4], -1},
+};
+
+// Dolphin's user paths from scratch: the defaults under the user folder, then each configured path
+// (as UICommon::Init does at start), the folders Dolphin expects, and the port's screenshot folder.
+void ApplyUserPaths()
+{
+  File::SetUserPath(D_USER_IDX, File::GetUserPath(D_USER_IDX));
+  for (const PathSetting& path : PATH_SETTINGS)
+  {
+    const std::string value = Config::Get(path.info);
+    if (path.user_path >= 0 && !value.empty())
+      File::SetUserPath(path.user_path, value);
+  }
+  UICommon::CreateDirectories();
+  File::CreateFullPath(File::GetUserPath(D_WIISDCARDSYNCFOLDER_IDX));
+  File::CreateFullPath(File::GetUserPath(D_GBASAVES_IDX));
+  File::CreateFullPath(File::GetUserPath(D_DUMPFRAMES_IDX));
+  File::CreateFullPath(File::GetUserPath(D_DUMPAUDIO_IDX));
+  File::CreateFullPath(File::GetUserPath(D_RIIVOLUTION_IDX));
+  File::CreateFullPath(File::GetUserPath(D_DYNAMICINPUT_IDX));
+  Storage::ApplyScreenshotsFolder();
+}
+
+void AddPathSettings(std::map<std::string, Binding>& bindings)
+{
+  for (const PathSetting& path : PATH_SETTINGS)
+  {
+    const Config::Info<std::string>& info = path.info;
+    const int user_path = path.user_path;
+    bindings[path.name] = {
+        // The path in use: the setting, or Dolphin's default (as ConfigUserPath shows it).
+        [&info, user_path] {
+          std::string value = Config::Get(info);
+          if (value.empty() && user_path >= 0)
+          {
+            value = File::GetUserPath(user_path);
+            if (value.ends_with('/'))
+              value.pop_back();
+          }
+          return QVariant(QString::fromStdString(value));
+        },
+        [&info, user_path](bool, const QVariant& value) {
+          // Global only (the items are globalOnly). "" goes back to the default.
+          const std::string text = value.toString().trimmed().toStdString();
+          if (text.empty())
+            Config::DeleteKey(Config::LayerType::Base, info);
+          else
+            Config::SetBase(info, text);
+          if (user_path >= 0)
+            ApplyUserPaths();
+        },
+        [&info] { return InGameLayer(info); }, [&info](bool game) { Delete(info, game); }};
+  }
+}
 }  // namespace
 
 SettingsModel::SettingsModel(QObject* parent) : QObject(parent)
@@ -165,6 +245,40 @@ SettingsModel::SettingsModel(QObject* parent) : QObject(parent)
 #include "DolphinUT/SettingsTable.inc"
   };
   AddVirtualSettings(m_bindings);
+  AddPathSettings(m_bindings);
+}
+
+SettingsModel::~SettingsModel()
+{
+  if (m_action_thread.joinable())
+    m_action_thread.join();
+}
+
+bool SettingsModel::runAction(const QString& action)
+{
+  std::function<bool()> work;
+  if (action == QStringLiteral("sd_pack"))
+    work = [] { return Common::SyncSDFolderToSDImage([] { return false; }, false); };
+  else if (action == QStringLiteral("sd_unpack"))
+    work = [] { return Common::SyncSDImageToSDFolder([] { return false; }); };
+  if (!work || m_busy)
+    return false;
+  if (m_action_thread.joinable())
+    m_action_thread.join();
+  m_busy = true;
+  emit busyChanged();
+  Emulator::LogFromAnyThread(QStringLiteral("action %1").arg(action));
+  m_action_thread = std::thread([this, action, work = std::move(work)] {
+    const bool ok = work();
+    QMetaObject::invokeMethod(this, [this, action, ok] {
+      Emulator::LogFromAnyThread(QStringLiteral("action %1: %2").arg(action, ok ? "done" : "failed"));
+      m_busy = false;
+      emit busyChanged();
+      emit actionFinished(action, ok);
+      Changed();
+    });
+  });
+  return true;
 }
 
 QVariantMap SettingsModel::menu(const QString& tag) const
