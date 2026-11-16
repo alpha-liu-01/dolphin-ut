@@ -118,7 +118,7 @@ Goal: the Android main screen. Open the app, see the games, start one.
 
 Steps:
 1. A `GameListModel` (`QAbstractListModel`) over `UICommon::GameFileCache`, scanning the configured folders on a worker thread, like `DolphinQt/GameList/GameTracker.cpp`. Roles: title, platform, region, ID, cover, file path.
-2. The QML grid of cover cards with platform tabs (GameCube, Wii, WiiWare, All), as `MainActivity` / `card_game.xml`.
+2. The QML grid of cover cards with platform tabs (GameCube, Wii, WiiWare; Android has no "All" tab), as `MainActivity` / `card_game.xml`.
    - Covers: Dolphin's existing GameTDB cover download (`UICommon` / `GameCovers`), cached in the user folder. Banner or title text when there is no cover.
 3. Long press: the game details dialog (`dialog_game_details.xml`): title, ID, region, file, size, compression.
 4. Game folders: add and remove folders. The default is the app's own data folder (3.7).
@@ -126,6 +126,26 @@ Steps:
 6. Refresh, and a pull-to-refresh gesture.
 
 Exit: the test games appear with covers on the phone, and a tap opens the emulation screen (3.2).
+
+#### Status (2026-11-15): done
+
+Notes: `stage3.1-library.md`.
+- Built, in Lomiri Components:
+  - the library: worker-thread scan over `GameFileCache`, the three Android tabs, cover cards (GameTDB covers through Dolphin's own download), search, pull to refresh, rescan on return to the app;
+  - the long-press properties dialog and the details page;
+  - grid options;
+  - game folders with a folder browser;
+  - a Developer page with the 3.0 tools.
+- Findings:
+  - **Lomiri Components on Qt 6 do their own scaling**, so `QT_SCALE_FACTOR` scaled everything twice. It is no longer set (device pixel ratio 1, like Qt 5 Lomiri apps).
+  - There is no Qt 6 Suru style for Qt Quick Controls.
+  - **The bundled curl had no CA store** when cross-compiled, so every HTTPS request failed. `ut/build.sh` now sets Ubuntu's CA paths.
+  - Covers are off by default outside Android (a 3.8 decision).
+  - 3.0's `start()` had saved the test backend in `Dolphin.ini`; a chosen backend is now per run.
+- Tools: `dolphin-ut --qml FILE` and `--grab PNG` with `ut/phone-debug/page-harness.qml` check pages from screenshots over adb.
+- On-screen tests passed. The remembered tab failed (the initial `Sections` index overwrote the saved one); it is fixed and checked over adb.
+- **User decision: covers on by default** (3.8).
+- Found while testing: **Wind Waker hangs the GPU on Vulkan** (kernel: KGSL "GPU hang detected", 3 faults → context dropped). DolphinQt does the same, so it is not the frontend. It is not specialized shaders or the EFB/XFB options. Most likely this phone's Qualcomm Vulkan driver (V@530). Stage 4; OpenGL ES works.
 
 ### 3.2 Emulation screen and lifecycle (medium)
 
@@ -172,10 +192,7 @@ Exit: the GameCube test game and a Wii game are playable with touch only, with t
 Goal: Android's `MenuFragment`.
 
 Steps:
-1. A side panel or sheet over the paused game, opened by back / Escape / a two-finger tap / an overlay button. With option A, it cannot be a subsurface over the game. Ways to try:
-   - another top-level QML window, perhaps showing the paused frame behind it;
-   - drawn into the game picture like the overlay.
-   The same choice applies to the overlay settings dialogs (3.3).
+1. A side panel or sheet over the paused game, opened by back / Escape / a two-finger tap / an overlay button. With option A, it cannot be a subsurface over the game. **User decision (2026-11-15): draw it into the game picture, like the overlay, and see whether that works well.** The overlay settings dialogs (3.3) are drawn the same way. A separate top-level QML window stays the fallback.
 2. Entries: pause/resume, screenshot, quick save, quick load, save state slots and load state slots (with timestamps, as `SaveLoadStateFragment`), overlay controls (the 3.3 settings), settings (3.6), refresh Wii Remotes, change disc, reset, **exit** (stops and returns to the library; no separate Confirm on Stop dialog).
 3. Not now: Skylanders and Infinity Base portals (deferred with the figures UI).
 
@@ -231,6 +248,7 @@ Shipped default `Dolphin.ini` / `GFX.ini` (base layer; the user can change all o
 - Wii Remote 1's extension in the default profile: none (Android; the sideways overlay) or Nunchuk (desktop default). A controller default, the user's call;
 - graphics backend Vulkan (faster than OpenGL ES in stage 2 and with Newer SMB in 3.0; slower in the 3.0 Need for Speed benchmark), with OpenGL ES as the fallback when Vulkan fails to start, and per-game overrides (3.6) for games that run better on OpenGL ES. The global default is checked against stage 4's game list;
 - the OSD FPS display off;
+- `General.UseGameCovers = True`: game covers from GameTDB, as in the Android app. **Decided by the user (3.1)**; upstream turns it on only on Android;
 - no Confirm on Stop (the menu's Exit replaces it);
 - `RenderToMain` is not needed (the frontend has no main window to render into).
 

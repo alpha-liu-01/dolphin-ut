@@ -7,6 +7,8 @@
 # MODE:  ogl | ogl-fs | vk | vk-fs   the test game in batch mode (-b), windowed or fullscreen
 #        ut                          the QML frontend (stage 3); ut-start boots the test game in it
 #                                    (extra args: --backend OGL, --state-slot N, -C System.Section.Key=Value)
+#                                    UI checks: --grab PNG [--grab-after MS] saves a screenshot of the
+#                                    app window; --qml FILE loads another QML file (page-harness.qml)
 #        ui                          the main window, nothing started (start the game by tapping it)
 #        ui-main                     the main window with "Render to Main Window"
 # SECONDS defaults to 60. The log goes to /home/phablet/dolphin-ut-user-w/run-MODE.log; the

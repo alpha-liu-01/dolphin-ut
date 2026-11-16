@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <csignal>
+#include <cstdio>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -12,13 +13,15 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QQuickStyle>
+#include <QImage>
+#include <QQuickWindow>
 #include <QSurfaceFormat>
 #include <QTimer>
 #include <QWindow>
 
 #include "Common/StringUtil.h"
 #include "DolphinUT/Emulator.h"
+#include "DolphinUT/GameList.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
 
@@ -48,21 +51,6 @@ void DropUbuntuMirClientPlatform()
     unsetenv("QT_QPA_PLATFORM");
   else
     setenv("QT_QPA_PLATFORM", kept.c_str(), 1);
-}
-
-// Lomiri scales apps by GRID_UNIT_PX (1 grid unit = 8 dp; 21 on the Redmi Note 12 5G), while the
-// Wayland output reports a scale of 1. Qt Quick Controls size things in dp, so turn the grid unit
-// into Qt's scale factor unless the user set one.
-void ApplyLomiriScale()
-{
-  if (std::getenv("QT_SCALE_FACTOR"))
-    return;
-  const char* grid_unit = std::getenv("GRID_UNIT_PX");
-  if (!grid_unit)
-    return;
-  const double scale = std::atof(grid_unit) / 8.0;
-  if (scale > 0.5 && scale < 8.0)
-    setenv("QT_SCALE_FACTOR", std::to_string(scale).c_str(), 1);
 }
 
 // libhybris' EGL offers only OpenGL ES configs. Qt's default (desktop OpenGL) config choice fails
@@ -120,14 +108,14 @@ int main(int argc, char** argv)
   // Lomiri closes apps with SIGTERM, so the app must handle it itself.
   setenv("SDL_NO_SIGNAL_HANDLERS", "1", 0);
   DropUbuntuMirClientPlatform();
-  ApplyLomiriScale();
+  // No QT_SCALE_FACTOR: Lomiri Components scale by GRID_UNIT_PX themselves (units.gu), and a Qt
+  // scale factor on top of that scales everything twice (docs/ut-port/stage3.1-library.md).
   UseOpenGLES();
 
   QCoreApplication::setOrganizationName(QStringLiteral("Dolphin Emulator"));
   QCoreApplication::setOrganizationDomain(QStringLiteral("dolphin-emu.org"));
   QCoreApplication::setApplicationName(QStringLiteral("dolphin-ut"));
   QGuiApplication app(argc, argv);
-  QQuickStyle::setStyle(QStringLiteral("Material"));
 
   AddCommandLineConfigLayer(argc, argv);
   UICommon::SetUserDirectory(ArgumentValue(argc, argv, "-u", "--user"));
@@ -137,18 +125,47 @@ int main(int argc, char** argv)
   LomiriIntegration lomiri;
   Emulator emulator(&lomiri);
 
+  GameListModel game_list;
+  qmlRegisterType<GameListFilter>("DolphinUT.Native", 1, 0, "GameListFilter");
+
   QQmlApplicationEngine engine;
+  engine.addImageProvider(QStringLiteral("dolphin"), new GameImageProvider(&game_list));
+  engine.rootContext()->setContextProperty(QStringLiteral("gameList"), &game_list);
   engine.rootContext()->setContextProperty(QStringLiteral("emulator"), &emulator);
   engine.rootContext()->setContextProperty(QStringLiteral("lomiri"), &lomiri);
-  engine.loadFromModule("DolphinUT", "Main");
+  // Development: --qml FILE loads that file instead of the app's UI (the phone has no Qt 6 qml
+  // runtime), with the same context objects.
+  const std::string qml_file = ArgumentValue(argc, argv, nullptr, "--qml");
+  if (qml_file.empty())
+    engine.loadFromModule("DolphinUT", "Main");
+  else
+    engine.load(QUrl::fromLocalFile(QString::fromStdString(qml_file)));
   if (engine.rootObjects().isEmpty())
     return 1;
 
   auto* launcher = qobject_cast<QWindow*>(engine.rootObjects().first());
   emulator.SetLauncherWindow(launcher);
 
+  // Development: --grab PNG [--grab-after MS] saves a screenshot of the app's window (default after
+  // 4 s), so the UI can be checked over adb.
+  const std::string grab_path = ArgumentValue(argc, argv, nullptr, "--grab");
+  if (!grab_path.empty())
+  {
+    const std::string grab_after = ArgumentValue(argc, argv, nullptr, "--grab-after");
+    QTimer::singleShot(grab_after.empty() ? 4000 : std::atoi(grab_after.c_str()), &app,
+                       [launcher, grab_path] {
+                         auto* window = qobject_cast<QQuickWindow*>(launcher);
+                         const bool saved =
+                             window && window->grabWindow().save(QString::fromStdString(grab_path));
+                         std::printf("[dolphin-ut] grab %s: %s\n", grab_path.c_str(),
+                                     saved ? "saved" : "failed");
+                         std::fflush(stdout);
+                       });
+  }
+
   // For tests over adb: --start PATH [--backend Vulkan|OGL] [--state-slot N] boots a game without a
-  // tap, and optionally loads a save state (made with the overlay's Save) once it runs.
+  // tap (with the configured backend unless --backend is given), and optionally loads a save state
+  // (made with the overlay's Save) once it runs.
   const std::string state_slot = ArgumentValue(argc, argv, nullptr, "--state-slot");
   if (!state_slot.empty())
     emulator.SetBootStateSlot(std::atoi(state_slot.c_str()));
@@ -157,8 +174,7 @@ int main(int argc, char** argv)
   {
     const std::string backend = ArgumentValue(argc, argv, nullptr, "--backend");
     QTimer::singleShot(1500, &emulator, [&emulator, start_path, backend] {
-      emulator.start(QString::fromStdString(start_path),
-                     QString::fromStdString(backend.empty() ? "Vulkan" : backend));
+      emulator.start(QString::fromStdString(start_path), QString::fromStdString(backend));
     });
   }
 

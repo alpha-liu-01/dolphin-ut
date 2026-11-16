@@ -28,6 +28,9 @@ docker image inspect "$image" >/dev/null 2>&1 || docker build -t "$image" "$root
 
 [ "$reconfigure" = 1 ] && rm -rf "$root/$build/CMakeCache.txt" "$root/$build/CMakeFiles"
 
+# The bundled curl (USE_SYSTEM_LIBS=OFF) only looks for a CA store when not cross-compiling, so
+# without CURL_CA_BUNDLE/CURL_CA_PATH every HTTPS request (GameTDB covers, ...) fails to verify.
+# Ubuntu Touch keeps them in the usual Debian places (docs/ut-port/stage3.1-library.md).
 docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$root:/src" -w /src "$image" sh -euc "
   if [ ! -f $build/CMakeCache.txt ]; then
     cmake -S . -B $build -G Ninja \
@@ -39,6 +42,7 @@ docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$root:/src" -w /src "$im
       -DENABLE_AUTOUPDATE=OFF -DENABLE_ANALYTICS=OFF -DUSE_DISCORD_PRESENCE=OFF \
       -DENCODE_FRAMEDUMPS=OFF \
       -DENABLE_UT_FRONTEND=ON \
+      -DCURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt -DCURL_CA_PATH=/etc/ssl/certs \
       ${DOLPHIN_CMAKE_ARGS:-}
   fi
   ninja -C $build

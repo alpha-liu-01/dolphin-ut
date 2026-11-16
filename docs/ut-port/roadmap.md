@@ -214,7 +214,8 @@ Goal: someone can pick up the phone and play, without a keyboard and mouse, in a
 
 Removed from the old stage 3: Widgets UI scaling, `RenderToMain` as a shipped default, Confirm on Stop handling. Deferred to after stage 3: cheats, Riivolution, Skylanders and Infinity Base, NetPlay, achievements, GBA link, disc conversion, system update, TV layout, translations of the new strings.
 
-Status (2026-11-15): **3.0 done** (`stage3.0-foundations.md`). Next: 3.1 (game library).
+Status (2026-11-15): **3.0 done** (`stage3.0-foundations.md`). **3.1 (game library) done** (`stage3.1-library.md`): a native Lomiri library with the Android tabs, GameTDB covers (on by default, user decision), details, grid options and game folders. Next: 3.2 (emulation screen and lifecycle).
+- Found while testing: Wind Waker hangs the GPU on Vulkan (`VK_ERROR_DEVICE_LOST`, KGSL "GPU hang detected"), in DolphinQt too. OpenGL ES works. Stage 4.
 - **Window architecture A, decided by the user:** Dolphin's renderer draws the touch overlay; no subsurface. The condition: the Android overlay customization UX is reimplemented (3.3). Portrait gets its own default layout, as on Android.
 - On screen, everything works:
   - touch controls, including the Wii Remote + Nunchuk layout and the D-pad;
@@ -249,6 +250,13 @@ Planned steps:
      - check whether the GPU governor (`mod_percent`) needs a hint too (the GPU reached 685–700 MHz, 66 % busy, once the CPU was boosted);
      - check Lomiri's cgroup for a launched app (the tests ran in adbd's).
 4. GPU driver workarounds: list where this phone's blob shows the bugs that `DriverDetails.cpp` guards only on Android (risk 6). Report results to the user, who decides whether and how the fork changes those entries.
+   - First case (3.1): Wind Waker (`GZLP01`) hangs the GPU on Vulkan about 10 s in (KGSL "GPU hang detected", three faults, then the context is dropped), in DolphinQt too.
+   - Ruled out: ubershaders, the EFB/XFB copy and access options, backend multithreading, fog.
+   - The Android-only Qualcomm entries are unlikely to cover it: `BUG_BROKEN_TEV_COLOR_ZERO` starts at driver 700, and this phone has V@530.
+   - Next steps:
+     - bisect Dolphin's Vulkan feature use (dual-source blending, logic ops, framebuffer fetch, …);
+     - compare with Android Dolphin on the same driver (Waydroid, not set up yet);
+     - check whether the game's per-game GFX settings matter.
 
 Exit: a results table per game and backend, and a recommended default backend and settings for this phone.
 

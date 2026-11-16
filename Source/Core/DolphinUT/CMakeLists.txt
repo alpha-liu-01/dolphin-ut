@@ -1,6 +1,6 @@
 # Ubuntu Touch frontend: a touch-first QML UI modeled on the Android app (docs/ut-port/stage3-roadmap.md).
 
-find_package(Qt6 6.2 REQUIRED COMPONENTS Core Gui Quick QuickControls2 DBus)
+find_package(Qt6 6.2 REQUIRED COMPONENTS Core Gui Quick DBus)
 if(Qt6_VERSION VERSION_GREATER_EQUAL 6.10.0)
   find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)
 endif()
@@ -10,6 +10,8 @@ add_executable(dolphin-ut
   Host.cpp
   Emulator.cpp
   Emulator.h
+  GameList.cpp
+  GameList.h
   GameWindow.cpp
   GameWindow.h
   LomiriIntegration.cpp
@@ -33,7 +35,14 @@ qt_policy(SET QTP0004 NEW)
 qt_add_qml_module(dolphin-ut
   URI DolphinUT
   VERSION 1.0
-  QML_FILES qml/Main.qml
+  QML_FILES
+    qml/Main.qml
+    qml/LibraryPage.qml
+    qml/GameCard.qml
+    qml/GameDetailsPage.qml
+    qml/GameFoldersPage.qml
+    qml/FolderPickerPage.qml
+    qml/DeveloperPage.qml
 )
 
 target_include_directories(dolphin-ut PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS})
@@ -47,7 +56,6 @@ PRIVATE
   videocommon
   imgui
   Qt6::Quick
-  Qt6::QuickControls2
   Qt6::DBus
 )
 if(TARGET Qt6::GuiPrivate)

@@ -116,7 +116,6 @@ Emulator::Emulator(LomiriIntegration* lomiri, QObject* parent) : QObject(parent)
                 .arg(QGuiApplication::platformName())
                 .arg(qgetenv("QT_SCALE_FACTOR").isEmpty() ? QStringLiteral("1") :
                                                             QString::fromUtf8(qgetenv("QT_SCALE_FACTOR"))));
-  refreshGames();
 }
 
 Emulator::~Emulator()
@@ -151,26 +150,6 @@ void Emulator::Shutdown()
   if (m_controllers_initialized)
     UICommon::ShutdownControllers();
   m_controllers_initialized = false;
-}
-
-void Emulator::refreshGames()
-{
-  m_games.clear();
-  static const QStringList filters = {QStringLiteral("*.iso"),  QStringLiteral("*.gcm"),
-                                      QStringLiteral("*.wbfs"), QStringLiteral("*.rvz"),
-                                      QStringLiteral("*.gcz"),  QStringLiteral("*.ciso"),
-                                      QStringLiteral("*.wia"),  QStringLiteral("*.dol"),
-                                      QStringLiteral("*.elf"),  QStringLiteral("*.wad")};
-  for (const std::string& folder : Config::GetIsoPaths())
-  {
-    const QDir dir(QString::fromStdString(folder));
-    for (const QFileInfo& file : dir.entryInfoList(filters, QDir::Files, QDir::Name))
-      m_games.append(file.absoluteFilePath());
-  }
-  appendLog(QStringLiteral("%1 game(s) in %2 folder(s)")
-                .arg(m_games.size())
-                .arg(Config::GetIsoPaths().size()));
-  emit gamesChanged();
 }
 
 WindowSystemInfo Emulator::MakeWindowSystemInfo(QWindow* window) const
@@ -208,9 +187,13 @@ void Emulator::start(const QString& path, const QString& backend)
     return;
   }
 
-  // The backend for this run (later a setting, 3.6/3.8).
-  Config::SetBaseOrCurrent(Config::MAIN_GFX_BACKEND, backend.toStdString());
-  VideoBackendBase::ActivateBackend(backend.toStdString());
+  // An explicit backend applies to this run only (the current-run layer is never saved). Without
+  // one, the configured backend is used, including per-game settings: the core activates it at
+  // boot (Core::Init → VideoBackendBase::PopulateBackendInfo).
+  if (backend.isEmpty())
+    Config::DeleteKey(Config::LayerType::CurrentRun, Config::MAIN_GFX_BACKEND);
+  else
+    Config::SetCurrent(Config::MAIN_GFX_BACKEND, backend.toStdString());
 
   const UICommon::GameFile game(path.toStdString());
   const bool gamecube = game.GetPlatform() == DiscIO::Platform::GameCubeDisc ||
@@ -218,7 +201,10 @@ void Emulator::start(const QString& path, const QString& backend)
   appendLog(QStringLiteral("start %1 (%2, %3)")
                 .arg(QFileInfo(path).fileName(), gamecube ? QStringLiteral("GameCube") :
                                                             QStringLiteral("Wii"),
-                     backend));
+                     backend.isEmpty() ?
+                         QStringLiteral("configured: %1")
+                             .arg(QString::fromStdString(Config::Get(Config::MAIN_GFX_BACKEND))) :
+                         backend));
 
   m_game_window = new GameWindow();
   connect(m_game_window, &GameWindow::SizeChanged, this, &Emulator::OnGameWindowSizeChanged);

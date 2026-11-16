@@ -25,7 +25,6 @@ class TouchOverlay;
 class Emulator : public QObject
 {
   Q_OBJECT
-  Q_PROPERTY(QStringList games READ games NOTIFY gamesChanged)
   Q_PROPERTY(QString state READ state NOTIFY stateChanged)
   Q_PROPERTY(QString log READ log NOTIFY logChanged)
   Q_PROPERTY(bool hideLauncherWhilePlaying MEMBER m_hide_launcher NOTIFY settingsChanged)
@@ -38,12 +37,11 @@ public:
   void SetLauncherWindow(QWindow* window);
   void Shutdown();
 
-  QStringList games() const { return m_games; }
   QString state() const { return m_state; }
   QString log() const { return m_log; }
 
-  Q_INVOKABLE void refreshGames();
-  Q_INVOKABLE void start(const QString& path, const QString& backend);
+  // backend: "Vulkan" or "OGL" for this run only; empty for the configured one.
+  Q_INVOKABLE void start(const QString& path, const QString& backend = {});
   Q_INVOKABLE void stop();
   Q_INVOKABLE void appendLog(const QString& text);
 
@@ -58,7 +56,6 @@ public:
   static bool GameWindowHasFocus();
 
 signals:
-  void gamesChanged();
   void stateChanged();
   void logChanged();
   void settingsChanged();
@@ -83,7 +80,6 @@ private:
   bool m_pause_when_inactive = true;
   bool m_controllers_initialized = false;
   int m_boot_state_slot = 0;
-  QStringList m_games;
   QString m_state = QStringLiteral("idle");
   QString m_log;
 };
