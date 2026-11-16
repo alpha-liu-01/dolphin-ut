@@ -330,7 +330,7 @@ Steps:
 
 Exit: a game copied from a PC over MTP, or shared from the File Manager, shows up in the library and runs, all inside confinement (with stage 5's AppArmor profile, or `unconfined` while developing).
 
-#### Status (2026-11-16): done (on-screen tests passed); a re-test of the single-instance fix is open
+#### Status (2026-11-16): done (on-screen tests passed, the single-instance fix too)
 
 Notes: `stage3.7-storage.md`.
 - **On-screen tests passed** (M1–M7), a microSD card included. Two findings: the save state items need Enable Savestates, which the new user folder had off (expected; the 3.8 decision); and the development entry started a new copy on each launch or Share, fixed with `X-Lomiri-Single-Instance=true`.
@@ -347,10 +347,10 @@ Notes: `stage3.7-storage.md`.
 Goal: a first launch that plays well without visiting the settings.
 
 Shipped default `Dolphin.ini` / `GFX.ini` (base layer; the user can change all of it):
-- `Core.EnableSaveStates`: off as in the Android app, or on (3.4: the in-game menu's save state entries need it). The user's call;
+- `Core.EnableSaveStates = True` (3.4: the in-game menu's save state entries need it; Android: off). **Decided by the user (after 3.7)**;
 - `CPUThread = True` (dual core, as on Android). **Decided by the user (3.0)**. The CPU Boost setting's own default is already Maximum (3.6); in the 3.0 benchmark dual core beat single core at every setting (79 % against 41 % with the CPU boost);
 - the CPU boost on (heat is not an issue, user 3.0), at the uclamp_min value stage 4 settles on (1024 in the 3.0 benchmark);
-- Wii Remote 1's extension in the default profile: none (Android; the sideways overlay) or Nunchuk (desktop default). A controller default, the user's call;
+- Wii Remote 1's extension in the default profile: Nunchuk, Dolphin's default on every platform. (This line first said Android had none; `Wiimote::LoadDefaults` selects the Nunchuk on Android too, so there was nothing to decide.)
 - graphics backend Vulkan (faster than OpenGL ES in stage 2 and with Newer SMB in 3.0; slower in the 3.0 Need for Speed benchmark), with OpenGL ES as the fallback when Vulkan fails to start, and per-game overrides (3.6) for games that run better on OpenGL ES. The global default is checked against stage 4's game list;
 - the OSD FPS display off;
 - `General.UseGameCovers = True`: game covers from GameTDB, as in the Android app. **Decided by the user (3.1)**; upstream turns it on only on Android;
@@ -362,6 +362,13 @@ Launcher environment (shared with stage 5): `PULSE_PROP="media.role=multimedia"`
 **Settings that change emulated behavior** (for example speed hacks, CPU clock override, accuracy options) are not changed by the port. Their defaults stay upstream's unless the user decides otherwise.
 
 Exit: a fresh install on the phone starts the test game with these defaults.
+
+#### Status (2026-11-16): built; on-screen tests open
+
+Notes: `stage3.8-defaults.md`.
+- **Port defaults without touching Core** (`PortDefaults.{h,cpp}`): dual core, save states and covers are written into the user's Dolphin.ini once per user folder (`[UbuntuTouch] DefaultsVersion`), and only where the user has no value. A fresh folder booted Need for Speed on Vulkan in dual core at 100 % speed.
+- **Already defaults:** Vulkan (first in this build's list), the CPU boost at maximum, the FPS display off, the Nunchuk. Confirm on Stop and RenderToMain are not used by the port.
+- **Vulkan → OpenGL ES fallback** (`Emulator`): when Vulkan fails to initialize, the game starts again on OpenGL ES for that run, with an on-screen note. Checked by hiding Vulkan behind an empty `libvulkan.so.1`.
 
 ## Removed from the old stage 3
 

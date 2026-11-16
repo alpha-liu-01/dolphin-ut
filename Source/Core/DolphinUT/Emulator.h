@@ -55,6 +55,9 @@ public:
   static void LogFromAnyThread(const QString& text);
   static void RequestStopFromAnyThread();
   static bool GameWindowHasFocus();
+  // From the message alert handler: notes "Failed to initialize video backend!" during a boot, so a
+  // failed Vulkan start can be retried with OpenGL ES (3.8).
+  static void NoteAlert(const char* text);
 
 signals:
   void stateChanged();
@@ -83,6 +86,12 @@ private:
   bool m_pause_when_inactive = true;
   bool m_controllers_initialized = false;
   int m_boot_state_slot = 0;
+  // The game being started, and whether the core reached Running or Paused (a failed boot goes from
+  // Starting straight back to Uninitialized).
+  QString m_boot_path;
+  bool m_boot_reached_running = false;
+  // This run is the OpenGL ES retry after Vulkan failed: say so on screen once it runs.
+  bool m_vulkan_fell_back = false;
   QString m_state = QStringLiteral("idle");
   QString m_log;
 };

@@ -25,6 +25,7 @@
 #include "DolphinUT/Emulator.h"
 #include "DolphinUT/GameList.h"
 #include "DolphinUT/SettingsModel.h"
+#include "DolphinUT/PortDefaults.h"
 #include "DolphinUT/Storage.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
@@ -105,6 +106,7 @@ void AddCommandLineConfigLayer(int argc, char** argv)
 // wait (3.6 second pass), it logs the message, shows it on screen, and continues, as "Ignore" does.
 bool OnMsgAlert(const char* caption, const char* text, bool yes_no, Common::MsgType style)
 {
+  Emulator::NoteAlert(text);
   Emulator::LogFromAnyThread(QStringLiteral("alert (%1): %2 — %3")
                                  .arg(QString::fromUtf8(caption), QString::fromUtf8(text),
                                       yes_no ? QStringLiteral("continuing") :
@@ -148,6 +150,10 @@ int main(int argc, char** argv)
 
   LomiriIntegration lomiri;
   Emulator emulator(&lomiri);
+
+  // The port's defaults for this phone (stage 3.8): once per user folder, before anything reads them.
+  for (const QString& line : PortDefaults::Apply())
+    emulator.appendLog(QStringLiteral("default set: ") + line);
 
   // Shared folders, the screenshot folder, and the games folder in the library (before its scan).
   Storage::SetUp();

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstdio>
+#include <string_view>
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -38,6 +39,7 @@
 #include "UICommon/GameFile.h"
 #include "UICommon/UICommon.h"
 #include "VideoCommon/AsyncRequests.h"
+#include "VideoCommon/OnScreenDisplay.h"
 #include "VideoCommon/PerformanceMetrics.h"
 #include "VideoCommon/Present.h"
 #include "VideoCommon/VideoBackendBase.h"
@@ -45,6 +47,8 @@
 
 namespace
 {
+// Set by Emulator::NoteAlert (any thread) when the video backend failed to initialize.
+std::atomic<bool> s_video_backend_failed = false;
 std::atomic<Emulator*> s_instance = nullptr;
 std::atomic<bool> s_game_window_active = false;
 
@@ -224,6 +228,10 @@ void Emulator::start(const QString& path, const QString& backend)
     return;
   }
 
+  m_boot_path = path;
+  m_boot_reached_running = false;
+  s_video_backend_failed = false;
+
   // An explicit backend applies to this run only (the current-run layer is never saved). Without
   // one, the configured backend is used, including per-game settings: the core activates it at
   // boot (Core::Init → VideoBackendBase::PopulateBackendInfo).
@@ -383,8 +391,36 @@ void Emulator::OnCoreStateChanged(Core::State state)
                   .arg(CpuBoost::Apply(boost)));
   }
 
+  if (state == Core::State::Running || state == Core::State::Paused)
+  {
+    m_boot_reached_running = true;
+    if (m_vulkan_fell_back)
+    {
+      m_vulkan_fell_back = false;
+      OSD::AddMessage("Vulkan failed to start: this game runs on OpenGL ES.", 10000,
+                      OSD::Color::YELLOW);
+    }
+  }
+
   if (state == Core::State::Uninitialized)
+  {
+    // Vulkan (the default backend) failed to start: try OpenGL ES for this run instead of leaving
+    // the user at the library with an error. The configured backend stays as it is, so Vulkan is
+    // tried again next time; Settings (global or per game) can pick OpenGL ES for good.
+    const bool vulkan_failed = s_video_backend_failed.exchange(false) && !m_boot_reached_running &&
+                               g_video_backend && g_video_backend->GetConfigName() == "Vulkan";
+    m_vulkan_fell_back = false;
     FinishStop();
+    if (vulkan_failed && !m_boot_path.isEmpty())
+    {
+      appendLog(QStringLiteral("Vulkan failed to start: retrying with OpenGL ES for this run"));
+      const QString path = m_boot_path;
+      QTimer::singleShot(0, this, [this, path] {
+        start(path, QStringLiteral("OGL"));
+        m_vulkan_fell_back = m_game_window != nullptr;
+      });
+    }
+  }
 }
 
 void Emulator::OnApplicationStateChanged(Qt::ApplicationState state)
@@ -467,4 +503,11 @@ void Emulator::RequestStopFromAnyThread()
 bool Emulator::GameWindowHasFocus()
 {
   return s_game_window_active;
+}
+
+void Emulator::NoteAlert(const char* text)
+{
+  // Core::EmuThread's message when the backend's Initialize fails (not translated).
+  if (std::string_view(text) == "Failed to initialize video backend!")
+    s_video_backend_failed = true;
 }

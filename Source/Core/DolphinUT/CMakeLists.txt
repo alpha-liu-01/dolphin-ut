@@ -24,6 +24,8 @@ add_executable(dolphin-ut
   SettingsModel.cpp
   SettingsModel.h
   SettingsTable.inc
+  PortDefaults.cpp
+  PortDefaults.h
   Storage.cpp
   Storage.h
   OverlayLayout.h

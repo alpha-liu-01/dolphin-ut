@@ -177,3 +177,7 @@ Re-test (with the new entry; close every Dolphin copy in the app switcher first)
 - Then in the File Manager, Share a game to Dolphin (dev).
 - Is there one Dolphin in the app switcher at the end, and did the share import into it (result dialog, game in the library)?
 
+Passed (user, 2026-11-16): the single-instance fix works.
+
+**Save states (the open 3.8 decision): on by default** (user: "Save states are quite helpful"). Done in 3.8.
+
