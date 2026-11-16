@@ -6,7 +6,7 @@ Goal (`stage3-roadmap.md`): the Android app's overlay, so games are playable wit
 - **3.3a (this part, built):** the Android layouts for every controller type, in landscape and portrait, with the Android graphics, sizes, default positions and touch behavior.
 - **3.3b (next):** the customization UX (edit mode, scale, opacity, show/hide controls, latching, reset) and its dialogs, drawn into the game picture (user decision for 3.4/3.3).
 
-Status (2026-11-15): **3.3 done.** 3.3a and 3.3b passed their on-screen tests. One change after them: a latched L/R now also holds the analog trigger (re-test below).
+Status (2026-11-15): **3.3 done.** 3.3a and 3.3b passed their on-screen tests. One change after them, re-tested and passed: a latched L/R now also holds the analog trigger.
 
 ## What was built (3.3a)
 
@@ -256,4 +256,4 @@ The Android app presses the analog trigger fully while the finger is on L or R, 
 
 Changed: the analog trigger now follows the button's state (pressed or latched → 1.0, released → 0.0). For buttons that do not latch, this is exactly the Android behavior; only latched L/R differ, in the way a latched trigger is expected to work. This is the overlay's own logic, not an emulation change.
 
-**Re-test (S3.3-M5b):** Latching Controls → L and R latching; in Need for Speed, one tap on R should keep full throttle until the next tap. Turn latching off again afterwards.
+**Re-test (S3.3-M5b):** Latching Controls → L and R latching; in Need for Speed, one tap on R should keep full throttle until the next tap. Turn latching off again afterwards. **Passed (user, 2026-11-15): latching works with the L and R analog triggers.**

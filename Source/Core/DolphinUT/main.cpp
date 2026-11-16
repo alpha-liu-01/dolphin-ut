@@ -169,6 +169,11 @@ int main(int argc, char** argv)
   const std::string state_slot = ArgumentValue(argc, argv, nullptr, "--state-slot");
   if (!state_slot.empty())
     emulator.SetBootStateSlot(std::atoi(state_slot.c_str()));
+  // Development: --pause-after MS pauses the game that long after start (to check what a paused game
+  // shows, such as the in-game menu, over adb).
+  const std::string pause_after = ArgumentValue(argc, argv, nullptr, "--pause-after");
+  if (!pause_after.empty())
+    QTimer::singleShot(std::atoi(pause_after.c_str()), &emulator, [&emulator] { emulator.togglePause(); });
   const std::string start_path = ArgumentValue(argc, argv, nullptr, "--start");
   if (!start_path.empty())
   {

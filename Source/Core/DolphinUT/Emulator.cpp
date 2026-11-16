@@ -23,6 +23,9 @@
 #include "Core/BootManager.h"
 #include "Core/Config/GraphicsSettings.h"
 #include "Core/Config/MainSettings.h"
+#include "Core/HW/DVD/DVDInterface.h"
+#include "Core/HW/ProcessorInterface.h"
+#include "Core/HW/WiimoteReal/WiimoteReal.h"
 #include "Core/State.h"
 #include "Core/System.h"
 #include "DiscIO/Enums.h"
@@ -32,9 +35,11 @@
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
 #include "UICommon/GameFile.h"
 #include "UICommon/UICommon.h"
+#include "VideoCommon/AsyncRequests.h"
 #include "VideoCommon/PerformanceMetrics.h"
 #include "VideoCommon/Present.h"
 #include "VideoCommon/VideoBackendBase.h"
+#include "VideoCommon/VideoEvents.h"
 
 namespace
 {
@@ -102,6 +107,31 @@ Emulator::Emulator(LomiriIntegration* lomiri, QObject* parent) : QObject(parent)
                                                  QStringLiteral("single core")));
   });
   m_perf_log.start();
+
+  // A paused game presents nothing, so a menu drawn into the picture would freeze (and could not be
+  // used to unpause). While paused with a menu open, ask the video thread to present the last frame
+  // again, about 30 times a second: a job on the paused CPU thread queues it for the video thread
+  // (AsyncRequests, which the GPU loop runs even while paused; in single core it runs on the CPU
+  // thread, which then owns the video backend).
+  m_paused_redraw.setInterval(33);
+  connect(&m_paused_redraw, &QTimer::timeout, this, [this] {
+    auto& system = Core::System::GetInstance();
+    if (!m_overlay || Core::GetState(system) != Core::State::Paused ||
+        !m_overlay->WantsPausedRedraw())
+    {
+      return;
+    }
+    Core::RunOnCPUThread(system, [] {
+      AsyncRequests::GetInstance()->PushEvent([] {
+        if (!g_presenter)
+          return;
+        PresentInfo info{};
+        GetVideoEvents().before_present_event.Trigger(info);
+        g_presenter->Present();
+      });
+    });
+  });
+  m_paused_redraw.start();
 
   m_state_hook = Core::AddOnStateChangedCallback([this](Core::State state) {
     QMetaObject::invokeMethod(this, [this, state] { OnCoreStateChanged(state); },
@@ -213,9 +243,10 @@ void Emulator::start(const QString& path, const QString& backend)
   connect(m_game_window, &GameWindow::CloseRequested, this, &Emulator::stop);
   connect(m_game_window, &GameWindow::StopRequested, this, &Emulator::stop);
   // Until the in-game menu (3.4) exists, Back pauses or resumes.
+  // Back / Escape opens or closes the in-game menu, as in the Android app.
   connect(m_game_window, &GameWindow::MenuRequested, this, [this] {
-    appendLog(QStringLiteral("menu requested (no in-game menu yet): pause/resume"));
-    togglePause();
+    if (m_overlay)
+      m_overlay->ToggleMenu();
   });
   connect(m_game_window, &QWindow::activeChanged, this,
           [this] { s_game_window_active = m_game_window && m_game_window->isActive(); });
@@ -226,15 +257,30 @@ void Emulator::start(const QString& path, const QString& backend)
     m_launcher->hide();
   m_game_window->show();
 
+  // The in-game menu's actions (the Android app's EmulationActivity.handleMenuAction), all run on
+  // the UI thread.
   TouchOverlay::Actions actions;
+  actions.game_title = game.GetName(UICommon::GameFile::Variant::LongAndPossiblyCustom);
   actions.exit = [] { RequestStopFromAnyThread(); };
-  actions.save_state = [this] {
-    appendLog(QStringLiteral("save state slot %1").arg(TEST_STATE_SLOT));
-    State::Save(Core::System::GetInstance(), TEST_STATE_SLOT);
+  actions.toggle_pause = [this] { togglePause(); };
+  actions.screenshot = [] { Core::SaveScreenShot(); };
+  actions.save_state = [this](int slot) {
+    appendLog(QStringLiteral("save state slot %1").arg(slot));
+    State::Save(Core::System::GetInstance(), static_cast<u32>(slot));
   };
-  actions.load_state = [this] {
-    appendLog(QStringLiteral("load state slot %1").arg(TEST_STATE_SLOT));
-    State::Load(Core::System::GetInstance(), TEST_STATE_SLOT);
+  actions.load_state = [this](int slot) {
+    appendLog(QStringLiteral("load state slot %1").arg(slot));
+    State::Load(Core::System::GetInstance(), static_cast<u32>(slot));
+  };
+  actions.refresh_wiimotes = [] { WiimoteReal::Refresh(); };
+  actions.change_disc = [this](const std::string& disc) {
+    appendLog(QStringLiteral("change disc: %1").arg(QString::fromStdString(disc)));
+    auto& core_system = Core::System::GetInstance();
+    core_system.GetDVDInterface().ChangeDisc(Core::CPUThreadGuard{core_system}, disc);
+  };
+  actions.reset = [this] {
+    appendLog(QStringLiteral("reset"));
+    Core::System::GetInstance().GetProcessorInterface().ResetButton_Tap();
   };
   // Controls are sized by the screen's shorter side, as in the Android app.
   const QSize screen = m_game_window->screen()->size() * m_game_window->devicePixelRatio();
@@ -371,6 +417,20 @@ void Emulator::SetShowPerformanceStats(bool show)
     return;
   Config::SetBase(Config::GFX_SHOW_FPS, show);
   Config::SetBase(Config::GFX_SHOW_SPEED, show);
+  Config::Save();
+  emit settingsChanged();
+}
+
+bool Emulator::GetEnableSaveStates() const
+{
+  return Config::Get(Config::MAIN_ENABLE_SAVESTATES);
+}
+
+void Emulator::SetEnableSaveStates(bool enable)
+{
+  if (enable == GetEnableSaveStates())
+    return;
+  Config::SetBase(Config::MAIN_ENABLE_SAVESTATES, enable);
   Config::Save();
   emit settingsChanged();
 }

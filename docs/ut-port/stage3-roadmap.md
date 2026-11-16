@@ -201,7 +201,7 @@ Steps:
 
 Exit: the GameCube test game and a Wii game are playable with touch only, with the overlay edited and saved.
 
-#### Status (2026-11-15): done (3.3a and 3.3b passed on screen; a latched L/R now also holds the analog trigger, unlike the Android app, to re-test)
+#### Status (2026-11-15): done (3.3a and 3.3b passed on screen; a latched L/R now also holds the analog trigger, unlike the Android app, re-tested)
 
 - 3.3b: the Android "Overlay Controls" menu and edit mode, drawn into the game picture with ImGui:
   - Edit Layout (drag, saved per layout and orientation in `Config/TouchOverlay.ini`);
@@ -237,6 +237,24 @@ Steps:
 3. Not now: Skylanders and Infinity Base portals (deferred with the figures UI).
 
 Exit: every entry works on the phone with the test games.
+
+#### Status (2026-11-15): on-screen tests done; two fixes to re-test (closing the menu: "Close" and a tap beside the panel; no "State not found" per empty slot)
+
+Notes: `stage3.4-menu.md`.
+- The Android in-game menu is a left panel drawn into the picture with the Android entries and labels:
+  - Pause/Unpause;
+  - Screenshot;
+  - Quick Save/Load (slot 9);
+  - Save/Load State, six slots with times (Android's slots 0–5, so the files match);
+  - Overlay Controls (3.3);
+  - Refresh Wii Remotes;
+  - Change Disc (from the game folders);
+  - Reset;
+  - Exit.
+- Settings come with 3.6.
+- It opens from a "Menu" button at the top centre or with Back/Escape.
+- Save states appear only with `Core.EnableSaveStates`, which is off by default as on Android; a Developer switch covers it until 3.6. The default is the user's call (3.8).
+- **A paused game presents nothing, so the menu froze.** While paused with a menu open, a redraw is queued about 30 times a second: a job on the paused CPU thread pushes an `AsyncRequests` event, which triggers the overlay hook and `Presenter::Present()`. No core change; checked with `--pause-after`.
 
 ### 3.5 Controllers and mapping (medium)
 
@@ -276,6 +294,8 @@ Steps:
 3. MicroSD: whether a confined app may read removable media, or the user must import.
 4. Export: save states, screenshots and memory cards back through content-hub (optional).
 
+- **Screenshots to `~/Pictures/Dolphin`** so the Gallery shows them (found in 3.4: Dolphin saves them in its user folder). Needs the `picture_files` policy group in the click.
+
 Exit: a game copied from a PC over MTP, or shared from the File Manager, shows up in the library and runs, all inside confinement (with stage 5's AppArmor profile, or `unconfined` while developing).
 
 ### 3.8 Defaults for this phone (small)
@@ -283,6 +303,7 @@ Exit: a game copied from a PC over MTP, or shared from the File Manager, shows u
 Goal: a first launch that plays well without visiting the settings.
 
 Shipped default `Dolphin.ini` / `GFX.ini` (base layer; the user can change all of it):
+- `Core.EnableSaveStates`: off as in the Android app, or on (3.4: the in-game menu's save state entries need it). The user's call;
 - `CPUThread = True` (dual core, as on Android). **Decided by the user (3.0)**; in the 3.0 benchmark dual core beat single core at every setting (79 % against 41 % with the CPU boost);
 - the CPU boost on (heat is not an issue, user 3.0), at the uclamp_min value stage 4 settles on (1024 in the 3.0 benchmark);
 - Wii Remote 1's extension in the default profile: none (Android; the sideways overlay) or Nunchuk (desktop default). A controller default, the user's call;

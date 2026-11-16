@@ -33,12 +33,18 @@ struct ImTextureData;
 class TouchOverlay
 {
 public:
-  // Frontend actions (not emulated controls), until the in-game menu (3.4) takes them over.
+  // What the in-game menu (stage 3.4, the Android app's MenuFragment) does; run on the UI thread.
   struct Actions
   {
+    std::string game_title;
     std::function<void()> exit;
-    std::function<void()> save_state;
-    std::function<void()> load_state;
+    std::function<void()> toggle_pause;
+    std::function<void()> screenshot;
+    std::function<void(int slot)> save_state;  // the Android app's slots: 0–5, quick save 9
+    std::function<void(int slot)> load_state;
+    std::function<void()> refresh_wiimotes;
+    std::function<void(const std::string& path)> change_disc;
+    std::function<void()> reset;
   };
 
   // wii: the game is a Wii game. screen_short_side: the screen's shorter side in physical pixels;
@@ -50,6 +56,11 @@ public:
   TouchOverlay& operator=(const TouchOverlay&) = delete;
 
   // UI thread.
+  // Opens or closes the in-game menu (Back / Escape, as in the Android app).
+  void ToggleMenu();
+  // While the game is paused, nothing is presented; a menu that is open needs redraws
+  // (Emulator::RequestPausedRedraw).
+  bool WantsPausedRedraw() const;
   OverlayLayout::Type GetType() const;
   int GetControllerIndex() const;
   // Sizes in physical pixels.
@@ -88,10 +99,9 @@ private:
     float stick_y = 0.0f;
   };
 
-  struct ActionButton
+  // The button that opens the in-game menu (top centre; the Android app uses Back).
+  struct MenuButton
   {
-    const char* label;
-    std::function<void()> action;  // empty: opens the overlay menu
     QRectF rect;
     int track = -1;
     bool pressed = false;
@@ -115,6 +125,12 @@ private:
   enum class Menu
   {
     None,
+    // The in-game menu (MenuFragment) and its pages.
+    Game,
+    SaveState,
+    LoadState,
+    ChangeDisc,
+    // Overlay Controls (3.3).
     Main,
     Toggle,
     Latching,
@@ -152,10 +168,15 @@ private:
 
   // Runs a settings change on the UI thread, then rebuilds the overlay from the settings.
   void ChangeSettings(std::function<void()> change);
+  // Runs a menu action on the UI thread.
+  void RunOnUIThread(std::function<void()> action);
 
   // Video thread, while the on-screen UI's ImGui frame is open; m_mutex held.
   void Draw();
   void DrawMenu();
+  void DrawGameMenu();
+  void OpenPage(Menu page);
+  void OpenTestPage();
   void RetireTextures();
 
   const bool m_wii;
@@ -171,13 +192,17 @@ private:
 
   std::vector<Image> m_images;
   std::vector<Control> m_controls;
-  std::vector<ActionButton> m_actions;
+  Actions m_actions;
+  MenuButton m_menu_button;
   Pointer m_pointer;
   bool m_has_pointer = false;
   QSizeF m_window_size;
   QRectF m_game_rect;  // the game picture in the window (from the presenter), for the pointer
 
   Menu m_menu = Menu::None;
+  std::vector<std::string> m_slot_labels;  // filled when a save/load page opens
+  std::vector<std::string> m_discs;        // filled when Change Disc opens
+  float m_game_panel_width = 0.0f;         // the in-game menu's panel, as last drawn
   int m_menu_touch = -1;
   int m_opacity_preview = -1;  // the opacity slider while it is dragged
   int m_scale_preview = -1;
@@ -192,6 +217,7 @@ private:
   std::vector<std::unique_ptr<ImTextureData>> m_textures;
   std::vector<std::unique_ptr<ImTextureData>> m_retired_textures;
   bool m_images_changed = true;
+  bool m_test_page_checked = false;
 
   std::shared_ptr<std::atomic<bool>> m_alive = std::make_shared<std::atomic<bool>>(true);
   Common::EventHook m_draw_hook;

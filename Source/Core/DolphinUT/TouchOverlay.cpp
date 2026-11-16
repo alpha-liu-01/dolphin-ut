@@ -8,6 +8,9 @@
 #include <cmath>
 #include <cstring>
 #include <numbers>
+#include <string_view>
+
+#include <fmt/format.h>
 
 #include <QCoreApplication>
 #include <QEventPoint>
@@ -19,7 +22,17 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#include "Common/FileUtil.h"
+#include "Common/StringUtil.h"
+#include "Core/Config/MainSettings.h"
+#include "Core/Config/UISettings.h"
+#include "Core/ConfigManager.h"
+#include "Core/Core.h"
+#include "Core/State.h"
+#include "Core/System.h"
 #include "DolphinUT/Emulator.h"
+#include "UICommon/GameFileCache.h"
+#include "VideoCommon/OnScreenDisplay.h"
 #include "InputCommon/ControllerInterface/Touch/InputOverrider.h"
 #include "VideoCommon/Present.h"
 #include "VideoCommon/VideoEvents.h"
@@ -47,35 +60,33 @@ ImVec2 ToImVec2(QPointF point)
 }  // namespace
 
 TouchOverlay::TouchOverlay(bool wii, int screen_short_side, Actions actions)
-    : m_wii(wii), m_screen_short_side(screen_short_side)
+    : m_wii(wii), m_screen_short_side(screen_short_side), m_actions(std::move(actions))
 {
-  if (actions.exit)
-    m_actions.push_back({"Exit", std::move(actions.exit)});
-  if (actions.save_state)
-    m_actions.push_back({"Save", std::move(actions.save_state)});
-  if (actions.load_state)
-    m_actions.push_back({"Load", std::move(actions.load_state)});
-  // Opens the Android app's "Overlay Controls" menu (in the in-game menu there, 3.4 here).
-  m_actions.push_back({"Controls", {}});
-
   {
     std::lock_guard lock(m_mutex);
     Build();
+  }
+  m_draw_hook = GetVideoEvents().before_present_event.Register([this](PresentInfo&) { Draw(); });
+}
 
-    // Development: DOLPHIN_UT_OVERLAY_MENU=main|toggle|latching|adjust|controller|pointer|edit opens
-    // that menu page at start, for checking its look from screen captures over adb.
+void TouchOverlay::OpenTestPage()
+{
+  // Development: DOLPHIN_UT_OVERLAY_MENU=game|save|load|disc|main|toggle|latching|adjust|controller|
+  // pointer|edit opens that menu page once the game draws, for checking its look from screen
+  // captures over adb.
+  {
     const QByteArray menu = qgetenv("DOLPHIN_UT_OVERLAY_MENU");
     static constexpr std::pair<const char*, Menu> pages[] = {
-        {"main", Menu::Main},         {"toggle", Menu::Toggle},   {"latching", Menu::Latching},
+        {"game", Menu::Game},         {"save", Menu::SaveState},  {"load", Menu::LoadState},
+        {"disc", Menu::ChangeDisc},   {"main", Menu::Main},         {"toggle", Menu::Toggle},   {"latching", Menu::Latching},
         {"adjust", Menu::Adjust},     {"controller", Menu::Controller},
         {"pointer", Menu::Pointer},   {"edit", Menu::Editing}};
     for (const auto& [name, page] : pages)
     {
       if (menu == name)
-        m_menu = page;
+        OpenPage(page);
     }
   }
-  m_draw_hook = GetVideoEvents().before_present_event.Register([this](PresentInfo&) { Draw(); });
 }
 
 TouchOverlay::~TouchOverlay()
@@ -200,13 +211,98 @@ void TouchOverlay::ReleaseAll()
     Release(control);
     control.latching = latching;
   }
-  for (ActionButton& action : m_actions)
-  {
-    action.track = -1;
-    action.pressed = false;
-  }
+  m_menu_button.track = -1;
+  m_menu_button.pressed = false;
   if (m_pointer.track >= 0)
     ReleasePointer();
+}
+
+void TouchOverlay::ToggleMenu()
+{
+  std::lock_guard lock(m_mutex);
+  // As the Android app's Back: closes whatever page is open, or opens the in-game menu.
+  if (m_menu == Menu::None)
+  {
+    ReleaseAll();
+    OpenPage(Menu::Game);
+  }
+  else
+  {
+    m_menu = Menu::None;
+  }
+}
+
+bool TouchOverlay::WantsPausedRedraw() const
+{
+  std::lock_guard lock(m_mutex);
+  return m_menu != Menu::None;
+}
+
+void TouchOverlay::OpenPage(Menu page)
+{
+  m_menu = page;
+  if (page == Menu::SaveState || page == Menu::LoadState)
+  {
+    // SaveLoadStateFragment: six slots with the time each was saved ("Slot 1 / Empty").
+    m_slot_labels.clear();
+    const auto now = std::chrono::system_clock::now();
+    for (int slot = 0; slot < 6; ++slot)
+    {
+      // State::GetUnixTimeOfSlot shows "State not found" for a missing file, once per empty slot
+      // (S3.4-M3), so look for the file first, as State::GetInfoStringOfSlot does.
+      const std::string file =
+          fmt::format("{}{}.s{:02d}", File::GetUserPath(D_STATESAVES_IDX),
+                      SConfig::GetInstance().GetGameID(), slot);
+      const u64 saved_ms =
+          File::Exists(file) ? State::GetUnixTimeOfSlot(static_cast<u32>(slot)) : 0;
+      std::string when = "Empty";
+      if (saved_ms != 0)
+      {
+        const auto saved = std::chrono::system_clock::time_point(std::chrono::milliseconds(saved_ms));
+        const auto minutes =
+            std::chrono::duration_cast<std::chrono::minutes>(now - saved).count();
+        if (minutes < 1)
+          when = "Just now";
+        else if (minutes < 60)
+          when = std::to_string(minutes) + " min. ago";
+        else if (minutes < 60 * 24)
+          when = std::to_string(minutes / 60) + " h ago";
+        else
+          when = std::to_string(minutes / (60 * 24)) + " days ago";
+      }
+      m_slot_labels.push_back("Slot " + std::to_string(slot + 1) + "\n" + when);
+    }
+  }
+  else if (page == Menu::ChangeDisc)
+  {
+    // The Android app opens a file picker; here, the disc images in the game folders.
+    m_discs.clear();
+    const std::vector<std::string> folders = Config::GetIsoPaths();
+    const std::vector<std::string_view> views(folders.begin(), folders.end());
+    for (std::string& path :
+         UICommon::FindAllGamePaths(views, Config::Get(Config::MAIN_RECURSIVE_ISO_PATHS)))
+    {
+      static constexpr std::string_view not_discs[] = {".wad", ".dol", ".elf", ".json"};
+      std::string lower = path;
+      Common::ToLower(&lower);
+      if (std::ranges::none_of(not_discs, [&](std::string_view ext) { return lower.ends_with(ext); }))
+        m_discs.push_back(std::move(path));
+    }
+    std::ranges::sort(m_discs);
+  }
+}
+
+void TouchOverlay::RunOnUIThread(std::function<void()> action)
+{
+  if (!action)
+    return;
+  QMetaObject::invokeMethod(
+      QCoreApplication::instance(),
+      [alive = m_alive, action = std::move(action)] {
+        if (*alive)
+          action();
+      },
+      Qt::QueuedConnection);
 }
 
 void TouchOverlay::ChangeSettings(std::function<void()> change)
@@ -282,15 +378,10 @@ void TouchOverlay::Layout()
     control.virtual_rect = control.rect;
   }
 
-  // The frontend's buttons: small and round at the top centre, free in every Android layout.
+  // The in-game menu's button: small and round at the top centre, free in every Android layout.
   const double short_side = std::min(width, height);
-  const double radius = 0.035 * short_side;
-  for (size_t i = 0; i < m_actions.size(); ++i)
-  {
-    const double center_x =
-        width / 2 + (static_cast<double>(i) - (m_actions.size() - 1) / 2.0) * radius * 2.8;
-    m_actions[i].rect = QRectF(center_x - radius, 0.05 * short_side, radius * 2, radius * 2);
-  }
+  const double radius = 0.04 * short_side;
+  m_menu_button.rect = QRectF(width / 2 - radius, 0.04 * short_side, radius * 2, radius * 2);
 
   // Edit mode's "Done", in the middle, as the Android app's done_control_config.
   const QSizeF done(0.24 * short_side, 0.1 * short_side);
@@ -343,6 +434,15 @@ void TouchOverlay::HandleTouch(const QList<QEventPoint>& points, QSizeF window_s
 
       if (m_menu != Menu::None)
       {
+        // Ubuntu Touch has no system Back: a tap beside the in-game menu's panel closes it.
+        const bool game_menu = m_menu == Menu::Game || m_menu == Menu::SaveState ||
+                               m_menu == Menu::LoadState || m_menu == Menu::ChangeDisc;
+        if (game_menu && point.state() == QEventPoint::State::Pressed && m_menu_touch < 0 &&
+            m_game_panel_width > 0 && position.x() > m_game_panel_width)
+        {
+          m_menu = Menu::None;
+          continue;
+        }
         // The menu is ImGui: its first finger becomes ImGui's mouse.
         if (point.state() == QEventPoint::State::Pressed && m_menu_touch < 0)
         {
@@ -369,14 +469,11 @@ void TouchOverlay::HandleTouch(const QList<QEventPoint>& points, QSizeF window_s
       case QEventPoint::State::Pressed:
       {
         bool pressed = false;
-        for (ActionButton& action : m_actions)
+        if (m_menu_button.rect.contains(position) && m_menu_button.track < 0)
         {
-          if (action.rect.contains(position))
-          {
-            action.track = id;
-            action.pressed = true;
-            pressed = true;
-          }
+          m_menu_button.track = id;
+          m_menu_button.pressed = true;
+          pressed = true;
         }
         const bool action_hit = pressed;
         // As the Android app: every control under the finger is pressed.
@@ -403,23 +500,14 @@ void TouchOverlay::HandleTouch(const QList<QEventPoint>& points, QSizeF window_s
           MovePointer(position);
         break;
       case QEventPoint::State::Released:
-        for (ActionButton& action : m_actions)
+        if (m_menu_button.track == id)
         {
-          if (action.track != id)
-            continue;
-          action.track = -1;
-          action.pressed = false;
-          if (!action.rect.contains(position))
-            continue;
-          if (action.action)
-          {
-            // Run outside the lock: the action may stop the game.
-            QTimer::singleShot(0, action.action);
-          }
-          else
+          m_menu_button.track = -1;
+          m_menu_button.pressed = false;
+          if (m_menu_button.rect.contains(position))
           {
             ReleaseAll();
-            m_menu = Menu::Main;
+            OpenPage(Menu::Game);
           }
         }
         for (Control& control : m_controls)
@@ -713,6 +801,11 @@ void TouchOverlay::Draw()
 
   const auto start = std::chrono::steady_clock::now();
   std::lock_guard lock(m_mutex);
+  if (!m_test_page_checked)
+  {
+    m_test_page_checked = true;
+    OpenTestPage();
+  }
 
   // The images become ImGui user textures: Dolphin's ImGui backend uploads them, and frees them with
   // the on-screen UI when the game stops. After a rebuild, the old ones are retired.
@@ -848,14 +941,19 @@ void TouchOverlay::Draw()
   {
     round_button(m_done_rect, "Done", m_done_touch >= 0);
   }
-  else
+  else if (m_menu == Menu::None)
   {
-    // The frontend's own buttons (until the in-game menu, 3.4).
-    for (const ActionButton& action : m_actions)
-      round_button(action.rect, action.label, action.pressed);
+    round_button(m_menu_button.rect, "Menu", m_menu_button.pressed);
   }
 
-  if (m_menu != Menu::None && m_menu != Menu::Editing)
+  // Dolphin's messages move right of the in-game menu panel, as with the Android app's menu.
+  const bool game_menu = m_menu == Menu::Game || m_menu == Menu::SaveState ||
+                         m_menu == Menu::LoadState || m_menu == Menu::ChangeDisc;
+  if (game_menu)
+    DrawGameMenu();
+  else
+    OSD::SetObscuredPixelsLeft(0);
+  if (m_menu != Menu::None && m_menu != Menu::Editing && !game_menu)
     DrawMenu();
 
   m_draw_time += std::chrono::steady_clock::now() - start;
@@ -900,8 +998,12 @@ void TouchOverlay::DrawMenu()
   ImGui::SetNextWindowSizeConstraints(ImVec2(width, 0), ImVec2(width, max_height));
   ImGui::SetNextWindowBgAlpha(0.94f);
 
-  const char* titles[] = {"",          "Overlay Controls", "Toggle Controls", "Latching Controls",
-                          "Adjust Controls", "Choose Controller", "Touch IR Pointer", ""};
+  const char* titles[] = {"",          "",
+                          "",          "",
+                          "",          "Overlay Controls",
+                          "Toggle Controls", "Latching Controls",
+                          "Adjust Controls", "Choose Controller",
+                          "Touch IR Pointer", ""};
   const std::string title =
       std::string(titles[static_cast<int>(m_menu)]) + "###dolphin-ut-overlay-menu";
   constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
@@ -967,8 +1069,8 @@ void TouchOverlay::DrawMenu()
         ChangeSettings([type, portrait] { OverlayLayout::ResetPositions(type, portrait); });
       }
       next();
-      if (ImGui::Button("Close", full))
-        m_menu = Menu::None;
+      if (ImGui::Button("Back", full))
+        m_menu = Menu::Game;
       if (landscape)
         ImGui::Columns(1);
       break;
@@ -1108,5 +1210,151 @@ void TouchOverlay::DrawMenu()
   }
   ImGui::End();
   ImGui::PopStyleVar(9);
+  ImGui::PopFont();
+}
+
+void TouchOverlay::DrawGameMenu()
+{
+  // The Android app's in-game menu (MenuFragment): a panel along the left edge, the game's title on
+  // top, then its entries with the Android labels. The game keeps running behind it unless paused,
+  // as in the Android app.
+  const float width_px = static_cast<float>(m_window_size.width());
+  const float height_px = static_cast<float>(m_window_size.height());
+  const float short_side = std::min(width_px, height_px);
+  const bool landscape = width_px > height_px;
+  const float ui_scale = std::max(ImGui::GetStyle().FontScaleMain, 1.0f);
+  // A little smaller than the overlay menu: eleven entries must fit a landscape height.
+  ImGui::PushFont(nullptr, std::max(short_side * 0.038f / ui_scale, 12.0f));
+  const float line = ImGui::GetFontSize();
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(line * 0.8f, line * 0.6f));
+  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(line * 0.6f, line * 0.32f));
+  ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(line * 0.4f, line * 0.3f));
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+  ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, line * 0.25f);
+  ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
+
+  const float panel_width = landscape ? std::max(width_px * 0.3f, line * 14.0f) :
+                                        std::min(width_px * 0.75f, line * 18.0f);
+  ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+  ImGui::SetNextWindowSize(ImVec2(panel_width, height_px), ImGuiCond_Always);
+  ImGui::SetNextWindowBgAlpha(0.94f);
+  OSD::SetObscuredPixelsLeft(static_cast<int>(panel_width));
+  m_game_panel_width = panel_width;
+
+  constexpr ImGuiWindowFlags flags =
+      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
+      ImGuiWindowFlags_NoScrollbar;
+  if (ImGui::Begin("###dolphin-ut-game-menu", nullptr, flags))
+  {
+    const ImVec2 full(-FLT_MIN, 0);
+    // The title, and "Close" beside it (there is no system Back to close the menu with).
+    const char* close_label = "Close";
+    const float close_width =
+        ImGui::CalcTextSize(close_label).x + ImGui::GetStyle().FramePadding.x * 2;
+    ImGui::PushTextWrapPos(ImGui::GetContentRegionAvail().x - close_width -
+                           ImGui::GetStyle().ItemSpacing.x);
+    ImGui::TextUnformatted(m_actions.game_title.c_str());
+    ImGui::PopTextWrapPos();
+    ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - close_width);
+    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
+    if (ImGui::Button(close_label))
+      m_menu = Menu::None;
+    ImGui::PopStyleVar();
+    ImGui::Separator();
+
+    const auto action = [&](const std::function<void()>& function, bool close) {
+      RunOnUIThread(function);
+      if (close)
+        m_menu = Menu::None;
+    };
+    const bool savestates = Config::Get(Config::MAIN_ENABLE_SAVESTATES);
+
+    switch (m_menu)
+    {
+    case Menu::Game:
+    {
+      const bool paused = Core::GetState(Core::System::GetInstance()) == Core::State::Paused;
+      if (ImGui::Button(paused ? "Unpause Emulation" : "Pause Emulation", full))
+        action(m_actions.toggle_pause, false);
+      if (ImGui::Button("Take Screenshot", full))
+        action(m_actions.screenshot, true);
+      if (savestates)
+      {
+        if (ImGui::Button("Quick Save", full) && m_actions.save_state)
+          action([save = m_actions.save_state] { save(9); }, true);
+        if (ImGui::Button("Quick Load", full) && m_actions.load_state)
+          action([load = m_actions.load_state] { load(9); }, true);
+        if (ImGui::Button("Save State", full))
+          OpenPage(Menu::SaveState);
+        if (ImGui::Button("Load State", full))
+          OpenPage(Menu::LoadState);
+      }
+      if (ImGui::Button("Overlay Controls", full))
+        m_menu = Menu::Main;
+      if (m_wii && ImGui::Button("Refresh Wii Remotes", full))
+        action(m_actions.refresh_wiimotes, true);
+      if (ImGui::Button("Change Disc", full))
+        OpenPage(Menu::ChangeDisc);
+      if (ImGui::Button("Reset Emulation", full))
+        action(m_actions.reset, true);
+      ImGui::Separator();
+      if (ImGui::Button("Exit Emulation", full))
+        action(m_actions.exit, true);
+      break;
+    }
+
+    case Menu::SaveState:
+    case Menu::LoadState:
+    {
+      // SaveLoadStateFragment: a grid of six slots.
+      const bool save = m_menu == Menu::SaveState;
+      ImGui::TextUnformatted(save ? "Save State" : "Load State");
+      const float cell = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2;
+      for (int slot = 0; slot < static_cast<int>(m_slot_labels.size()); ++slot)
+      {
+        if (slot % 2 == 1)
+          ImGui::SameLine();
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.5f, 0.5f));
+        const bool clicked =
+            ImGui::Button(m_slot_labels[slot].c_str(), ImVec2(cell, line * 3.2f));
+        ImGui::PopStyleVar();
+        if (clicked)
+        {
+          const auto& function = save ? m_actions.save_state : m_actions.load_state;
+          if (function)
+            action([function, slot] { function(slot); }, true);
+        }
+      }
+      ImGui::Spacing();
+      if (ImGui::Button("Back", full))
+        m_menu = Menu::Game;
+      break;
+    }
+
+    case Menu::ChangeDisc:
+    {
+      ImGui::TextUnformatted("Change Disc");
+      if (m_discs.empty())
+        ImGui::TextWrapped("No disc images in the game folders.");
+      for (const std::string& path : m_discs)
+      {
+        std::string name;
+        SplitPath(path, nullptr, &name, nullptr);
+        if (ImGui::Button((name + "##" + path).c_str(), full) && m_actions.change_disc)
+          action([change = m_actions.change_disc, path] { change(path); }, true);
+      }
+      ImGui::Spacing();
+      if (ImGui::Button("Back", full))
+        m_menu = Menu::Game;
+      break;
+    }
+
+    default:
+      break;
+    }
+  }
+  ImGui::End();
+  ImGui::PopStyleVar(6);
   ImGui::PopFont();
 }
