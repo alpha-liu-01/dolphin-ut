@@ -20,6 +20,7 @@
 #include <QWindow>
 
 #include "Common/StringUtil.h"
+#include "DolphinUT/Controllers.h"
 #include "DolphinUT/Emulator.h"
 #include "DolphinUT/GameList.h"
 #include "DolphinUT/LomiriIntegration.h"
@@ -126,12 +127,16 @@ int main(int argc, char** argv)
   Emulator emulator(&lomiri);
 
   GameListModel game_list;
+  Controllers controllers;
+  QObject::connect(&controllers, &Controllers::message, &emulator, &Emulator::appendLog);
+  controllers.SetVibrator([&lomiri](int duration_ms) { lomiri.vibrate(duration_ms); });
   qmlRegisterType<GameListFilter>("DolphinUT.Native", 1, 0, "GameListFilter");
 
   QQmlApplicationEngine engine;
   engine.addImageProvider(QStringLiteral("dolphin"), new GameImageProvider(&game_list));
   engine.rootContext()->setContextProperty(QStringLiteral("gameList"), &game_list);
   engine.rootContext()->setContextProperty(QStringLiteral("emulator"), &emulator);
+  engine.rootContext()->setContextProperty(QStringLiteral("controllers"), &controllers);
   engine.rootContext()->setContextProperty(QStringLiteral("lomiri"), &lomiri);
   // Development: --qml FILE loads that file instead of the app's UI (the phone has no Qt 6 qml
   // runtime), with the same context objects.
@@ -145,6 +150,8 @@ int main(int argc, char** argv)
 
   auto* launcher = qobject_cast<QWindow*>(engine.rootObjects().first());
   emulator.SetLauncherWindow(launcher);
+  // The controllers exist now (UICommon::InitControllers in SetLauncherWindow).
+  controllers.Start();
 
   // Development: --grab PNG [--grab-after MS] saves a screenshot of the app's window (default after
   // 4 s), so the UI can be checked over adb.

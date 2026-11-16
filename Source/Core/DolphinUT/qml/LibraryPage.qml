@@ -57,6 +57,11 @@ Page {
                     onTriggered: PopupUtils.open(gridOptionsDialog, page)
                 },
                 Action {
+                    iconName: "input-gaming-symbolic"
+                    text: "Controllers"
+                    onTriggered: pageStack.push(Qt.resolvedUrl("ControllersPage.qml"))
+                },
+                Action {
                     iconName: "folder"
                     text: "Game Folders"
                     onTriggered: pageStack.push(Qt.resolvedUrl("GameFoldersPage.qml"))

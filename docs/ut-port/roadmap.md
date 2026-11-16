@@ -214,7 +214,9 @@ Goal: someone can pick up the phone and play, without a keyboard and mouse, in a
 
 Removed from the old stage 3: Widgets UI scaling, `RenderToMain` as a shipped default, Confirm on Stop handling. Deferred to after stage 3: cheats, Riivolution, Skylanders and Infinity Base, NetPlay, achievements, GBA link, disc conversion, system update, TV layout, translations of the new strings.
 
-Status (2026-11-15): **3.0 done** (`stage3.0-foundations.md`). **3.1 (game library) done** (`stage3.1-library.md`): a native Lomiri library with the Android tabs, GameTDB covers (on by default, user decision), details, grid options and game folders. **3.4 (in-game menu): on-screen tests done, two fixes to re-test** (`stage3.4-menu.md`): the Android menu as a left panel in the game picture; menus keep drawing while paused (redraws queued through the paused CPU thread).
+Status (2026-11-15): **3.0 done** (`stage3.0-foundations.md`). **3.1 (game library) done** (`stage3.1-library.md`): a native Lomiri library with the Android tabs, GameTDB covers (on by default, user decision), details, grid options and game folders. **3.5 (controllers and mapping): on-screen tests passed, one fix to re-test** (`stage3.5-controllers.md`): Controllers pages after the Android app's, input detection, profiles, SDL gamepad defaults, automatic mapping of a new gamepad, rumble on the phone's vibrator.
+
+**3.4 (in-game menu) done** (`stage3.4-menu.md`): the Android menu as a left panel in the game picture; menus keep drawing while paused (redraws queued through the paused CPU thread).
 
 **3.3a (touch overlay: Android layouts, graphics and touch) done**, all on-screen tests passed (`stage3.3-overlay.md`). **3.3b (the Android overlay customization: edit mode, toggles, latching, scale and opacity, controller, pointer options, reset) done**, drawn into the game picture with ImGui; the user found the menu size "perfect". One improvement over Android: a latched L/R also holds the analog trigger. Next: 3.4 (in-game menu). Portrait puts the game in the top half (`Presenter::SetDrawArea`, a host-side VideoCommon addition).
 

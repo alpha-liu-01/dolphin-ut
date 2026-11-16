@@ -238,7 +238,7 @@ Steps:
 
 Exit: every entry works on the phone with the test games.
 
-#### Status (2026-11-15): on-screen tests done; two fixes to re-test (closing the menu: "Close" and a tap beside the panel; no "State not found" per empty slot)
+#### Status (2026-11-15): done (the fixes for closing the menu and the "State not found" messages passed their re-test)
 
 Notes: `stage3.4-menu.md`.
 - The Android in-game menu is a left panel drawn into the picture with the Android entries and labels:
@@ -268,6 +268,21 @@ Steps:
 5. Optional, for USB: try SDL3's HIDAPI PS4 driver over libusb for the DualShock 4 clone the kernel rejects (stage 1). If it does not work, it stays a stone-ut kernel item.
 
 Exit: a Bluetooth gamepad plays the test games with default mappings, and a remap through the new UI works.
+
+#### Status (2026-11-15): on-screen tests passed; one fix to re-test (empty type/source lists on ports 2–4)
+
+Notes: `stage3.5-controllers.md`.
+- The wired DualShock 4 clone cannot be reached: the USB nodes are group 1018 (`phablet` not in it), and `hid-sony` rejects it. It stays a stone-ut item (a udev rule, or the kernel). Over Bluetooth it works as `SDL/0/PS4 Controller`.
+- **Controllers pages** (library ⋮ → Controllers):
+  - the GameCube port types and the Wii Remote source and extension, as the Android app;
+  - a generic mapping page over Dolphin's controller objects: device, map all devices, Reset to Default, Clear, profiles, controls and group settings;
+  - tap to detect an input (`InputDetector`, the Android timings), press and hold for the expression, a list for outputs.
+- **Gamepad defaults** from SDL3's standard names (Dolphin has none outside Android).
+- **Automatic mapping:** a gamepad that appears takes GameCube 1 and Wii Remote 1 if they have no usable device. The user's Wii Remote 1, mapped to the touchscreen since stage 1, moved to the BETOP T6 (`SDL/0/Xbox One Wireless Controller`); GameCube 1 kept its evdev mapping.
+- **Rumble on the phone:** a frontend device, `UbuntuTouch/0/Phone`, with a Motor output going to hfd-service.
+- Detection was checked with Dolphin's pipe device over adb.
+- No "hide overlay with a gamepad" in the Android app (3.3 step 6 closed).
+- The DualShock 4 clone over HIDAPI is an optional on-screen test.
 
 ### 3.6 Settings (large, in two passes)
 

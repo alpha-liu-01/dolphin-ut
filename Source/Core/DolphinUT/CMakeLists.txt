@@ -8,6 +8,8 @@ endif()
 add_executable(dolphin-ut
   main.cpp
   Host.cpp
+  Controllers.cpp
+  Controllers.h
   Emulator.cpp
   Emulator.h
   GameList.cpp
@@ -60,6 +62,10 @@ qt_add_qml_module(dolphin-ut
     qml/GameFoldersPage.qml
     qml/FolderPickerPage.qml
     qml/DeveloperPage.qml
+    qml/ControllersPage.qml
+    qml/GameCubePortPage.qml
+    qml/WiimotePage.qml
+    qml/MappingPage.qml
 )
 
 target_include_directories(dolphin-ut PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS})

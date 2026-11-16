@@ -2,7 +2,7 @@
 
 Goal (`stage3-roadmap.md`): the Android app's in-game menu (`MenuFragment`), drawn into the game picture (user decision, 3.4).
 
-Status (2026-11-15): on-screen tests done. Two fixes (closing the menu, spurious "State not found" messages) wait for a re-test (end of this document).
+Status (2026-11-15): **done.** The two fixes (closing the menu, spurious "State not found" messages) passed their re-test.
 
 ## What was built
 
@@ -167,7 +167,7 @@ Dolphin saves screenshots in its user folder (`<user folder>/ScreenShots/`), as 
 - Worth changing: save them to **`~/Pictures/Dolphin`** (`File::SetUserPath(D_SCREENSHOTS_IDX, …)` at start).
 - **Where:** 3.7 (files and storage). In the click package, the user folder moves to the app's own data folder, and writing to `~/Pictures` needs the click's `picture_files` AppArmor policy group. Both are decided there, along with the other user-visible files (save exports, the game folder).
 
-### Re-test (stopped here)
+### Re-test: passed (user, 2026-11-15)
 
 **S3.4-M1b.** Open the menu, then close it with **Close**; open it again and close it by tapping on the game beside the panel. Both should leave the game as it was. Inside Save State / Load State, does a tap beside the panel close the menu too?
 
