@@ -269,8 +269,11 @@ for tag, function in tags.items():
 HIDDEN_SETTINGS = {"IntSetting.MAIN_EMULATION_ORIENTATION", "BooleanSetting.MAIN_EXPAND_TO_CUTOUT_AREA",
                    # Analytics are not built into the port (ENABLE_ANALYTICS=OFF).
                    "BooleanSetting.MAIN_ANALYTICS_ENABLED"}
-HIDDEN_MENUS = {"GPU_DRIVERS", "HOTKEYS", "CONFIG_ACHIEVEMENTS"}
-REDIRECTS = {"GCPAD_TYPE": "ControllersPage.qml", "WIIMOTE": "ControllersPage.qml"}
+HIDDEN_MENUS = {"HOTKEYS", "CONFIG_ACHIEVEMENTS"}
+# Menus the port draws with its own page. The GPU driver is chosen for the whole app, at start
+# (stage 4, VulkanDriver.h), as the Android app offers it only outside game settings.
+REDIRECTS = {"GCPAD_TYPE": "ControllersPage.qml", "WIIMOTE": "ControllersPage.qml",
+             "GPU_DRIVERS": "GpuDriversPage.qml"}
 # The top level's "Long press a setting to clear it." is shown with game settings only, as there.
 for item in menus["SETTINGS"]["items"]:
     if item["type"] == "header" and item["title"] == strings.get("setting_clear_info"):
@@ -281,8 +284,8 @@ for menu in menus.values():
         if item.get("setting") in HIDDEN_SETTINGS or item.get("menu") in HIDDEN_MENUS:
             continue
         if item["type"] == "submenu" and item["menu"] in REDIRECTS:
-            # The Controllers page edits the global setup; per-game controller profiles are not
-            # done yet, so it is left out of game settings.
+            # Global only: the Controllers page edits the global setup (per-game controller
+            # profiles are not done yet), and the GPU driver applies to the whole app.
             item = {"type": "page", "title": item["title"], "page": REDIRECTS[item["menu"]],
                     "globalOnly": True}
         kept.append(item)

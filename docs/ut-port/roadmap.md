@@ -291,17 +291,21 @@ Exit:
 - a results table for the tested games;
 - a verdict on custom drivers.
 
-#### Status (2026-11-16): on-screen tests S4-M1…M4 done; two decisions open
+#### Status (2026-11-16): done; only the user's `DriverDetails` line is open
+
+All on-screen tests passed (S4-M1…M6). S4-M5: frame pacing is the same at 60 Hz and 120 Hz, so the panel stays at 120 Hz.
 
 - **S4-M2 passed:** marking dual-source blending broken gives no hang and nothing broken.
 - **S4-M3 passed:** a lost GPU restarts the game on OpenGL ES.
 - **S4-M4 passed** on OpenGL ES (the game's own setting): about 18 minutes at ~99% with no slowdown, about 2% battery in 16 minutes, barely warm.
 - **S4-M1:** Turnip's picture is right. Every Turnip game crashed when it stopped (SIGBUS in `vkDestroyDevice`). The cause: Mesa calls `pthread_barrier_*`, which libhybris does not hook. Fixed in `VulkanDriver.cpp`, which supplies glibc's barrier functions through `hybris_set_hook_callback`.
+- **The GPU driver feature is built** (step 8): Settings → Graphics → GPU Driver, as on Android. It installs AdrenoTools packages (zip with `meta.json`), chooses one for the next start, and removes them. The click 2609.266 ships the shim, which now builds without files from a phone. Checked over adb and on screen in the installed click (S4-M6).
+- **Open:** the `DriverDetails` line for dual-source blending is the user's decision and change. The candidate and its version range (`0x80000000`–`0x80213000`) are in the notes.
 
 Notes: `stage4-adreno.md`.
 - **Wind Waker's hang is dual-source blending** in Qualcomm's V@530 Vulkan driver (bisected over Dolphin's optional Vulkan features). Marking it broken (`BUG_BROKEN_DUAL_SOURCE_BLENDING`, Dolphin's existing mechanism) or switching it off removes the hang. That `DriverDetails` line is the user's decision and change.
 - **A lost GPU no longer leaves a frozen game:** at the first `VK_ERROR_DEVICE_LOST` the game stops and starts again on OpenGL ES, with a note (one alert instead of thousands).
-- **Custom Vulkan drivers work under libhybris** (step 6: yes), with no root. A 7.7 KB stand-in `libvndksupport.so` (`ut/vkdriver/`, built without the NDK) lets Android's Vulkan loader load a driver from a folder the app chooses at start. Mesa Turnip v26.0.0 R8 runs Wind Waker with no hang, and Need for Speed at 100 %. The settings and install UI follow the on-screen tests.
+- **Custom Vulkan drivers work under libhybris** (step 6: yes), with no root. A 7.7 KB stand-in `libvndksupport.so` (`ut/vkdriver/`, built without the NDK) lets Android's Vulkan loader load a driver from a folder the app chooses at start. Mesa Turnip v26.0.0 R8 runs Wind Waker with no hang, and Need for Speed at 100 %. The settings page and installer are built (step 8).
 - Compatibility table, the Android-only Qualcomm entries (risk 6), and scripts for the long run and frame pacing: in the notes.
 
 ### 5. Packaging and distribution
@@ -377,6 +381,7 @@ Notes: `stage5-packaging.md`.
 | NoGUI Wayland window (fallback only) | `Source/Core/DolphinNoGUI/PlatformWayland.cpp` | ported from ROCKNIX 015 if needed |
 | QML frontend: library, emulation screen, touch overlay, in-game menu, mapping, settings | new `Source/Core/DolphinUT/` (target `dolphin-ut`), using `UICommon`, `Core`, `InputCommon/ControllerInterface/Touch` (`InputOverrider`); possibly a small overlay renderer in `VideoCommon` (stage 3.0 decision) | port |
 | Packaging | `ut/click/` (manifest, AppArmor, desktop file, content-hub, launcher, build and install scripts), `ut/docker/Dockerfile` (click and the bundled Qt 6 Wayland plugin) | port |
+| Custom GPU drivers | `Source/Core/DolphinUT/GpuDrivers.{h,cpp}`, `VulkanDriver.{h,cpp}`, `qml/GpuDriversPage.qml`; the stand-in `libvndksupport.so` in `ut/vkdriver/` (stage 4) | port |
 | Memory arena | `Source/Core/Common/MemArenaUnix.cpp`: `memfd_create` before `shm_open` (stage 5; confined clicks may not create files in `/dev/shm`) | port, upstream candidate |
 | Docs | this folder | port |
 
@@ -384,7 +389,7 @@ Notes: `stage5-packaging.md`.
 
 Updated 2026-11-16. Settled since the first version: the Qt 6 Widgets window (stage 1), Bluetooth gamepads (stage 0 M3, 3.5), wired USB controllers (stage 1: OTG works; the DualShock 4 clone is rejected by `hid-sony`), and the BETOP T6's layout (3.5: SDL3's database knows it in Xbox mode).
 
-- Frame pacing on the 120 Hz panel: swap-interval-1 windows ran at 83–87 fps, not vsync-locked (stage 0 M1). Stage 4 step 5.
+- ~~Frame pacing on the 120 Hz panel~~: settled in stage 4 (S4-M5). Games show the same frames at 60 Hz and 120 Hz, and the panel stays at 120 Hz.
 - The full GLES extension list and Vulkan feature set on a window surface, as opposed to the pbuffer and headless probes in stone-ut.
 - How Android Dolphin performs on this exact phone. crDroid is no longer installed, so there is no same-device baseline. Published results for SM4375 / Snapdragon 4 Gen 1 phones are the closest reference.
 - Anything under click confinement (stage 5).

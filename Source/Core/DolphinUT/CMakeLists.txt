@@ -28,6 +28,8 @@ add_executable(dolphin-ut
   PortDefaults.h
   Storage.cpp
   Storage.h
+  GpuDrivers.cpp
+  GpuDrivers.h
   VulkanDriver.cpp
   VulkanDriver.h
   OverlayLayout.h
@@ -86,6 +88,7 @@ qt_add_qml_module(dolphin-ut
     qml/SettingsPage.qml
     qml/ImportPage.qml
     qml/UserDataPage.qml
+    qml/GpuDriversPage.qml
 )
 
 target_include_directories(dolphin-ut PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS})
@@ -100,6 +103,7 @@ PRIVATE
   imgui
   Qt6::Quick
   Qt6::DBus
+  MINIZIP::minizip-ng
 )
 if(TARGET Qt6::GuiPrivate)
   target_link_libraries(dolphin-ut PRIVATE Qt6::GuiPrivate)

@@ -22,8 +22,9 @@
 #                     a new version (for example 2609.265.1).
 #
 # The click holds dolphin-ut (stripped), Dolphin's Sys/ next to it (where Dolphin looks first), the
-# launcher, the hooks, and the Qt 6 Wayland shell integration from the cross container
-# (/opt/ut-bundle, ut/docker/Dockerfile). Everything else is on the phone (stage 1).
+# launcher, the hooks, the Qt 6 Wayland shell integration from the cross container
+# (/opt/ut-bundle, ut/docker/Dockerfile), and the stand-in libvndksupport.so for custom GPU drivers
+# in lib/hybris/ (stage 4, ut/vkdriver). Everything else is on the phone (stage 1).
 set -eu
 root=$(cd "$(dirname "$0")/../.." && pwd)
 build=build-ut/dolphin
@@ -44,10 +45,14 @@ remote=$(git -C "$root" remote get-url origin 2>/dev/null | sed 's|^git@github.c
 source="${remote:-this fork} at commit $commit"
 case "$desc" in *-dirty) source="$source, with uncommitted changes (a development build)" ;; esac
 
+# The GPU driver shim (7.7 KB, built from ut/vkdriver without files from a phone).
+sh "$root/ut/vkdriver/build-shim.sh" >/dev/null
+
 stage=build-ut/click/$name
 docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$root:/src" -w /src dolphin-ut-cross sh -euc "
   rm -rf '$stage'
-  mkdir -p '$stage/lib/aarch64-linux-gnu/qt6/plugins/wayland-shell-integration'
+  mkdir -p '$stage/lib/aarch64-linux-gnu/qt6/plugins/wayland-shell-integration' '$stage/lib/hybris'
+  cp build-ut/vkdriver/libvndksupport.so '$stage/lib/hybris/'
   aarch64-linux-gnu-strip -o '$stage/dolphin-ut' '$build/Binaries/dolphin-ut'
   cp -r Data/Sys '$stage/Sys'
   cp Data/dolphin-emu.svg '$stage/dolphin-ut.svg'

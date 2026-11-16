@@ -148,10 +148,10 @@ The new finding is **not** in that list: dual-source blending (step 1) is broken
 | Decision | Options | Recommendation |
 | --- | --- | --- |
 | Wind Waker on the system driver (step 1) | (a) a `BUG_BROKEN_DUAL_SOURCE_BLENDING` line for this driver in `DriverDetails.cpp`, written by you; (b) nothing in Dolphin, and Turnip or OpenGL ES for such games; (c) a port default that starts known problem games on OpenGL ES (roadmap step 2) | **(a)**: S4-M2 passed (no hang, nothing broken). Scope it so Turnip stays out: see "Results of the manual tests" |
-| Custom GPU drivers (step 6) | build the feature (setting, install from zip, shim in the click) or leave it at the environment variable | Build it: the picture is right, and the crash when a game stopped is found and fixed (S4-M1 results). The system driver stays the default |
+| Custom GPU drivers (step 6) | build the feature (setting, install from zip, shim in the click) or leave it at the environment variable | **Built and passed** (step 8, S4-M6); the system driver stays the default |
 | The other Android-only Qualcomm entries (step 7) | enable any of them on Linux | None for now: none applies or is needed on V@530 |
 
-## Manual tests (results below, "Results of the manual tests")
+## Manual tests (all done; results in "Results of the manual tests")
 
 Screen on, unlocked, from an interactive `adb shell`. These use the `run-dolphin.sh` test build (your test folder `dolphin-ut-user-w`), which has the diagnostic switches and the driver shim. For a game other than the default, set `GAME=`.
 
@@ -190,6 +190,79 @@ The phone never barely got warm after all 4 tests. Please collect the log.
 
 **S4-M5 (optional). Frame pacing** (step 5). During a game: `python3 /home/phablet/dolphin-ut-probe/fps-panel.py 30` in another `adb shell`. It prints the panel's real refresh, the frames committed per second, and GPU load. To compare at 60 Hz: `sudo stone-refresh-rate 60 --restart-display`, then the same again, then `sudo stone-refresh-rate 120 --restart-display`.
 
+No significant performance differences were observed. GameCube or Wii games weren't supposed to run at 120fps anyway. Even if they were, this phone is not powerful enough for 120fps gaming. 
+
+phablet@ubuntu-phablet:~$ python3 /home/phablet/dolphin-ut-probe/fps-panel.py 30
+dpms: On; modes: 1080x2400x120x183275vid 1080x2400x120x184666vid 1080x2400x60x184666vid 1080x2400x60x183275vid
+fps: 38.9 duration:1000000 frame_count:39 | vsyncs  58 median 16.74 ms | gpu  63% 700 MHz cpu0  576 cpu6 2016
+fps: 37.9 duration:1000000 frame_count:38 | vsyncs  60 median 16.70 ms | gpu  66% 700 MHz cpu0  576 cpu6 2016
+fps: 38.3 duration:1000000 frame_count:39 | vsyncs  60 median 16.73 ms | gpu  63% 700 MHz cpu0  576 cpu6 2016
+fps: 38.9 duration:1000000 frame_count:39 | vsyncs  60 median 16.73 ms | gpu  63% 700 MHz cpu0 1804 cpu6 2016
+fps: 37.8 duration:1000000 frame_count:38 | vsyncs  60 median 16.70 ms | gpu  62% 700 MHz cpu0  940 cpu6 2016
+fps: 36.8 duration:1000000 frame_count:37 | vsyncs  60 median 16.70 ms | gpu  63% 700 MHz cpu0 1804 cpu6 2016
+fps: 37.9 duration:1000000 frame_count:38 | vsyncs  60 median 16.72 ms | gpu  62% 700 MHz cpu0  576 cpu6 2016
+fps: 38.1 duration:1000000 frame_count:39 | vsyncs  59 median 16.71 ms | gpu  63% 700 MHz cpu0  576 cpu6 2016
+fps: 37.9 duration:1000000 frame_count:38 | vsyncs  60 median 16.69 ms | gpu  63% 700 MHz cpu0  576 cpu6 2016
+fps: 37.9 duration:1000000 frame_count:38 | vsyncs  60 median 16.71 ms | gpu  61% 700 MHz cpu0  576 cpu6 2016
+fps: 36.6 duration:1000000 frame_count:37 | vsyncs  60 median 16.70 ms | gpu  62% 700 MHz cpu0  576 cpu6 2016
+fps: 39.7 duration:1000000 frame_count:40 | vsyncs  60 median 16.71 ms | gpu  61% 700 MHz cpu0 1516 cpu6 2016
+fps: 39.8 duration:1000000 frame_count:40 | vsyncs  60 median 16.70 ms | gpu  62% 700 MHz cpu0  576 cpu6 2016
+fps: 41.1 duration:1000000 frame_count:42 | vsyncs  60 median 16.71 ms | gpu  65% 700 MHz cpu0 1516 cpu6 2016
+fps: 36.8 duration:1000000 frame_count:37 | vsyncs  59 median 16.69 ms | gpu  59% 700 MHz cpu0  576 cpu6 2016
+fps: 36.2 duration:1000000 frame_count:37 | vsyncs  60 median 16.72 ms | gpu  60% 266 MHz cpu0  576 cpu6 2016
+fps: 44.6 duration:1000000 frame_count:50 | vsyncs  60 median 16.70 ms | gpu  64% 700 MHz cpu0  576 cpu6 2016
+fps: 49.9 duration:1000000 frame_count:50 | vsyncs  60 median 16.70 ms | gpu  52% 700 MHz cpu0  576 cpu6 2016
+fps: 49.8 duration:1000000 frame_count:50 | vsyncs  60 median 16.70 ms | gpu  53% 700 MHz cpu0  576 cpu6 2016
+fps: 49.8 duration:1000000 frame_count:50 | vsyncs  60 median 16.70 ms | gpu  53% 700 MHz cpu0 1516 cpu6 2016
+fps: 27.8 duration:1000000 frame_count:28 | vsyncs  60 median 16.71 ms | gpu  54% 266 MHz cpu0  576 cpu6 2016
+fps: 31.1 duration:1000000 frame_count:42 | vsyncs  59 median 16.71 ms | gpu  55% 700 MHz cpu0  576 cpu6 2016
+fps: 49.9 duration:1000000 frame_count:50 | vsyncs  60 median 16.71 ms | gpu  58% 700 MHz cpu0  576 cpu6 2016
+fps: 49.9 duration:1000000 frame_count:50 | vsyncs  60 median 16.71 ms | gpu  57% 700 MHz cpu0  576 cpu6 2016
+fps: 50.9 duration:1000000 frame_count:51 | vsyncs  60 median 16.71 ms | gpu  60% 700 MHz cpu0  576 cpu6 2016
+fps: 48.9 duration:1000000 frame_count:49 | vsyncs  60 median 16.71 ms | gpu  57% 700 MHz cpu0  576 cpu6 2016
+fps: 48.9 duration:1000000 frame_count:49 | vsyncs  60 median 16.70 ms | gpu  59% 700 MHz cpu0  576 cpu6 2016
+fps: 38.1 duration:1000000 frame_count:39 | vsyncs  60 median 16.70 ms | gpu  53% 700 MHz cpu0 1804 cpu6 2016
+fps: 39.8 duration:1000000 frame_count:41 | vsyncs  59 median 16.69 ms | gpu  74% 700 MHz cpu0 1804 cpu6 2016
+fps: 27.6 duration:1000000 frame_count:28 | vsyncs  60 median 16.71 ms | gpu  74% 700 MHz cpu0 1516 cpu6 1804
+== summary
+vsync period median 16.71 ms (59.9 Hz), 1794 vsync events
+committed frames/s: max 50.9, mean 40.6
+phablet@ubuntu-phablet:~$ (base) alpha@alpha-asus:~/Documents/GitHub/dolphin-ut$ adb shell
+phablet@ubuntu-phablet:~$ python3 /home/phablet/dolphin-ut-probe/fps-panel.py 30
+dpms: On; modes: 1080x2400x120x183275vid 1080x2400x120x184666vid 1080x2400x60x184666vid 1080x2400x60x183275vid
+fps: 36.6 duration:1000000 frame_count:37 | vsyncs 119 median 8.36 ms | gpu  61% 700 MHz cpu0  576 cpu6 2016
+fps: 38.5 duration:1000000 frame_count:39 | vsyncs 119 median 8.36 ms | gpu  62% 700 MHz cpu0  576 cpu6 2016
+fps: 38.6 duration:1000000 frame_count:39 | vsyncs 120 median 8.36 ms | gpu  62% 700 MHz cpu0  576 cpu6 2016
+fps: 37.9 duration:1000000 frame_count:38 | vsyncs 120 median 8.36 ms | gpu  60% 700 MHz cpu0  576 cpu6 2016
+fps: 37.7 duration:1000000 frame_count:38 | vsyncs 119 median 8.35 ms | gpu  60% 700 MHz cpu0  940 cpu6 2016
+fps: 42.5 duration:1000000 frame_count:44 | vsyncs 120 median 8.36 ms | gpu  64% 700 MHz cpu0  576 cpu6 2016
+fps: 41.5 duration:1000000 frame_count:42 | vsyncs 120 median 8.36 ms | gpu  60% 700 MHz cpu0  940 cpu6 2016
+fps: 39.4 duration:1000000 frame_count:40 | vsyncs 119 median 8.36 ms | gpu  64% 700 MHz cpu0  940 cpu6 2016
+fps: 41.8 duration:1000000 frame_count:42 | vsyncs 120 median 8.35 ms | gpu  68% 700 MHz cpu0  940 cpu6 2016
+fps: 40.6 duration:1000000 frame_count:41 | vsyncs 120 median 8.35 ms | gpu  67% 700 MHz cpu0 1804 cpu6 2016
+fps: 41.7 duration:1000000 frame_count:42 | vsyncs 120 median 8.36 ms | gpu  63% 700 MHz cpu0  576 cpu6 1228
+fps: 49.5 duration:1000000 frame_count:50 | vsyncs 119 median 8.34 ms | gpu  52% 700 MHz cpu0  576 cpu6 1401
+fps: 49.5 duration:1000000 frame_count:50 | vsyncs 120 median 8.34 ms | gpu  54% 700 MHz cpu0  576 cpu6 2016
+fps: 49.5 duration:1000000 frame_count:50 | vsyncs 120 median 8.37 ms | gpu  53% 700 MHz cpu0  576 cpu6 1228
+fps: 41.5 duration:1000000 frame_count:42 | vsyncs 119 median 8.35 ms | gpu  51% 266 MHz cpu0  576 cpu6 1228
+fps: 26.0 duration:1000000 frame_count:29 | vsyncs 120 median 8.35 ms | gpu   0% 700 MHz cpu0  576 cpu6 2016
+fps: 49.5 duration:1000000 frame_count:50 | vsyncs 120 median 8.36 ms | gpu  59% 700 MHz cpu0  576 cpu6 2016
+fps: 49.5 duration:1000000 frame_count:50 | vsyncs 120 median 8.34 ms | gpu  59% 700 MHz cpu0  576 cpu6 1228
+fps: 49.4 duration:1000000 frame_count:50 | vsyncs 119 median 8.35 ms | gpu  60% 700 MHz cpu0  576 cpu6 2016
+fps: 48.4 duration:1000000 frame_count:49 | vsyncs 120 median 8.35 ms | gpu  58% 700 MHz cpu0  576 cpu6 2016
+fps: 46.5 duration:1000000 frame_count:47 | vsyncs 120 median 8.36 ms | gpu  58% 700 MHz cpu0 1113 cpu6 1228
+fps: 46.9 duration:1000000 frame_count:47 | vsyncs 119 median 8.34 ms | gpu  56% 700 MHz cpu0  576 cpu6 2016
+fps: 30.6 duration:1000000 frame_count:31 | vsyncs 120 median 8.35 ms | gpu  53% 700 MHz cpu0  576 cpu6 2016
+fps: 37.0 duration:1000000 frame_count:40 | vsyncs 120 median 8.35 ms | gpu  66% 650 MHz cpu0 1516 cpu6 2016
+fps: 25.5 duration:1000000 frame_count:26 | vsyncs 120 median 8.36 ms | gpu  70% 700 MHz cpu0 1516 cpu6 2016
+fps: 23.8 duration:1000000 frame_count:24 | vsyncs 119 median 8.35 ms | gpu  61% 700 MHz cpu0  576 cpu6 2016
+fps: 19.5 duration:1000000 frame_count:20 | vsyncs 120 median 8.36 ms | gpu  61% 700 MHz cpu0  576 cpu6 2016
+fps: 20.3 duration:1000000 frame_count:21 | vsyncs 120 median 8.36 ms | gpu  58% 700 MHz cpu0 1804 cpu6 2016
+fps: 19.9 duration:1000000 frame_count:20 | vsyncs 119 median 8.35 ms | gpu  64% 700 MHz cpu0  691 cpu6 2016
+fps: 24.8 duration:1000000 frame_count:25 | vsyncs 120 median 8.35 ms | gpu  61% 700 MHz cpu0 1804 cpu6 2016
+== summary
+vsync period median 8.35 ms (119.7 Hz), 3590 vsync events
+committed frames/s: max 49.5, mean 38.1
 
 phablet@ubuntu-phablet:~$ DOLPHIN_UT_GPU_DRIVER=/home/phablet/dolphin-ut-turnip/driver GAME=/home/phablet/Documents/Dolphin/Games/windwaker.iso sh /home/phablet/dolphin-ut-probe/run-dolphin.sh ut-start 900 --backend Vulkan
 running: ut-start: -u /home/phablet/dolphin-ut-user-w --start /home/phablet/Documents/Dolphin/Games/windwaker.iso --backend Vulkan (for 900s, log /home/phablet/dolphin-ut-user-w/run-ut-start.log)
@@ -242,6 +315,8 @@ logout
 | S4-M2 dual-source blending marked broken | **Pass:** no hang, nothing broken |
 | S4-M3 lost GPU on screen | **Pass:** restarts on OpenGL ES by itself, with the note |
 | S4-M4 long run, unplugged | **Pass, on OpenGL ES.** Phone barely warm. Speed held, but the temperature samples were lost (below) |
+| S4-M5 frame pacing, 60 Hz and 120 Hz | **Pass:** no difference that matters; the panel stays at 120 Hz (below) |
+| S4-M6 the GPU driver feature in the installed app | **Pass:** install from Downloads, tick and restart note, Turnip in use after reopening, Wind Waker past the title and back to the library, back to the system driver, removal (step 8) |
 
 ### S4-M1: Turnip crashed when a game stopped (SIGBUS): found and fixed
 
@@ -302,6 +377,21 @@ logout
 - **Battery** (upower history): 100% at the unplug, 99% at 14:02:58, 98% at 14:06:38: about 2% in 16 minutes of play, around 7–8% an hour.
 - **Temperature:** only your report: the phone barely got warm.
 
+### S4-M5: frame pacing
+
+`fps-panel.py 30` during a game (a 50 Hz PAL game: at most 50 frames a second), once at 60 Hz and once at 120 Hz:
+
+| Panel | Measured refresh | Frames shown per second: mean | max | GPU load |
+| --- | --- | --- | --- | --- |
+| 60 Hz | 59.9 Hz (16.71 ms) | 40.6 | 50.9 | 52–74% at 700 MHz |
+| 120 Hz | 119.7 Hz (8.35 ms) | 38.1 | 49.5 | 51–70% at 700 MHz |
+
+- **The refresh is steady in both modes:** 58–60 and 119–120 vsyncs every second.
+- **The frame rate follows the game, not the panel.** It peaks at the game's own 50 a second and dips in heavy scenes to 20–40 at both rates. The two means differ by less than the difference between the two runs' scenes. You noticed no difference playing.
+- **Neither rate divides 50 frames a second evenly** (60/50 and 120/50 are not whole numbers), so a PAL game's frames are held for one or two vsyncs at 60 Hz, or two or three at 120 Hz, either way. The panel offers only 60 and 120 Hz, so there is no even mode for 50 Hz. NTSC games (60 a second) divide both evenly.
+- **The tool counts frames per second, not each frame's time**, so finer judder is not measured. Nothing on screen asked for it.
+- **Decision: no change.** The panel stays at the phone's 120 Hz, and the port does not switch rates per game. The GPU runs at its top clock (700 MHz) at about 60% load in these games, so 120 Hz composition costs no game speed.
+
 ### What this means for the decisions
 
 - **`DriverDetails` line (option (a)):** S4-M2 passed, so (a) is the recommendation. For the scope:
@@ -317,3 +407,56 @@ logout
   - Older V@5xx blobs fall inside; whether they hang is not known.
   - `OS_ALL` against `OS_LINUX` stays your call.
 - **Driver feature:** the picture is right on all three games, Wind Waker no longer hangs, and the crash at stop is fixed. Build it, keeping the system driver as the default. Label a downloaded driver as "custom", since every new Mesa release can import something libhybris lacks.
+
+## Step 8: the GPU driver feature (built)
+
+As the Android app's Settings → Graphics → GPU Driver.
+
+### What it does
+
+- **Settings → Graphics → GPU Driver** (`qml/GpuDriversPage.qml`), the Android app's entry. The generator routes Android's hidden `GPU_DRIVERS` menu to this page (`ut/tools/gen-settings.py`, `REDIRECTS`). It is in global settings only: the driver is loaded for the whole app.
+  - **In use now:** the driver this run uses. If the chosen one could not be used, the reason, in red. If another is chosen, "Close Dolphin … and open it again".
+  - **The choices:** "System driver" (the phone's Qualcomm driver, the default), then each installed driver, with name, Vulkan version, vendor, author, package version and description from its `meta.json`. A tick marks the chosen one. Swipe right to remove one.
+  - **Install Driver…:** the app's file picker (zip files, starting in Downloads). An installed driver is chosen at once.
+- **Packages:** the Android app's format (AdrenoTools: a zip with `meta.json` schema version 1 and the driver library it names), such as Mesa Turnip from K11MCH1/AdrenoToolsDrivers.
+  - Installed into `<user folder>/GpuDrivers/<name-vVersion>/`. The named library is saved as `vulkan.adreno.so`, the name the shim loads; other `.so` files in the package go next to it, where the driver's namespace finds them.
+  - Checked before writing: `meta.json` is present and readable, each library is a 64-bit ARM ELF, and the size is sane.
+  - The files are written to a temporary folder and then renamed, so a failed install leaves nothing behind. The same name and version replaces the installed copy.
+- **The choice:** `Dolphin.ini`, `[UbuntuTouch] GpuDriver` = the folder name (empty: the system driver).
+  - `main()` sets the user folder and reads that key from the file before `QGuiApplication` (`GpuDrivers::ApplyAtStart`), because libhybris starts with Qt's EGL and the driver is fixed for the process (`VulkanDriver.h`).
+  - Dolphin's `DriverLibName` is the Android app's libadrenotools setting; it stays unused here.
+  - `DOLPHIN_UT_GPU_DRIVER` (a folder) still overrides the setting, for tests.
+- **The click** carries the shim in `lib/hybris/libvndksupport.so`, next to the binary, where `GpuDrivers` looks (`ut/click/build-click.sh`).
+- **The shim builds without a phone:**
+  - `ut/vkdriver/build-shim.sh` links against stub `libc.so`, `libdl.so` and `libdl_android.so` (`bionic-stubs.c`). They carry only the twelve imported names, the sonames and bionic's symbol versions (`LIBC`, `LIBDL_ANDROID`); at run time libhybris resolves them in the phone's libraries.
+  - The result has the same imports, versions and `NEEDED` entries as the build against the phone's own libraries (compared with `readelf`).
+
+### Checked on the phone (test folder, adb)
+
+| Check | Result |
+| --- | --- |
+| Install `Turnip_v26.0.0_R8.zip` (`page-harness.qml --test-page gpu-roundtrip`) | Installed as `Mesa_Turnip_driver_v26.0.0_-_R8-v1/` (`vulkan.adreno.so`, `meta.json`), chosen, `GpuDriver` written |
+| Install a file that is not a zip | "This is not a zip file." |
+| Install a zip without `meta.json` | "This is not a driver package: it has no meta.json." |
+| Next start | "GPU driver …: in use"; the page shows "In use now: Mesa Turnip driver v26.0.0 - R8" with the tick |
+| Need for Speed, Vulkan, driver from the setting (no environment variable) | Turnip loaded by the shim, 100% speed, stopped cleanly |
+| Need for Speed, OpenGL ES, Turnip chosen | Unaffected (OpenGL ES, 100%), stopped cleanly |
+| The chosen driver's folder missing | Falls back to the system driver; the page shows the reason in red |
+| **The installed click** 2609.266 (`run-click.sh`, its AppArmor profile, a test user folder with Turnip chosen) | Shim at `lib/hybris/`, Turnip loaded, Wind Waker running 25 s (past the 11 s hang of the system driver), stopped cleanly |
+
+### Not done (later)
+
+- **Opening a driver zip from another app** (content-hub, for example from the browser's downloads). Import Games skips non-game files; a driver zip could be routed to the installer.
+- **Restarting the app from the page.** Lomiri tracks the app's process, and an in-place restart is untested, so the page asks to close and reopen Dolphin.
+- **Turnip's other imports.** Turnip may import other pthread functions that libhybris lacks (S4-M1 results). One would crash the same recognizable way, and `core-info.py` names it.
+
+### S4-M6 (manual, on screen): the feature in the installed app (passed)
+
+1. Download a driver package on the phone, for example `Turnip_v26.0.0_R8.zip` from K11MCH1/AdrenoToolsDrivers (Releases), or copy one to `~/Downloads` over USB.
+2. In Dolphin: Settings → Graphics → GPU Driver → Install Driver…, then tap the zip. Is it listed with a tick, with "Close Dolphin … and open it again"?
+3. Close Dolphin from the app switcher, open it again. Does the page say "In use now: Mesa Turnip…"?
+4. Play Wind Waker on Vulkan past the title, then leave the game. Does it run, and does Dolphin return to the library?
+5. Choose "System driver", reopen Dolphin. Does the page say "In use now: System driver"? Swipe the Turnip entry right and remove it.
+
+
+All tests passed! 

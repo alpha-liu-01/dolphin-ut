@@ -3,7 +3,8 @@
 //     [--test-arg GAME_PATH] --grab /home/phablet/dolphin-ut-probe/page.png --grab-after 6000
 // NAME: details (needs GAME_PATH), folders, picker, developer, controllers, gcport, wiimote,
 // mapping-gc, mapping-wii, settings:<MENU TAG>, game-settings (--test-arg GAMEID),
-// settings-roundtrip, file-picker, import, userdata, paths-roundtrip, sd-roundtrip; anything else
+// settings-roundtrip, file-picker, import, userdata, paths-roundtrip, sd-roundtrip, gpu-drivers,
+// gpu-roundtrip (--test-arg ZIP; ZIP.nometa.zip is the failure case); anything else
 // shows the library.
 import QtQuick
 import QtQuick.Window
@@ -61,6 +62,21 @@ Window {
             else if (page === "file-picker") stack.push(base + "FolderPickerPage.qml", { title: "Open File", pickFiles: true, extensions: ["iso", "rvz", "wbfs", "gcm"], startFolder: arg })
             else if (page === "import") stack.push(base + "ImportPage.qml")
             else if (page === "userdata") stack.push(base + "UserDataPage.qml")
+            else if (page === "gpu-drivers") stack.push(base + "GpuDriversPage.qml")
+            else if (page === "gpu-roundtrip") {
+                // Stage 4: install the driver package --test-arg ZIP and choose it (as the page does),
+                // list; then the
+                // failure cases (not a zip, a zip without meta.json).
+                const r = gpuDrivers.install(arg)
+                console.log("GPU install " + JSON.stringify(r))
+                if (r.ok)
+                    gpuDrivers.select(r.id)
+                console.log("GPU active '" + gpuDrivers.active + "' error '" + gpuDrivers.activeError + "' selected '" + gpuDrivers.selected + "'")
+                console.log("GPU drivers " + JSON.stringify(gpuDrivers.drivers))
+                console.log("GPU not a zip " + JSON.stringify(gpuDrivers.install("/etc/hostname")))
+                console.log("GPU no meta " + JSON.stringify(gpuDrivers.install(arg + ".nometa.zip")))
+                stack.push(base + "GpuDriversPage.qml")
+            }
             else if (page === "paths-roundtrip") {
                 // A path setting (3.7): set, read back, reset (--test-arg FOLDER).
                 const name = "StringSetting.MAIN_DUMP_PATH"

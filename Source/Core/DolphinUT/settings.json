@@ -956,6 +956,12 @@
      "type": "submenu",
      "title": "Advanced",
      "menu": "ADVANCED_GRAPHICS"
+    },
+    {
+     "type": "page",
+     "title": "GPU Driver",
+     "page": "GpuDriversPage.qml",
+     "globalOnly": true
     }
    ],
    "title": "Graphics Settings"

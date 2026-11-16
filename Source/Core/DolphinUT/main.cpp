@@ -25,10 +25,10 @@
 #include "DolphinUT/Controllers.h"
 #include "DolphinUT/Emulator.h"
 #include "DolphinUT/GameList.h"
+#include "DolphinUT/GpuDrivers.h"
 #include "DolphinUT/SettingsModel.h"
 #include "DolphinUT/PortDefaults.h"
 #include "DolphinUT/Storage.h"
-#include "DolphinUT/VulkanDriver.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
 
@@ -131,18 +131,6 @@ void OnQuitSignal(int)
 
 int main(int argc, char** argv)
 {
-  // Stage 4: a custom Vulkan driver (a folder with vulkan.adreno.so, e.g. Mesa Turnip), set up before
-  // libhybris starts (VulkanDriver.h). The stand-in libvndksupport.so is next to the binary, in
-  // lib/hybris/. Only from the environment for now; a setting comes with the feature.
-  if (const char* folder = std::getenv("DOLPHIN_UT_GPU_DRIVER"); folder && *folder)
-  {
-    std::string error;
-    const bool ok =
-        VulkanDriver::Use(folder, File::GetExeDirectory() + "/lib/hybris", &error);
-    std::printf("[dolphin-ut] GPU driver %s: %s\n", folder, ok ? "in use" : error.c_str());
-    std::fflush(stdout);
-  }
-
   // SDL (the controller backend) would install its own SIGINT/SIGTERM handlers when controllers are
   // initialized, replacing ours and turning the signals into a game stop instead of an app quit.
   // Lomiri closes apps with SIGTERM, so the app must handle it itself.
@@ -155,11 +143,20 @@ int main(int argc, char** argv)
   // Started by Lomiri (APP_ID set): Qt's settings and caches, and Dolphin's user folder, go to the
   // app's own folders, which a confined click may write (stage 3.7).
   Storage::ConfigureApplication();
+  UICommon::SetUserDirectory(Storage::UserFolder(ArgumentValue(argc, argv, "-u", "--user")));
+
+  // Stage 4: the chosen Vulkan driver (Settings → Graphics → GPU Driver), set up before libhybris
+  // starts with Qt's EGL (GpuDrivers.h, VulkanDriver.h).
+  if (const std::string driver_note = GpuDrivers::ApplyAtStart(); !driver_note.empty())
+  {
+    std::printf("[dolphin-ut] %s\n", driver_note.c_str());
+    std::fflush(stdout);
+  }
+
   QGuiApplication app(argc, argv);
 
   Common::RegisterMsgAlertHandler(OnMsgAlert);
   AddCommandLineConfigLayer(argc, argv);
-  UICommon::SetUserDirectory(Storage::UserFolder(ArgumentValue(argc, argv, "-u", "--user")));
   UICommon::CreateDirectories();
   UICommon::Init();
 
@@ -176,6 +173,7 @@ int main(int argc, char** argv)
   GameListModel game_list;
   Controllers controllers;
   SettingsModel settings_model;
+  GpuDrivers gpu_drivers;
   QObject::connect(&controllers, &Controllers::message, &emulator, &Emulator::appendLog);
   controllers.SetVibrator([&lomiri](int duration_ms) { lomiri.vibrate(duration_ms); });
   qmlRegisterType<GameListFilter>("DolphinUT.Native", 1, 0, "GameListFilter");
@@ -188,6 +186,7 @@ int main(int argc, char** argv)
   engine.rootContext()->setContextProperty(QStringLiteral("settingsModel"), &settings_model);
   engine.rootContext()->setContextProperty(QStringLiteral("lomiri"), &lomiri);
   engine.rootContext()->setContextProperty(QStringLiteral("storage"), &storage);
+  engine.rootContext()->setContextProperty(QStringLiteral("gpuDrivers"), &gpu_drivers);
   // Development: --qml FILE loads that file instead of the app's UI (the phone has no Qt 6 qml
   // runtime), with the same context objects.
   const std::string qml_file = ArgumentValue(argc, argv, nullptr, "--qml");
