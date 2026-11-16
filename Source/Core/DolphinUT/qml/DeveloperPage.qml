@@ -63,6 +63,21 @@ Page {
                 }
             }
 
+            ListItem {
+                height: statsLayout.height
+                ListItemLayout {
+                    id: statsLayout
+                    padding.leading: 0
+                    title.text: "Show FPS and speed in games"
+                    subtitle.text: "Dolphin's on-screen statistics (Graphics settings in 3.6)"
+                    Switch {
+                        SlotsLayout.position: SlotsLayout.Trailing
+                        checked: emulator.showPerformanceStats
+                        onClicked: emulator.showPerformanceStats = checked
+                    }
+                }
+            }
+
             Row {
                 spacing: units.gu(1)
                 Button {

@@ -98,6 +98,14 @@ void LomiriIntegration::vibrate(int duration_ms)
           });
 }
 
+float LomiriIntegration::GridUnitScale()
+{
+  // Lomiri's scale: 1 grid unit is 8 px at scale 1 (GRID_UNIT_PX=21 on the Redmi Note 12 5G).
+  bool ok = false;
+  const float grid_unit = qEnvironmentVariable("GRID_UNIT_PX").toFloat(&ok);
+  return ok && grid_unit >= 4.0f ? grid_unit / 8.0f : 1.0f;
+}
+
 void LomiriIntegration::PreferLandscape(QWindow* window)
 {
   if (!window)

@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <QElapsedTimer>
 #include <QWindow>
 
 class TouchOverlay;
@@ -27,11 +28,20 @@ signals:
   // In physical pixels.
   void SizeChanged(int width, int height, float scale);
   void CloseRequested();
+  // Escape or Back, as the Android app's Back: a short press opens the in-game menu (3.4), a long
+  // press stops the game.
+  void MenuRequested();
+  void StopRequested();
 
 protected:
   bool event(QEvent* event) override;
+  void keyPressEvent(QKeyEvent* event) override;
+  void keyReleaseEvent(QKeyEvent* event) override;
   void resizeEvent(QResizeEvent* event) override;
+  void exposeEvent(QExposeEvent* event) override;
 
 private:
   TouchOverlay* m_overlay = nullptr;
+  QElapsedTimer m_back_pressed;
+  bool m_fullscreen_requested = false;
 };

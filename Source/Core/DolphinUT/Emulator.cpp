@@ -3,6 +3,7 @@
 
 #include "DolphinUT/Emulator.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cstdio>
 
@@ -12,12 +13,15 @@
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QMetaObject>
+#include <QScreen>
+#include <QTimer>
 #include <QWindow>
 #include <qpa/qplatformnativeinterface.h>
 #include <qpa/qplatformwindow.h>
 
 #include "Core/Boot/Boot.h"
 #include "Core/BootManager.h"
+#include "Core/Config/GraphicsSettings.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/HW/Wiimote.h"
 #include "Core/HW/WiimoteEmu/ExtensionPort.h"
@@ -170,7 +174,10 @@ WindowSystemInfo Emulator::MakeWindowSystemInfo(QWindow* window) const
     wsi.render_window = reinterpret_cast<void*>(window->winId());
   }
   wsi.render_surface = wsi.render_window;
-  wsi.render_surface_scale = static_cast<float>(window->devicePixelRatio());
+  // Dolphin sizes its on-screen UI by this. Qt's device pixel ratio is 1 under Lomiri Components
+  // (3.1), so use Lomiri's grid-unit scale, as native apps do.
+  wsi.render_surface_scale = std::max(static_cast<float>(window->devicePixelRatio()),
+                                      LomiriIntegration::GridUnitScale());
   const QSize physical = window->handle() ? window->handle()->geometry().size() :
                                             window->size() * window->devicePixelRatio();
   wsi.render_surface_width = physical.width();
@@ -209,11 +216,20 @@ void Emulator::start(const QString& path, const QString& backend)
   m_game_window = new GameWindow();
   connect(m_game_window, &GameWindow::SizeChanged, this, &Emulator::OnGameWindowSizeChanged);
   connect(m_game_window, &GameWindow::CloseRequested, this, &Emulator::stop);
+  connect(m_game_window, &GameWindow::StopRequested, this, &Emulator::stop);
+  // Until the in-game menu (3.4) exists, Back pauses or resumes.
+  connect(m_game_window, &GameWindow::MenuRequested, this, [this] {
+    appendLog(QStringLiteral("menu requested (no in-game menu yet): pause/resume"));
+    togglePause();
+  });
   connect(m_game_window, &QWindow::activeChanged, this,
           [this] { s_game_window_active = m_game_window && m_game_window->isActive(); });
   m_lomiri->PreferLandscape(m_game_window);
-  m_game_window->showFullScreen();
-  m_game_window->create();
+  // Lomiri makes the game window fullscreen (top panel hidden) only if it asks once mapped (see
+  // GameWindow::exposeEvent) and no other window of the app is showing: hide the library first.
+  if (m_hide_launcher && m_launcher)
+    m_launcher->hide();
+  m_game_window->show();
 
   TouchOverlay::Layout layout = TouchOverlay::Layout::GameCube;
   bool sideways_option = false;
@@ -252,9 +268,6 @@ void Emulator::start(const QString& path, const QString& backend)
   };
   m_overlay = std::make_unique<TouchOverlay>(layout, sideways_option, std::move(actions));
   m_game_window->SetOverlay(m_overlay.get());
-
-  if (m_hide_launcher && m_launcher)
-    m_launcher->hide();
 
   const WindowSystemInfo wsi = MakeWindowSystemInfo(m_game_window);
   appendLog(QStringLiteral("game window %1x%2, wl_surface %3")
@@ -354,6 +367,33 @@ void Emulator::OnApplicationStateChanged(Qt::ApplicationState state)
     m_paused_by_app_state = false;
     appendLog(QStringLiteral("resumed (app active)"));
   }
+}
+
+void Emulator::togglePause()
+{
+  auto& system = Core::System::GetInstance();
+  const Core::State state = Core::GetState(system);
+  if (state == Core::State::Running)
+    Core::SetState(system, Core::State::Paused);
+  else if (state == Core::State::Paused)
+    Core::SetState(system, Core::State::Running);
+  // A manual pause or resume overrides the automatic one for app switches.
+  m_paused_by_app_state = false;
+}
+
+bool Emulator::GetShowPerformanceStats() const
+{
+  return Config::Get(Config::GFX_SHOW_FPS) && Config::Get(Config::GFX_SHOW_SPEED);
+}
+
+void Emulator::SetShowPerformanceStats(bool show)
+{
+  if (show == GetShowPerformanceStats())
+    return;
+  Config::SetBase(Config::GFX_SHOW_FPS, show);
+  Config::SetBase(Config::GFX_SHOW_SPEED, show);
+  Config::Save();
+  emit settingsChanged();
 }
 
 void Emulator::OnGameWindowSizeChanged(int width, int height, float scale)

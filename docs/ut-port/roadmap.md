@@ -214,7 +214,10 @@ Goal: someone can pick up the phone and play, without a keyboard and mouse, in a
 
 Removed from the old stage 3: Widgets UI scaling, `RenderToMain` as a shipped default, Confirm on Stop handling. Deferred to after stage 3: cheats, Riivolution, Skylanders and Infinity Base, NetPlay, achievements, GBA link, disc conversion, system update, TV layout, translations of the new strings.
 
-Status (2026-11-15): **3.0 done** (`stage3.0-foundations.md`). **3.1 (game library) done** (`stage3.1-library.md`): a native Lomiri library with the Android tabs, GameTDB covers (on by default, user decision), details, grid options and game folders. Next: 3.2 (emulation screen and lifecycle).
+Status (2026-11-15): **3.0 done** (`stage3.0-foundations.md`). **3.1 (game library) done** (`stage3.1-library.md`): a native Lomiri library with the Android tabs, GameTDB covers (on by default, user decision), details, grid options and game folders. **3.2 (emulation screen and lifecycle): on-screen tests done, two fixes to re-test** (`stage3.2-emulation.md`):
+- the top panel stayed over the game; Lomiri needs `set_fullscreen` after mapping, with no other window of the app showing;
+- the statistics were too small (Dolphin's UI scale is now the grid-unit scale).
+- App switching, screen lock, Escape, closing from the spread and a SIGSTOP/SIGCONT suspend test all passed.
 - Found while testing: Wind Waker hangs the GPU on Vulkan (`VK_ERROR_DEVICE_LOST`, KGSL "GPU hang detected"), in DolphinQt too. OpenGL ES works. Stage 4.
 - **Window architecture A, decided by the user:** Dolphin's renderer draws the touch overlay; no subsurface. The condition: the Android overlay customization UX is reimplemented (3.3). Portrait gets its own default layout, as on Android.
 - On screen, everything works:

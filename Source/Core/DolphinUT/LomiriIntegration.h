@@ -22,6 +22,10 @@ public:
   void SetKeepDisplayOn(bool keep_on);
   void PreferLandscape(QWindow* window);
 
+  // Lomiri's UI scale (GRID_UNIT_PX / 8), what Qt's device pixel ratio was before 3.1 dropped
+  // QT_SCALE_FACTOR. Dolphin's own on-screen UI (statistics, messages) is sized by it.
+  static float GridUnitScale();
+
   // Asynchronous; failures are reported through message().
   Q_INVOKABLE void vibrate(int duration_ms);
 

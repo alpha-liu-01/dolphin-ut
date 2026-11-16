@@ -166,6 +166,20 @@ Steps:
 
 Exit: start from the library, play, switch to another app and back (the game paused and resumed), rotate, exit through the menu. No stale frames and no hangs.
 
+#### Status (2026-11-15): on-screen tests done; fixes for fullscreen and the statistics size waiting for a re-test
+
+Notes: `stage3.2-emulation.md`.
+- Steps 1, 2, 4 and the pause/resume of step 5 were already done and tested on screen in 3.0. Pausing also stops the audio: the CPU's stepping turns the sound stream off.
+- **Suspension:** a game frozen mid-run with SIGSTOP for 15 s (as Lomiri does to background apps) carried on after SIGCONT, with no device loss or GPU fault.
+- **Back/Escape** (step 6): a short press will open the 3.4 menu (it pauses or resumes until then), a long press stops, as on Android. Ubuntu Touch has no system Back, so this needs a keyboard; a gamepad "open menu" is for 3.4/3.5.
+- **FPS and speed** (step 7): Dolphin's own statistics, a switch on the Developer page until 3.6.
+- On screen (S3.2): app switching, screen lock, USB-keyboard Escape and closing from the spread work.
+- **Fullscreen failed: the top panel stayed.** Lomiri needs two things:
+  - `set_fullscreen` *after* the window is mapped;
+  - no other window of the app showing.
+  Fixed: the game window asks once exposed, and the library window is hidden first. Lomiri now answers 1080x2400 with the fullscreen state.
+- **The statistics were too small.** Dolphin's UI scale came from Qt's device pixel ratio, 1 since 3.1; it is now Lomiri's grid-unit scale (2.625).
+
 ### 3.3 Touch overlay (large)
 
 Goal: the Android overlay. Play without a controller.

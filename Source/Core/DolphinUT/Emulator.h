@@ -29,6 +29,10 @@ class Emulator : public QObject
   Q_PROPERTY(QString log READ log NOTIFY logChanged)
   Q_PROPERTY(bool hideLauncherWhilePlaying MEMBER m_hide_launcher NOTIFY settingsChanged)
   Q_PROPERTY(bool pauseWhenInactive MEMBER m_pause_when_inactive NOTIFY settingsChanged)
+  // Dolphin's on-screen FPS and speed (Graphics.Settings.ShowFPS / ShowSpeed). Until the settings
+  // screens (3.6) exist, it is on the Developer page.
+  Q_PROPERTY(bool showPerformanceStats READ GetShowPerformanceStats WRITE SetShowPerformanceStats
+                 NOTIFY settingsChanged)
 
 public:
   explicit Emulator(LomiriIntegration* lomiri, QObject* parent = nullptr);
@@ -44,6 +48,11 @@ public:
   Q_INVOKABLE void start(const QString& path, const QString& backend = {});
   Q_INVOKABLE void stop();
   Q_INVOKABLE void appendLog(const QString& text);
+  // Pauses a running game or resumes a paused one.
+  Q_INVOKABLE void togglePause();
+
+  bool GetShowPerformanceStats() const;
+  void SetShowPerformanceStats(bool show);
 
   // The overlay's Save / Load use this state slot (Dolphin's usual StateSaves/<game id>.s01).
   static constexpr u32 TEST_STATE_SLOT = 1;
