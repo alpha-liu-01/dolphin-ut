@@ -29,14 +29,6 @@ class Emulator : public QObject
   Q_PROPERTY(QString log READ log NOTIFY logChanged)
   Q_PROPERTY(bool hideLauncherWhilePlaying MEMBER m_hide_launcher NOTIFY settingsChanged)
   Q_PROPERTY(bool pauseWhenInactive MEMBER m_pause_when_inactive NOTIFY settingsChanged)
-  // Dolphin's on-screen FPS and speed (Graphics.Settings.ShowFPS / ShowSpeed). Until the settings
-  // screens (3.6) exist, it is on the Developer page.
-  Q_PROPERTY(bool showPerformanceStats READ GetShowPerformanceStats WRITE SetShowPerformanceStats
-                 NOTIFY settingsChanged)
-  // Core.EnableSaveStates: shows the save state entries in the in-game menu, off by default as in the
-  // Android app. On the Developer page until the settings screens (3.6).
-  Q_PROPERTY(bool enableSaveStates READ GetEnableSaveStates WRITE SetEnableSaveStates NOTIFY
-                 settingsChanged)
 
 public:
   explicit Emulator(LomiriIntegration* lomiri, QObject* parent = nullptr);
@@ -55,10 +47,6 @@ public:
   // Pauses a running game or resumes a paused one.
   Q_INVOKABLE void togglePause();
 
-  bool GetShowPerformanceStats() const;
-  void SetShowPerformanceStats(bool show);
-  bool GetEnableSaveStates() const;
-  void SetEnableSaveStates(bool enable);
 
   // Load this slot once the game runs (0: none).
   void SetBootStateSlot(int slot) { m_boot_state_slot = slot; }
@@ -87,6 +75,7 @@ private:
   QTimer m_host_jobs;
   QTimer m_perf_log;
   QTimer m_paused_redraw;
+  int m_cpu_boost = 0;  // the uclamp_min applied while running
   Common::EventHook m_state_hook;
   Core::State m_core_state = Core::State::Uninitialized;
   bool m_paused_by_app_state = false;

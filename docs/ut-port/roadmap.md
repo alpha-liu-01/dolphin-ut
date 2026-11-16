@@ -214,7 +214,9 @@ Goal: someone can pick up the phone and play, without a keyboard and mouse, in a
 
 Removed from the old stage 3: Widgets UI scaling, `RenderToMain` as a shipped default, Confirm on Stop handling. Deferred to after stage 3: cheats, Riivolution, Skylanders and Infinity Base, NetPlay, achievements, GBA link, disc conversion, system update, TV layout, translations of the new strings.
 
-Status (2026-11-15): **3.0 done** (`stage3.0-foundations.md`). **3.1 (game library) done** (`stage3.1-library.md`): a native Lomiri library with the Android tabs, GameTDB covers (on by default, user decision), details, grid options and game folders. **3.5 (controllers and mapping): on-screen tests passed, one fix to re-test** (`stage3.5-controllers.md`): Controllers pages after the Android app's, input detection, profiles, SDL gamepad defaults, automatic mapping of a new gamepad, rumble on the phone's vibrator.
+Status (2026-11-15): **3.0 done** (`stage3.0-foundations.md`). **3.1 (game library) done** (`stage3.1-library.md`): a native Lomiri library with the Android tabs, GameTDB covers (on by default, user decision), details, grid options and game folders. **3.6 (settings) first pass done** (`stage3.6-settings.md`): the Android app's settings menus generated from its sources and bound to Dolphin's own config objects; per-game settings; the CPU Boost setting (38–50 % → 82–100 % of full speed in Need for Speed); Dolphin's alerts are logged, shown and ignored instead of ending the app.
+
+**3.5 (controllers and mapping) done** (`stage3.5-controllers.md`): Controllers pages after the Android app's, input detection, profiles, SDL gamepad defaults, automatic mapping of a new gamepad, rumble on the phone's vibrator.
 
 **3.4 (in-game menu) done** (`stage3.4-menu.md`): the Android menu as a left panel in the game picture; menus keep drawing while paused (redraws queued through the paused CPU thread).
 

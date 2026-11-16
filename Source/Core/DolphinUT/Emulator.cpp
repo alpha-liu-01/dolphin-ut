@@ -3,6 +3,8 @@
 
 #include "DolphinUT/Emulator.h"
 
+#include "DolphinUT/CpuBoost.h"
+
 #include <algorithm>
 #include <atomic>
 #include <cstdio>
@@ -98,6 +100,9 @@ Emulator::Emulator(LomiriIntegration* lomiri, QObject* parent) : QObject(parent)
     auto& system = Core::System::GetInstance();
     if (Core::GetState(system) != Core::State::Running)
       return;
+    // Threads started since (shader compilers, …) get the boost too.
+    if (m_cpu_boost > 0)
+      CpuBoost::Apply(m_cpu_boost);
     const PerformanceMetrics& perf = system.GetPerfMetrics();
     appendLog(QStringLiteral("perf: %1 fps, %2 vps, %3% speed (%4)")
                   .arg(perf.GetFPS(), 0, 'f', 1)
@@ -368,6 +373,16 @@ void Emulator::OnCoreStateChanged(Core::State state)
     }
   }
 
+  // CPU boost (3.0 benchmark, 3.6 setting): on while the game runs, off when paused or stopped.
+  const int boost = state == Core::State::Running ? Config::Get(CpuBoost::UT_CPU_BOOST) : 0;
+  if (boost != m_cpu_boost)
+  {
+    m_cpu_boost = boost;
+    appendLog(QStringLiteral("CPU boost %1 (uclamp_min) on %2 threads")
+                  .arg(boost)
+                  .arg(CpuBoost::Apply(boost)));
+  }
+
   if (state == Core::State::Uninitialized)
     FinishStop();
 }
@@ -404,35 +419,6 @@ void Emulator::togglePause()
     Core::SetState(system, Core::State::Running);
   // A manual pause or resume overrides the automatic one for app switches.
   m_paused_by_app_state = false;
-}
-
-bool Emulator::GetShowPerformanceStats() const
-{
-  return Config::Get(Config::GFX_SHOW_FPS) && Config::Get(Config::GFX_SHOW_SPEED);
-}
-
-void Emulator::SetShowPerformanceStats(bool show)
-{
-  if (show == GetShowPerformanceStats())
-    return;
-  Config::SetBase(Config::GFX_SHOW_FPS, show);
-  Config::SetBase(Config::GFX_SHOW_SPEED, show);
-  Config::Save();
-  emit settingsChanged();
-}
-
-bool Emulator::GetEnableSaveStates() const
-{
-  return Config::Get(Config::MAIN_ENABLE_SAVESTATES);
-}
-
-void Emulator::SetEnableSaveStates(bool enable)
-{
-  if (enable == GetEnableSaveStates())
-    return;
-  Config::SetBase(Config::MAIN_ENABLE_SAVESTATES, enable);
-  Config::Save();
-  emit settingsChanged();
 }
 
 void Emulator::OnGameWindowSizeChanged(int width, int height, float scale)

@@ -63,37 +63,6 @@ Page {
                 }
             }
 
-            ListItem {
-                height: statsLayout.height
-                ListItemLayout {
-                    id: statsLayout
-                    padding.leading: 0
-                    title.text: "Show FPS and speed in games"
-                    subtitle.text: "Dolphin's on-screen statistics (Graphics settings in 3.6)"
-                    Switch {
-                        SlotsLayout.position: SlotsLayout.Trailing
-                        checked: emulator.showPerformanceStats
-                        onClicked: emulator.showPerformanceStats = checked
-                    }
-                }
-            }
-
-            ListItem {
-                height: saveStatesLayout.height
-                ListItemLayout {
-                    id: saveStatesLayout
-                    padding.leading: 0
-                    title.text: "Enable Save States"
-                    subtitle.text: "In the in-game menu; off by default, as in the Android app (Settings in 3.6)"
-                    subtitle.maximumLineCount: 2
-                    subtitle.wrapMode: Text.Wrap
-                    Switch {
-                        SlotsLayout.position: SlotsLayout.Trailing
-                        checked: emulator.enableSaveStates
-                        onClicked: emulator.enableSaveStates = checked
-                    }
-                }
-            }
 
             Row {
                 spacing: units.gu(1)

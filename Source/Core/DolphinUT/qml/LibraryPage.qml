@@ -52,6 +52,11 @@ Page {
                     onTriggered: gameList.refresh()
                 },
                 Action {
+                    iconName: "settings"
+                    text: "Settings"
+                    onTriggered: pageStack.push(Qt.resolvedUrl("SettingsPage.qml"))
+                },
+                Action {
                     iconName: "view-grid-symbolic"
                     text: "Grid Options"
                     onTriggered: PopupUtils.open(gridOptionsDialog, page)
@@ -278,6 +283,23 @@ Page {
                     PopupUtils.close(dialog)
                     pageStack.push(Qt.resolvedUrl("GameDetailsPage.qml"),
                                         { details: gameList.details(dialog.gamePath) })
+                }
+            }
+            Button {
+                text: "Edit Game Settings"
+                onClicked: {
+                    const details = gameList.details(dialog.gamePath)
+                    PopupUtils.close(dialog)
+                    if (settingsModel.openGame(details.gameId, details.revision))
+                        pageStack.push(Qt.resolvedUrl("SettingsPage.qml"),
+                                       { closesGame: true, gameTitle: details.title })
+                }
+            }
+            Button {
+                text: "Clear Game Settings"
+                onClicked: {
+                    settingsModel.clearGameSettings(gameList.details(dialog.gamePath).gameId)
+                    PopupUtils.close(dialog)
                 }
             }
             Button {

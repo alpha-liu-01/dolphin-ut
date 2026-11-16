@@ -19,15 +19,18 @@
 #include <QTimer>
 #include <QWindow>
 
+#include "Common/MsgHandler.h"
 #include "Common/StringUtil.h"
 #include "DolphinUT/Controllers.h"
 #include "DolphinUT/Emulator.h"
 #include "DolphinUT/GameList.h"
+#include "DolphinUT/SettingsModel.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
 
 #include "UICommon/CommandLineParse.h"
 #include "UICommon/UICommon.h"
+#include "VideoCommon/OnScreenDisplay.h"
 
 namespace
 {
@@ -94,6 +97,24 @@ void AddCommandLineConfigLayer(int argc, char** argv)
   CommandLineParse::ParseArguments(parser.get(), arguments);
 }
 
+// Dolphin's panic alerts and assertion questions ("An error occurred … Ignore and continue?").
+// Without a handler, Dolphin answers "no" on Linux, and an assertion then ends the app with SIGTRAP
+// (S3.6: Wind Waker loading a save state made while its GPU had hung). DolphinQt and the Android
+// app ask the user; until the port has a dialog that can be answered while the game's own threads
+// wait (3.6 second pass), it logs the message, shows it on screen, and continues, as "Ignore" does.
+bool OnMsgAlert(const char* caption, const char* text, bool yes_no, Common::MsgType style)
+{
+  Emulator::LogFromAnyThread(QStringLiteral("alert (%1): %2 — %3")
+                                 .arg(QString::fromUtf8(caption), QString::fromUtf8(text),
+                                      yes_no ? QStringLiteral("continuing") :
+                                               QStringLiteral("shown")));
+  std::string first_line = text;
+  first_line = first_line.substr(0, first_line.find("\n\n"));
+  OSD::AddMessage(std::string(caption) + ": " + first_line, 8000,
+                  style == Common::MsgType::Information ? OSD::Color::YELLOW : OSD::Color::RED);
+  return true;
+}
+
 std::atomic<bool> s_quit_requested = false;
 
 void OnQuitSignal(int)
@@ -118,6 +139,7 @@ int main(int argc, char** argv)
   QCoreApplication::setApplicationName(QStringLiteral("dolphin-ut"));
   QGuiApplication app(argc, argv);
 
+  Common::RegisterMsgAlertHandler(OnMsgAlert);
   AddCommandLineConfigLayer(argc, argv);
   UICommon::SetUserDirectory(ArgumentValue(argc, argv, "-u", "--user"));
   UICommon::CreateDirectories();
@@ -128,6 +150,7 @@ int main(int argc, char** argv)
 
   GameListModel game_list;
   Controllers controllers;
+  SettingsModel settings_model;
   QObject::connect(&controllers, &Controllers::message, &emulator, &Emulator::appendLog);
   controllers.SetVibrator([&lomiri](int duration_ms) { lomiri.vibrate(duration_ms); });
   qmlRegisterType<GameListFilter>("DolphinUT.Native", 1, 0, "GameListFilter");
@@ -137,6 +160,7 @@ int main(int argc, char** argv)
   engine.rootContext()->setContextProperty(QStringLiteral("gameList"), &game_list);
   engine.rootContext()->setContextProperty(QStringLiteral("emulator"), &emulator);
   engine.rootContext()->setContextProperty(QStringLiteral("controllers"), &controllers);
+  engine.rootContext()->setContextProperty(QStringLiteral("settingsModel"), &settings_model);
   engine.rootContext()->setContextProperty(QStringLiteral("lomiri"), &lomiri);
   // Development: --qml FILE loads that file instead of the app's UI (the phone has no Qt 6 qml
   // runtime), with the same context objects.

@@ -2,7 +2,7 @@
 
 Goal (`stage3-roadmap.md`): plug in or pair a gamepad and play, without a desktop mapping window.
 
-Status (2026-11-15): on-screen tests passed. One fix (the controller type and source lists on ports 2–4 were empty) waits for a re-test (end of this document).
+Status (2026-11-16): **done.** The fix for the empty type and source lists on ports 2–4 passed its re-test.
 
 ## What was built
 
@@ -165,6 +165,6 @@ Over Bluetooth, SDL3 recognises it as a PS4 controller, so the gamepad defaults 
 
 So it stays a stone-ut item: a udev rule giving the logged-in user (or `plugdev`) access to USB gamepads would let SDL3's HIDAPI driver handle it; a `hid-sony` fix would give the evdev device too.
 
-### Re-test (stopped here)
+### Re-test: passed (user, 2026-11-16)
 
 **S3.5-M8.** Controllers → GameCube Controller 2 → Controller type: the list shows all types; pick Standard Controller, Configure, then set it back to None. Wii Remote 2 → Wii Remote: Emulated, the extension list works, back to None.

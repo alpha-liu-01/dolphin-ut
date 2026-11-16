@@ -9,6 +9,8 @@ add_executable(dolphin-ut
   main.cpp
   Host.cpp
   Controllers.cpp
+  CpuBoost.cpp
+  CpuBoost.h
   Controllers.h
   Emulator.cpp
   Emulator.h
@@ -19,6 +21,9 @@ add_executable(dolphin-ut
   LomiriIntegration.cpp
   LomiriIntegration.h
   OverlayLayout.cpp
+  SettingsModel.cpp
+  SettingsModel.h
+  SettingsTable.inc
   OverlayLayout.h
   OverlayDefaults.inc
   TouchOverlay.cpp
@@ -51,6 +56,12 @@ qt_add_resources(dolphin-ut "overlay_images"
   FILES ${DOLPHIN_UT_OVERLAY_IMAGES}
 )
 
+# The settings menus generated from the Android app (ut/tools/gen-settings.py), under :/settings/.
+qt_add_resources(dolphin-ut "settings_menus"
+  PREFIX "/settings"
+  FILES settings.json
+)
+
 qt_add_qml_module(dolphin-ut
   URI DolphinUT
   VERSION 1.0
@@ -66,6 +77,7 @@ qt_add_qml_module(dolphin-ut
     qml/GameCubePortPage.qml
     qml/WiimotePage.qml
     qml/MappingPage.qml
+    qml/SettingsPage.qml
 )
 
 target_include_directories(dolphin-ut PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS})

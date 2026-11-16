@@ -2,7 +2,8 @@
 //   sh run-dolphin.sh ut 9 --qml /home/phablet/dolphin-ut-probe/page-harness.qml --test-page NAME \
 //     [--test-arg GAME_PATH] --grab /home/phablet/dolphin-ut-probe/page.png --grab-after 6000
 // NAME: details (needs GAME_PATH), folders, picker, developer, controllers, gcport, wiimote,
-// mapping-gc, mapping-wii; anything else shows the library.
+// mapping-gc, mapping-wii, settings:<MENU TAG>, game-settings (--test-arg GAMEID),
+// settings-roundtrip; anything else shows the library.
 import QtQuick
 import QtQuick.Window
 import Lomiri.Components
@@ -56,6 +57,30 @@ Window {
             }
             else if (page === "wiimote") stack.push(base + "WiimotePage.qml", { wiimote: 0 })
             else if (page === "mapping-gc") stack.push(base + "MappingPage.qml", { mapping: controllers.mapping("gcpad", 0) })
+            else if (page.startsWith("settings:")) stack.push(base + "SettingsPage.qml", { menuTag: page.substring(9) })
+            else if (page === "game-settings") {
+                // --test-arg GAMEID: that game's settings
+                if (settingsModel.openGame(arg, 0))
+                    stack.push(base + "SettingsPage.qml", { closesGame: true, gameTitle: arg })
+            }
+            else if (page === "game-roundtrip") {
+                // A game setting (--test-arg GAMEID): the backend for that game only.
+                const name = "StringSetting.MAIN_GFX_BACKEND"
+                console.log("GAME global before " + settingsModel.value(name))
+                console.log("GAME open " + settingsModel.openGame(arg, 0))
+                settingsModel.setValue(name, "OGL")
+                console.log("GAME in game " + settingsModel.value(name) + " overridden " + settingsModel.overridden(name))
+                settingsModel.closeGame()
+                console.log("GAME global after " + settingsModel.value(name))
+            }
+            else if (page === "settings-roundtrip") {
+                // Write a setting, read it back, and print both (for the test copy of the config).
+                const name = "BooleanSetting.MAIN_CPU_THREAD"
+                console.log("ROUNDTRIP before " + settingsModel.value(name))
+                settingsModel.setValue(name, !settingsModel.value(name))
+                console.log("ROUNDTRIP after " + settingsModel.value(name))
+                console.log("ROUNDTRIP boost " + settingsModel.value("Virtual.CPU_BOOST") + " dsp " + settingsModel.value("Virtual.DSP_ENGINE") + " mem1 " + settingsModel.value("Virtual.MEM1_MB") + " backend " + settingsModel.value("StringSetting.MAIN_GFX_BACKEND") + " speed " + settingsModel.value("FloatSetting.MAIN_EMULATION_SPEED"))
+            }
             else if (page === "detect") {
                 // Input detection on every device: write "PRESS A" into a Pipes/ FIFO meanwhile.
                 testMapping = controllers.mapping("gcpad", 0)

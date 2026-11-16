@@ -269,7 +269,7 @@ Steps:
 
 Exit: a Bluetooth gamepad plays the test games with default mappings, and a remap through the new UI works.
 
-#### Status (2026-11-15): on-screen tests passed; one fix to re-test (empty type/source lists on ports 2–4)
+#### Status (2026-11-16): done (the fix for the empty lists on ports 2–4 passed its re-test)
 
 Notes: `stage3.5-controllers.md`.
 - The wired DualShock 4 clone cannot be reached: the USB nodes are group 1018 (`phablet` not in it), and `hid-sony` rejects it. It stays a stone-ut item (a udev rule, or the kernel). Over Bluetooth it works as `SDL/0/PS4 Controller`.
@@ -299,6 +299,23 @@ Steps:
 
 Exit: the first-pass settings change behavior on the phone and persist.
 
+#### Status (2026-11-16): first pass done (on-screen tests passed); the second pass is open
+
+Notes: `stage3.6-settings.md`.
+- **On-screen tests passed**: global and game settings, Internal Resolution, Show FPS, per-game Video Backend. CPU Boost: Need for Speed went from 38–50 % to 82–100 % of full speed. With the emulated CPU clock at 85 % it matches the Android app (30–35 fps, VPS 50).
+- **Dolphin's alerts no longer end the app**: dolphin-ut had no message alert handler, so an assertion (Wind Waker loading an old, corrupt save state) answered "no" and trapped (SIGTRAP). The port now logs the alert, shows it on screen and continues, like "Ignore". A Yes/No answer is part of the second pass.
+- **The menus are generated from the Android app** (`ut/tools/gen-settings.py` reads `SettingsFragmentPresenter.kt`, the setting definitions, strings and arrays): 191 items in 18 menus, the Android order and labels.
+- **Settings are bound to Dolphin's own `Config::Info` objects** (136 of 143), so values and defaults are the emulator's. Android's defaults differ: dual core is on there and off on desktop Linux. One Android location is wrong (Audio Buffer Size); Dolphin's is used.
+- **Per-game settings:** long press → Edit Game Settings, the game's `GameSettings/<ID>.ini` layer, a press and hold to clear, and Clear Game Settings.
+- **CPU Boost** (Off/Medium/Maximum, default Maximum): uclamp on the app's threads while a game runs, per game too.
+- Virtual settings for the items Android builds from converters (DSP engine, Synchronize GPU Thread, MEM sizes, CPU core).
+- Left out:
+  - Android-only items;
+  - analytics;
+  - Hotkeys and RetroAchievements (later);
+  - pickers and actions (with 3.7).
+- Settings from the in-game menu are left for the second pass: the settings pages are in the hidden library window.
+
 ### 3.7 Files and storage (small to medium)
 
 Goal: games get onto the phone and saves stay put, within click confinement.
@@ -319,7 +336,7 @@ Goal: a first launch that plays well without visiting the settings.
 
 Shipped default `Dolphin.ini` / `GFX.ini` (base layer; the user can change all of it):
 - `Core.EnableSaveStates`: off as in the Android app, or on (3.4: the in-game menu's save state entries need it). The user's call;
-- `CPUThread = True` (dual core, as on Android). **Decided by the user (3.0)**; in the 3.0 benchmark dual core beat single core at every setting (79 % against 41 % with the CPU boost);
+- `CPUThread = True` (dual core, as on Android). **Decided by the user (3.0)**. The CPU Boost setting's own default is already Maximum (3.6); in the 3.0 benchmark dual core beat single core at every setting (79 % against 41 % with the CPU boost);
 - the CPU boost on (heat is not an issue, user 3.0), at the uclamp_min value stage 4 settles on (1024 in the 3.0 benchmark);
 - Wii Remote 1's extension in the default profile: none (Android; the sideways overlay) or Nunchuk (desktop default). A controller default, the user's call;
 - graphics backend Vulkan (faster than OpenGL ES in stage 2 and with Newer SMB in 3.0; slower in the 3.0 Need for Speed benchmark), with OpenGL ES as the fallback when Vulkan fails to start, and per-game overrides (3.6) for games that run better on OpenGL ES. The global default is checked against stage 4's game list;

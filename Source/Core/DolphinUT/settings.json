@@ -1,0 +1,3215 @@
+{
+ "generated_from": "Source/Android (ut/tools/gen-settings.py)",
+ "menus": {
+  "SETTINGS": {
+   "items": [
+    {
+     "type": "submenu",
+     "title": "Config",
+     "menu": "CONFIG"
+    },
+    {
+     "type": "submenu",
+     "title": "Graphics Settings",
+     "menu": "GRAPHICS"
+    },
+    {
+     "type": "page",
+     "title": "GameCube Input",
+     "page": "ControllersPage.qml",
+     "globalOnly": true
+    },
+    {
+     "type": "page",
+     "title": "Wii Input",
+     "page": "ControllersPage.qml",
+     "globalOnly": true
+    },
+    {
+     "type": "header",
+     "title": "Long press a setting to clear it.",
+     "gameOnly": true
+    }
+   ],
+   "title": "Settings"
+  },
+  "CONFIG": {
+   "items": [
+    {
+     "type": "submenu",
+     "title": "General",
+     "menu": "CONFIG_GENERAL"
+    },
+    {
+     "type": "submenu",
+     "title": "Interface",
+     "menu": "CONFIG_INTERFACE"
+    },
+    {
+     "type": "submenu",
+     "title": "Audio",
+     "menu": "CONFIG_AUDIO"
+    },
+    {
+     "type": "submenu",
+     "title": "Paths",
+     "menu": "CONFIG_PATHS"
+    },
+    {
+     "type": "submenu",
+     "title": "GameCube",
+     "menu": "CONFIG_GAME_CUBE"
+    },
+    {
+     "type": "submenu",
+     "title": "Wii",
+     "menu": "CONFIG_WII"
+    },
+    {
+     "type": "submenu",
+     "title": "Advanced",
+     "menu": "CONFIG_ADVANCED"
+    },
+    {
+     "type": "submenu",
+     "title": "Log",
+     "menu": "CONFIG_LOG"
+    },
+    {
+     "type": "submenu",
+     "title": "Debug",
+     "menu": "DEBUG"
+    }
+   ],
+   "title": "Config"
+  },
+  "CONFIG_GENERAL": {
+   "items": [
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_CPU_THREAD",
+     "title": "Dual Core (speedhack)",
+     "description": "Split workload to two CPU cores instead of one. Increases speed.",
+     "inverted": false
+    },
+    {
+     "type": "choice",
+     "setting": "Virtual.CPU_BOOST",
+     "title": "CPU Boost",
+     "description": "Keeps the CPU clocked up while a game runs (Ubuntu Touch has no game mode). Maximum doubled the speed of demanding games in testing.",
+     "entries": [
+      "Off",
+      "Medium",
+      "Maximum"
+     ],
+     "values": [
+      0,
+      512,
+      1024
+     ]
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_ENABLE_CHEATS",
+     "title": "Enable Cheats",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_OVERRIDE_REGION_SETTINGS",
+     "title": "Allow Mismatched Region Settings",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_AUTO_DISC_CHANGE",
+     "title": "Change Discs Automatically",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "slider",
+     "setting": "FloatSetting.MAIN_EMULATION_SPEED",
+     "title": "Speed Limit (0% = Unlimited)",
+     "description": "",
+     "min": 0.0,
+     "max": 200.0,
+     "units": "%",
+     "step": 1.0,
+     "percent": true
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.MAIN_FALLBACK_REGION",
+     "title": "Fallback Region",
+     "description": "",
+     "entries": [
+      "NTSC-J",
+      "NTSC-U",
+      "PAL",
+      "NTSC-K"
+     ],
+     "values": [
+      0,
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_ENABLE_SAVESTATES",
+     "title": "Enable Savestates",
+     "description": "WARNING: Savestates may not be compatible with future versions of Dolphin and can make it impossible to create normal saves in some cases. Never use savestates as the only way of saving your progress.",
+     "inverted": false
+    }
+   ],
+   "title": "General"
+  },
+  "CONFIG_INTERFACE": {
+   "items": [
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_USE_PANIC_HANDLERS",
+     "title": "Use Panic Handlers",
+     "description": "Show a message box when a potentially serious error has occurred. Disabling this may avoid annoying and non-fatal messages, but it may result in major crashes having no explanation at all.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_OSD_MESSAGES",
+     "title": "Show On-Screen Display Messages",
+     "description": "Display messages over the emulation screen area. These messages include memory card writes, video backend and CPU information, and JIT cache clearing.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_TIME_TRACKING",
+     "title": "Enable Play Time Tracking",
+     "description": "Tracks the time you spend playing games and shows it in the game details.",
+     "inverted": false
+    }
+   ],
+   "title": "Interface"
+  },
+  "CONFIG_AUDIO": {
+   "items": [
+    {
+     "type": "choice",
+     "setting": "Virtual.DSP_ENGINE",
+     "title": "DSP Emulation Engine",
+     "description": "",
+     "entries": [
+      "DSP HLE (recommended)",
+      "DSP LLE Interpreter (very slow)"
+     ],
+     "values": [
+      0,
+      2
+     ]
+    },
+    {
+     "type": "slider",
+     "setting": "IntSetting.MAIN_AUDIO_BUFFER_SIZE",
+     "title": "Audio Buffer Size",
+     "description": "Controls the number of audio samples buffered. Lower values reduce latency but may cause more crackling or stuttering. If unsure, set this to 80 ms.",
+     "min": 16,
+     "max": 512,
+     "units": "ms",
+     "step": 8,
+     "percent": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_AUDIO_FILL_GAPS",
+     "title": "Fill Audio Gaps",
+     "description": "Repeat existing audio during lag spikes to prevent stuttering. If unsure, leave this checked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_AUDIO_PRESERVE_PITCH",
+     "title": "Preserve Audio Pitch",
+     "description": "Keeps audio at normal pitch when changing emulation speed. Without this, audio pitch changes proportionally with speed. If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "slider",
+     "setting": "IntSetting.MAIN_AUDIO_VOLUME",
+     "title": "Audio Volume",
+     "description": "",
+     "min": 0,
+     "max": 100,
+     "units": "%",
+     "step": 1,
+     "percent": false
+    }
+   ],
+   "title": "Audio"
+  },
+  "CONFIG_PATHS": {
+   "items": [
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_RECURSIVE_ISO_PATHS",
+     "title": "Search Subfolders for Game Files",
+     "description": "",
+     "inverted": false
+    }
+   ],
+   "title": "Paths"
+  },
+  "CONFIG_GAME_CUBE": {
+   "items": [
+    {
+     "type": "header",
+     "title": "IPL Settings"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_SKIP_IPL",
+     "title": "Skip Main Menu",
+     "description": "Put IPL ROMs in User/GC/<region>",
+     "inverted": false
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.MAIN_GC_LANGUAGE",
+     "title": "System Language",
+     "description": "",
+     "entries": [
+      "English",
+      "German",
+      "French",
+      "Spanish",
+      "Italian",
+      "Dutch"
+     ],
+     "values": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "type": "header",
+     "title": "Device Settings"
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.MAIN_SLOT_A",
+     "title": "GameCube Slot A Device",
+     "description": "",
+     "entries": [
+      "Nothing",
+      "Dummy",
+      "Memory Card",
+      "GCI Folder"
+     ],
+     "values": [
+      255,
+      0,
+      1,
+      8
+     ]
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.MAIN_SLOT_B",
+     "title": "GameCube Slot B Device",
+     "description": "",
+     "entries": [
+      "Nothing",
+      "Dummy",
+      "Memory Card",
+      "GCI Folder"
+     ],
+     "values": [
+      255,
+      0,
+      1,
+      8
+     ]
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.MAIN_SERIAL_PORT_1",
+     "title": "GameCube Serial Port 1 Device",
+     "description": "",
+     "entries": [
+      "Nothing",
+      "Dummy",
+      "Broadband Adapter (XLink Kai)",
+      "Broadband Adapter (HLE)",
+      "Broadband Adapter (tapserver)",
+      "Modem Adapter (tapserver)",
+      "Triforce Baseboard"
+     ],
+     "values": [
+      255,
+      0,
+      10,
+      12,
+      11,
+      13,
+      6
+     ]
+    },
+    {
+     "type": "header",
+     "title": "GBA Settings"
+    }
+   ],
+   "title": "GameCube"
+  },
+  "CONFIG_WII": {
+   "items": [
+    {
+     "type": "header",
+     "title": "Misc Settings"
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.SYSCONF_LANGUAGE",
+     "title": "System Language",
+     "description": "",
+     "entries": [
+      "Japanese",
+      "English",
+      "German",
+      "French",
+      "Spanish",
+      "Italian",
+      "Dutch",
+      "Simplified Chinese",
+      "Traditional Chinese",
+      "Korean"
+     ],
+     "values": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+     ]
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.SYSCONF_WIDESCREEN",
+     "title": "Widescreen",
+     "description": "Changes aspect ratio from 4:3 to 16:9 in games that support it.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.SYSCONF_PAL60",
+     "title": "Use PAL60 Mode (EuRGB60)",
+     "description": "Changes refresh rate from 50 Hz to 60 Hz in PAL games that support it.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.SYSCONF_SCREENSAVER",
+     "title": "Enable Screen Saver",
+     "description": "Dims the screen after five minutes of inactivity.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_WII_WIILINK_ENABLE",
+     "title": "Enable WiiConnect24 via WiiLink",
+     "description": "Enables the WiiLink service for WiiConnect24 channels. Read the Terms of Service at https://www.wiilink24.com/tos",
+     "inverted": false
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.SYSCONF_SOUND_MODE",
+     "title": "Sound",
+     "description": "",
+     "entries": [
+      "Mono",
+      "Stereo",
+      "Surround"
+     ],
+     "values": [
+      0,
+      1,
+      2
+     ]
+    },
+    {
+     "type": "header",
+     "title": "SD Card Settings"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_WII_SD_CARD",
+     "title": "Insert SD Card",
+     "description": "Supports SD and SDHC. Default size is 128 MB.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_ALLOW_SD_WRITES",
+     "title": "Allow Writes to SD Card",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_WII_SD_CARD_ENABLE_FOLDER_SYNC",
+     "title": "Automatically Sync with Folder",
+     "description": "Synchronizes the SD Card with the SD Sync Folder when starting and ending emulation.",
+     "inverted": false
+    },
+    {
+     "type": "header",
+     "title": "Wii Remote Settings"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.SYSCONF_WIIMOTE_MOTOR",
+     "title": "Wii Remote Rumble",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "slider",
+     "setting": "IntSetting.SYSCONF_SPEAKER_VOLUME",
+     "title": "Wii Remote Speaker Volume",
+     "description": "",
+     "min": 0,
+     "max": 127,
+     "units": "",
+     "step": 1,
+     "percent": false
+    },
+    {
+     "type": "slider",
+     "setting": "IntSetting.SYSCONF_SENSOR_BAR_SENSITIVITY",
+     "title": "Sensor Bar Sensitivity",
+     "description": "",
+     "min": 1,
+     "max": 5,
+     "units": "",
+     "step": 1,
+     "percent": false
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.SYSCONF_SENSOR_BAR_POSITION",
+     "title": "Sensor Bar Position",
+     "description": "",
+     "entries": [
+      "Top",
+      "Bottom"
+     ],
+     "values": [
+      1,
+      0
+     ]
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_WIIMOTE_CONTINUOUS_SCANNING",
+     "title": "Wii Remote Continuous Scanning",
+     "description": "Leave this on if you are using a DolphinBar for real Wii Remote support.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_WIIMOTE_ENABLE_SPEAKER",
+     "title": "Wii Remote Speaker",
+     "description": "Enable sound output through the speaker on a real Wii Remote (DolphinBar required).",
+     "inverted": false
+    },
+    {
+     "type": "header",
+     "title": "Emulated USB Devices"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_EMULATE_SKYLANDER_PORTAL",
+     "title": "Skylanders Portal",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_EMULATE_INFINITY_BASE",
+     "title": "Infinity Base",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_EMULATE_WII_SPEAK",
+     "title": "Wii Speak",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_WII_SPEAK_MUTED",
+     "title": "Mute Wii Speak",
+     "description": "",
+     "inverted": false
+    }
+   ],
+   "title": "Wii"
+  },
+  "CONFIG_ADVANCED": {
+   "items": [
+    {
+     "type": "header",
+     "title": "CPU Options"
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.MAIN_CPU_CORE",
+     "title": "CPU Core",
+     "description": "",
+     "entries": [
+      "JIT Recompiler for ARM64 (recommended)",
+      "Cached Interpreter (slower)",
+      "Interpreter (slowest)"
+     ],
+     "values": [
+      4,
+      5,
+      0
+     ]
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_MMU",
+     "title": "Enable MMU",
+     "description": "Enables the Memory Management Unit. Needed for some games, but may reduce performance.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_PAUSE_ON_PANIC",
+     "title": "Pause on Panic",
+     "description": "Pauses the emulation if a Read/Write or Unknown Instruction panic occurs. The performance impact is the same as having Enable MMU on.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_ACCURATE_CPU_CACHE",
+     "title": "Enable Write-Back Cache (slow)",
+     "description": "Enables emulation of the CPU write-back cache. Enabling will have a significant impact on performance. This should be left disabled unless absolutely needed.",
+     "inverted": false
+    },
+    {
+     "type": "header",
+     "title": "Clock Override"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_OVERCLOCK_ENABLE",
+     "title": "Override Emulated CPU Clock Speed",
+     "description": "On games that have an unstable frame rate despite full emulation speed, higher values can improve their performance, requiring a powerful device. Lower values reduce the emulated console's performance, but improve the emulation speed.",
+     "inverted": false
+    },
+    {
+     "type": "slider",
+     "setting": "FloatSetting.MAIN_OVERCLOCK",
+     "title": "Emulated CPU Clock Speed",
+     "description": "Adjusts the emulated CPU's clock rate if \"Override Emulated CPU Clock Speed\" is enabled.",
+     "min": 0.0,
+     "max": 500.0,
+     "units": "%",
+     "step": 1.0,
+     "percent": true
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_VI_OVERCLOCK_ENABLE",
+     "title": "Override VBI Frequency",
+     "description": "Makes games run at a different frame rate, making the emulation less demanding when lowered, or improving smoothness when increased. This may affect gameplay speed, as it is often tied to the frame rate.",
+     "inverted": false
+    },
+    {
+     "type": "slider",
+     "setting": "FloatSetting.MAIN_VI_OVERCLOCK",
+     "title": "VBI Frequency",
+     "description": "Adjusts the VBI frequency rate if \"Override VBI Frequency\" is enabled.\nAlso adjusts the emulated CPU's clock speed, to keep it relatively the same.",
+     "min": 0.0,
+     "max": 500.0,
+     "units": "%",
+     "step": 1.0,
+     "percent": true
+    },
+    {
+     "type": "header",
+     "title": "Memory Override"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_RAM_OVERRIDE_ENABLE",
+     "title": "Enable Emulated Memory Size Override",
+     "description": "Sets the amount of RAM in the emulated console to the values provided.\n\nWARNING: Enabling this will completely break many games. By default, Dolphin determines what value is required based on the game information.",
+     "inverted": false
+    },
+    {
+     "type": "slider",
+     "setting": "Virtual.MEM1_MB",
+     "title": "MEM1 Size",
+     "description": "",
+     "min": 24,
+     "max": 64,
+     "units": "MB",
+     "step": 1,
+     "percent": false
+    },
+    {
+     "type": "slider",
+     "setting": "Virtual.MEM2_MB",
+     "title": "MEM2 Size",
+     "description": "",
+     "min": 64,
+     "max": 256,
+     "units": "MB",
+     "step": 1,
+     "percent": false
+    },
+    {
+     "type": "header",
+     "title": "GPU Options"
+    },
+    {
+     "type": "choice",
+     "setting": "Virtual.SYNC_GPU",
+     "title": "Synchronize GPU Thread",
+     "description": "Synchronizing the GPU thread reduces the risk of games crashing or becoming unstable with dual core enabled, but can also reduce the performance gain of dual core. If unsure, select \"On Idle Skipping\". Selecting \"Never\" is risky and not recommended!",
+     "entries": [
+      "Never",
+      "On Idle Skipping",
+      "Always"
+     ],
+     "values": [
+      0,
+      1,
+      2
+     ]
+    },
+    {
+     "type": "header",
+     "title": "Custom RTC Options"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_CUSTOM_RTC_ENABLE",
+     "title": "Enable Custom RTC",
+     "description": "This settings allows you to set a custom real time clock (RTC) separate from your current system time.",
+     "inverted": false
+    },
+    {
+     "type": "header",
+     "title": "Misc Settings"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_FAST_DISC_SPEED",
+     "title": "Emulate Disc Speed",
+     "description": "Enable emulated disc speed. Disabling this can cause crashes and other problems in some games.",
+     "inverted": true
+    }
+   ],
+   "title": "Advanced"
+  },
+  "GRAPHICS": {
+   "items": [
+    {
+     "type": "header",
+     "title": "General"
+    },
+    {
+     "type": "choice",
+     "setting": "StringSetting.MAIN_GFX_BACKEND",
+     "title": "Video Backend",
+     "description": "",
+     "entries": [
+      "OpenGL",
+      "Vulkan",
+      "Software",
+      "Null"
+     ],
+     "values": [
+      "OGL",
+      "Vulkan",
+      "Software Renderer",
+      "Null"
+     ]
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.GFX_SHADER_COMPILATION_MODE",
+     "title": "Shader Compilation Mode",
+     "description": "",
+     "entries": [
+      "Specialized (Default)",
+      "Exclusive Ubershaders",
+      "Hybrid Ubershaders",
+      "Skip Drawing"
+     ],
+     "values": [
+      0,
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_WAIT_FOR_SHADERS_BEFORE_STARTING",
+     "title": "Compile Shaders Before Starting",
+     "description": "This causes a delay when launching games, but will reduce stuttering early on.",
+     "inverted": false
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.GFX_ASPECT_RATIO",
+     "title": "Aspect Ratio",
+     "description": "",
+     "entries": [
+      "Auto",
+      "Force 16:9",
+      "Force 4:3",
+      "Stretch to Window"
+     ],
+     "values": [
+      0,
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "type": "header",
+     "title": "More"
+    },
+    {
+     "type": "submenu",
+     "title": "Enhancements",
+     "menu": "ENHANCEMENTS"
+    },
+    {
+     "type": "submenu",
+     "title": "Hacks",
+     "menu": "HACKS"
+    },
+    {
+     "type": "submenu",
+     "title": "Statistics",
+     "menu": "STATISTICS"
+    },
+    {
+     "type": "submenu",
+     "title": "Advanced",
+     "menu": "ADVANCED_GRAPHICS"
+    }
+   ],
+   "title": "Graphics Settings"
+  },
+  "ENHANCEMENTS": {
+   "items": [
+    {
+     "type": "choice",
+     "setting": "IntSetting.GFX_EFB_SCALE",
+     "title": "Internal Resolution",
+     "description": "Specifies the resolution used to render at. A high resolution will improve visual quality a lot but is also quite heavy on performance and might cause glitches in certain games.",
+     "entries": [
+      "1x Native (640x528)",
+      "2x Native (1280x1056) for 720p",
+      "3x Native (1920x1584) for 1080p",
+      "4x Native (2560x2112)",
+      "5x Native (3200x2640)",
+      "6x Native (3840x3168) for 4K"
+     ],
+     "values": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+     ]
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.GFX_MSAA",
+     "title": "Full-scene Anti-aliasing",
+     "description": "Reduces the amount of aliasing caused by rasterizing 3D graphics. This makes the rendered picture look less blocky. Heavily decreases emulation speed and sometimes causes issues.",
+     "entries": [
+      "Off",
+      "2x",
+      "4x",
+      "8x"
+     ],
+     "values": [
+      1,
+      2,
+      4,
+      8
+     ]
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.GFX_ENHANCE_MAX_ANISOTROPY",
+     "title": "Anisotropic Filtering",
+     "description": "Enhances visual quality of textures that are at oblique viewing angles. Might cause issues in a small number of games.",
+     "entries": [
+      "Default",
+      "2x",
+      "4x",
+      "8x",
+      "16x"
+     ],
+     "values": [
+      0,
+      1,
+      2,
+      3,
+      4
+     ]
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.GFX_ENHANCE_FORCE_TEXTURE_FILTERING",
+     "title": "Texture Filtering",
+     "description": "Overrides the texture scaling filter selected by the game. Any option except 'Default' will alter the look of the game's textures and might cause issues in a small number of games.",
+     "entries": [
+      "Default",
+      "Force Nearest",
+      "Force Linear"
+     ],
+     "values": [
+      0,
+      1,
+      2
+     ]
+    },
+    {
+     "type": "submenu",
+     "title": "Color Correction",
+     "menu": "COLOR_CORRECTION"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_COPY_EFB_SCALED",
+     "title": "Scaled EFB Copy",
+     "description": "Greatly increases quality of textures generated using render to texture effects. Raising the internal resolution will improve the effect of this setting. Slightly decreases performance and possibly causes issues (although unlikely).",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_ENABLE_PIXEL_LIGHTING",
+     "title": "Per-Pixel Lighting",
+     "description": "Calculate lighting of 3D graphics per-pixel rather than per vertex. Decreases emulation speed by some percent (depending on your GPU). This usually is a safe enhancement, but might cause issues sometimes.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_ENHANCE_FORCE_TRUE_COLOR",
+     "title": "Force 24-Bit Color",
+     "description": "Forces the game to render the RGB color channels in 24-bit, thereby increasing quality by reducing color banding.\nIt has no impact on performance and causes few graphical issues. If unsure, leave this checked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_DISABLE_FOG",
+     "title": "Disable Fog",
+     "description": "Makes distant objects more visible by removing fog, thus increasing the overall detail. Disabling fog will break some games which rely on proper fog emulation.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_ENHANCE_DISABLE_COPY_FILTER",
+     "title": "Disable Copy Filter",
+     "description": "Disables the blending of adjacent rows when copying the EFB. This is known in some games as \"deflickering\" or \"smoothing\". Disabling the filter is usually safe, and may result in a sharper image.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_ENHANCE_ARBITRARY_MIPMAP_DETECTION",
+     "title": "Arbitrary Mipmap Detection",
+     "description": "Enables detection of arbitrary mipmaps, which some games use for special distance-based effects.\nMay have false positives that result in blurry textures at increased internal resolution, such as in games that use very low resolution mipmaps. Disabling this can also reduce stutter in games that frequently load new textures.\n\nIf unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_WIDESCREEN_HACK",
+     "title": "Widescreen Hack",
+     "description": "Forces the game to output graphics for any aspect ratio. Use with \"Aspect Ratio\" set to \"Force 16:9\" to force 4:3-only games to run at 16:9. Rarely produces good results and often partially breaks graphics and game UIs.\nUnnecessary (and detrimental) if using any AR/Gecko-code widescreen patches. If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "submenu",
+     "title": "Stereoscopy",
+     "menu": "STEREOSCOPY"
+    }
+   ],
+   "title": "Enhancements"
+  },
+  "COLOR_CORRECTION": {
+   "items": [],
+   "title": "Color Correction"
+  },
+  "STEREOSCOPY": {
+   "items": [
+    {
+     "type": "choice",
+     "setting": "IntSetting.GFX_STEREO_MODE",
+     "title": "Stereoscopy Mode",
+     "description": "",
+     "entries": [
+      "Off",
+      "Side-by-Side",
+      "Top-and-Bottom",
+      "Anaglyph"
+     ],
+     "values": [
+      0,
+      1,
+      2,
+      3
+     ]
+    },
+    {
+     "type": "slider",
+     "setting": "FloatSetting.GFX_STEREO_DEPTH",
+     "title": "Depth",
+     "description": "Control the distance between the virtual cameras.\nA higher value creates a stronger feeling of depth while a lower value is more comfortable.",
+     "min": 0.0,
+     "max": 100.0,
+     "units": "",
+     "step": 1.0,
+     "percent": false
+    },
+    {
+     "type": "slider",
+     "setting": "FloatSetting.GFX_STEREO_CONVERGENCE",
+     "title": "Convergence",
+     "description": "Control the distance of the convergence plane, this is the distance at which objects will appear to be in front of the screen.\nA higher value creates stronger out-of-screen effects while a lower value is more comfortable.",
+     "min": 0.0,
+     "max": 200.0,
+     "units": "",
+     "step": 0.01,
+     "percent": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_STEREO_SWAP_EYES",
+     "title": "Swap Eyes",
+     "description": "Swap the left and right eye, mostly useful if you want to view side-by-side cross-eyed.",
+     "inverted": false
+    }
+   ],
+   "title": "Stereoscopy"
+  },
+  "HACKS": {
+   "items": [
+    {
+     "type": "header",
+     "title": "Embedded Frame Buffer"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_EFB_ACCESS_ENABLE",
+     "title": "Skip EFB Access from CPU",
+     "description": "Ignore any requests from the CPU to read/write to the EFB.",
+     "inverted": true
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_EFB_EMULATE_FORMAT_CHANGES",
+     "title": "Ignore Format Changes",
+     "description": "Ignore any changes to the EFB format.",
+     "inverted": true
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_SKIP_EFB_COPY_TO_RAM",
+     "title": "Store EFB Copies to Texture Only",
+     "description": "Stores EFB Copies exclusively on the GPU, bypassing system memory. Causes graphical defects in a small number of games. If unsure, leave this checked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_DEFER_EFB_COPIES",
+     "title": "Defer EFB Copies to RAM",
+     "description": "Waits until the game synchronizes with the emulated GPU before writing the contents of EFB copies to RAM. May result in faster performance. If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "header",
+     "title": "Texture Cache"
+    },
+    {
+     "type": "choice",
+     "setting": "IntSetting.GFX_SAFE_TEXTURE_CACHE_COLOR_SAMPLES",
+     "title": "Texture Cache Accuracy",
+     "description": "The safer the selection, the less likely the emulator will be missing any texture updates from RAM.",
+     "entries": [
+      "Fast",
+      "Medium",
+      "Safe"
+     ],
+     "values": [
+      128,
+      512,
+      0
+     ]
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_ENABLE_GPU_TEXTURE_DECODING",
+     "title": "GPU Texture Decoding",
+     "description": "Decodes textures on the GPU using compute shaders where supported. May improve performance in some scenarios.",
+     "inverted": false
+    },
+    {
+     "type": "header",
+     "title": "External Frame Buffer"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_SKIP_XFB_COPY_TO_RAM",
+     "title": "Store XFB Copies to Texture Only",
+     "description": "Stores XFB Copies exclusively on the GPU, bypassing system memory. Causes graphical defects in a small number of games that need to readback from memory. If unsure, leave this checked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_IMMEDIATE_XFB",
+     "title": "Immediately Present XFB",
+     "description": "Displays the XFB copies as soon as they are created, without waiting for scanout. Causes graphical defects in some games but reduces latency. If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_SKIP_DUPLICATE_XFBS",
+     "title": "Skip Presenting Duplicate Frames",
+     "description": "Skips presentation of duplicate frames. This may improve performance on low-end devices, while making frame pacing less consistent. If unsure, leave this checked.",
+     "inverted": false
+    },
+    {
+     "type": "header",
+     "title": "Other"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_FAST_DEPTH_CALC",
+     "title": "Fast Depth Calculation",
+     "description": "Uses a less accurate algorithm to calculate depth values. Causes issues in a few games, but can result in a decent speed increase depending on the game and/or GPU. If unsure, leave this checked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_BBOX_ENABLE",
+     "title": "Disable Bounding Box",
+     "description": "Disables bounding box emulation. This may improve GPU performance significantly, but some games will break. If unsure, leave this checked.",
+     "inverted": true
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_VERTEX_ROUNDING",
+     "title": "Vertex Rounding",
+     "description": "Rounds 2D vertices to whole pixels and rounds the viewport size to a whole number. Fixes graphical problems in some games at higher internal resolutions. This setting has no effect when native internal resolution is used. If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_VI_SKIP",
+     "title": "VBI Skip",
+     "description": "Skips Vertical Blank Interrupts when lag is detected, allowing for smooth audio playback when emulation speed is not 100%. Can cause freezes and compatibility issues.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_SAVE_TEXTURE_CACHE_TO_STATE",
+     "title": "Save Texture Cache to State",
+     "description": "Includes the contents of the embedded frame buffer (EFB) and upscaled EFB copies in save states. Fixes missing and/or non-upscaled textures/objects when loading states at the cost of additional save/load time.",
+     "inverted": false
+    }
+   ],
+   "title": "Hacks"
+  },
+  "STATISTICS": {
+   "items": [
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_SHOW_FPS",
+     "title": "Show FPS",
+     "description": "Shows the number of distinct frames rendered per second as a measure of visual smoothness.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_SHOW_FTIMES",
+     "title": "Show Frame Times",
+     "description": "Shows the average time in ms between each distinct rendered frame alongside the standard deviation.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_SHOW_VPS",
+     "title": "Show VPS",
+     "description": "Show the number of frames rendered per second as a measure of emulation speed.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_SHOW_VTIMES",
+     "title": "Show VBlank Times",
+     "description": "Shows the average time in ms between each rendered frame alongside the standard deviation.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_SHOW_GRAPHS",
+     "title": "Show Performance Graphs",
+     "description": "Shows frametime graph along with statistics as a representation of emulation performance.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_SHOW_SPEED",
+     "title": "Show % Speed",
+     "description": "Shows the % speed of emulation compared to full speed.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_SHOW_SPEED_COLORS",
+     "title": "Show Speed Color",
+     "description": "Changes the color of the FPS counter depending on emulation speed.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_LOG_RENDER_TIME_TO_FILE",
+     "title": "Log Render Time to File",
+     "description": "Logs the render time of every frame to User/Logs/render_time.txt. Use this feature to measure Dolphin's performance.",
+     "inverted": false
+    },
+    {
+     "type": "slider",
+     "setting": "IntSetting.GFX_PERF_SAMP_WINDOW",
+     "title": "Performance Sample Window",
+     "description": "The amount of time the FPS and VPS counters will sample over. The higher the value, the more stable the FPS/VPS counter will be, but the slower it will be to update.",
+     "min": 0,
+     "max": 10000,
+     "units": "ms",
+     "step": 100,
+     "percent": false
+    }
+   ],
+   "title": "Statistics"
+  },
+  "ADVANCED_GRAPHICS": {
+   "items": [
+    {
+     "type": "header",
+     "title": "Graphics Mods and Custom Textures"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_MODS_ENABLE",
+     "title": "Graphics Mods",
+     "description": "Loads graphics mods from User/Load/GraphicsMods/.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HIRES_TEXTURES",
+     "title": "Load Custom Textures",
+     "description": "Loads custom textures from User/Load/Textures/<game_id>/ and User/Load/DynamicInputTextures/<game_id>/.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_CACHE_HIRES_TEXTURES",
+     "title": "Prefetch Custom Textures",
+     "description": "Caches custom textures to system RAM on startup. This can require exponentially more RAM but fixes possible stuttering.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_DUMP_TEXTURES",
+     "title": "Dump Textures",
+     "description": "Dumps decoded game textures based on the other flags to User/Dump/Textures/<game_id>/. If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_DUMP_BASE_TEXTURES",
+     "title": "Dump Base Textures",
+     "description": "Whether to dump base game textures to User/Dump/Textures/<game_id>/.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_DUMP_MIP_TEXTURES",
+     "title": "Dump Mip Maps",
+     "description": "Whether to dump mipmapped game textures to User/Dump/Textures/<game_id>/.",
+     "inverted": false
+    },
+    {
+     "type": "header",
+     "title": "Crop"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_CROP_TO_ASPECT_RATIO",
+     "title": "To Aspect Ratio",
+     "description": "Crops the picture from its native aspect ratio to 4:3 or 16:9. If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_CROP_CUSTOM",
+     "title": "Custom",
+     "description": "Enables options to crop the picture by discrete native pixels (independent of the internal resolution setting) in order to attain a specific user target aspect ratio. Useful to resolve letterboxing issues. If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "slider",
+     "setting": "IntSetting.GFX_CROP_CUSTOM_TOP",
+     "title": "Custom Top",
+     "description": "Crops the picture top side by discrete native pixels (independent of the internal resolution setting) in order to attain a specific user target aspect ratio. If unsure, leave this value to 0.",
+     "min": 0,
+     "max": 528,
+     "units": "px",
+     "step": 1,
+     "percent": false
+    },
+    {
+     "type": "slider",
+     "setting": "IntSetting.GFX_CROP_CUSTOM_BOTTOM",
+     "title": "Custom Bottom",
+     "description": "Crops the picture bottom side by discrete native pixels (independent of the internal resolution setting) in order to attain a specific user target aspect ratio. If unsure, leave this value to 0.",
+     "min": 0,
+     "max": 528,
+     "units": "px",
+     "step": 1,
+     "percent": false
+    },
+    {
+     "type": "slider",
+     "setting": "IntSetting.GFX_CROP_CUSTOM_LEFT",
+     "title": "Custom Left",
+     "description": "Crops the picture left side by discrete native pixels (independent of the internal resolution setting) in order to attain a specific user target aspect ratio. If unsure, leave this value to 0.",
+     "min": null,
+     "max": null,
+     "units": "",
+     "step": null,
+     "percent": false
+    },
+    {
+     "type": "slider",
+     "setting": "IntSetting.GFX_CROP_CUSTOM_RIGHT",
+     "title": "Custom Right",
+     "description": "Crops the picture right side by discrete native pixels (independent of the internal resolution setting) in order to attain a specific user target aspect ratio. If unsure, leave this value to 0.",
+     "min": 0,
+     "max": 640,
+     "units": "px",
+     "step": 1,
+     "percent": false
+    },
+    {
+     "type": "header",
+     "title": "Misc"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.SYSCONF_PROGRESSIVE_SCAN",
+     "title": "Enable Progressive Scan",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_VSYNC",
+     "title": "V-Sync",
+     "description": "This setting is unnecessary on most Android devices, because Android always enables V-Sync. If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_BACKEND_MULTITHREADING",
+     "title": "Backend Multithreading",
+     "description": "Enables graphics backend multithreading (Vulkan only). May affect performance. If unsure, leave this checked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_PREFER_VS_FOR_LINE_POINT_EXPANSION",
+     "title": "Prefer VS for Point/Line Expansion",
+     "description": "On backends that support both using the geometry shader and the vertex shader for expanding points and lines, selects the vertex shader for the job. May affect performance.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_CPU_CULL",
+     "title": "Cull Vertices on the CPU",
+     "description": "Cull vertices on the CPU to reduce the number of draw calls required. May affect performance. If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_EFB_DEFER_INVALIDATION",
+     "title": "Defer EFB Cache Invalidation",
+     "description": "Defers invalidation of the EFB access cache until a GPU synchronization command is executed. May improve performance in some games at the cost of stability. If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_FAST_TEXTURE_SAMPLING",
+     "title": "Manual Texture Sampling",
+     "description": "Use a manual implementation of texture sampling instead of the graphics backend's built-in functionality.",
+     "inverted": true
+    },
+    {
+     "type": "header",
+     "title": "Frame Dumping"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_INTERNAL_RESOLUTION_FRAME_DUMPS",
+     "title": "Dump Frames at Internal Resolution",
+     "description": "Creates frame dumps and screenshots at the internal resolution of the renderer, rather than the size of the window it is displayed within. If the aspect ratio is widescreen, the output image will be scaled horizontally to preserve the vertical resolution.",
+     "inverted": false
+    },
+    {
+     "type": "slider",
+     "setting": "IntSetting.GFX_PNG_COMPRESSION_LEVEL",
+     "title": "PNG Compression Level",
+     "description": "",
+     "min": 0,
+     "max": 9,
+     "units": "",
+     "step": 1,
+     "percent": false
+    },
+    {
+     "type": "header",
+     "title": "Debugging"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_ENABLE_WIREFRAME",
+     "title": "Enable Wireframe",
+     "description": "If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_OVERLAY_STATS",
+     "title": "Show Statistics",
+     "description": "If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_OVERLAY_PROJ_STATS",
+     "title": "Show Projection Statistics",
+     "description": "If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_SHOW_INTERNAL_RESOLUTION",
+     "title": "Show XFB Resolution",
+     "description": "If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_TEXFMT_OVERLAY_ENABLE",
+     "title": "Texture Format Overlay",
+     "description": "If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_ENABLE_VALIDATION_LAYER",
+     "title": "Enable API Validation Layers",
+     "description": "If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_DUMP_EFB_TARGET",
+     "title": "Dump EFB Target",
+     "description": "If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_DUMP_XFB_TARGET",
+     "title": "Dump XFB Target",
+     "description": "If unsure, leave this unchecked.",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.GFX_HACK_DISABLE_COPY_TO_VRAM",
+     "title": "Disable EFB VRAM Copies",
+     "description": "If unsure, leave this unchecked.",
+     "inverted": false
+    }
+   ],
+   "title": "Advanced"
+  },
+  "CONFIG_LOG": {
+   "items": [
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.LOGGER_WRITE_TO_FILE",
+     "title": "Write Logs to File",
+     "description": "Log messages from enabled log types to the Logs folder. Will decrease performance.",
+     "inverted": false
+    },
+    {
+     "type": "header",
+     "title": "Log Types"
+    }
+   ],
+   "title": "Log"
+  },
+  "DEBUG": {
+   "items": [
+    {
+     "type": "header",
+     "title": "Warning: Debug settings will slow emulation"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_FASTMEM",
+     "title": "Disable Fastmem",
+     "description": "",
+     "inverted": true
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_PAGE_TABLE_FASTMEM",
+     "title": "Disable Page Table Fastmem",
+     "description": "",
+     "inverted": true
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_FASTMEM_ARENA",
+     "title": "Disable Fastmem Arena",
+     "description": "",
+     "inverted": true
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_LARGE_ENTRY_POINTS_MAP",
+     "title": "Disable Large Entry Points Map",
+     "description": "",
+     "inverted": true
+    },
+    {
+     "type": "header",
+     "title": "Jit Profiling"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_DEBUG_JIT_ENABLE_PROFILING",
+     "title": "Enable Jit Block Profiling",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "header",
+     "title": "Jit"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_DEBUG_JIT_OFF",
+     "title": "Jit Disabled",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_DEBUG_JIT_LOAD_STORE_OFF",
+     "title": "Jit Load Store Disabled",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_DEBUG_JIT_LOAD_STORE_FLOATING_OFF",
+     "title": "Jit Load Store Floating Point Disabled",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_DEBUG_JIT_LOAD_STORE_PAIRED_OFF",
+     "title": "Jit Load Store Paired Disabled",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_DEBUG_JIT_FLOATING_POINT_OFF",
+     "title": "Jit Floating Point Disabled",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_DEBUG_JIT_INTEGER_OFF",
+     "title": "Jit Integer Disabled",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_DEBUG_JIT_PAIRED_OFF",
+     "title": "Jit Paired Disabled",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_DEBUG_JIT_SYSTEM_REGISTERS_OFF",
+     "title": "Jit System Registers Disabled",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_DEBUG_JIT_BRANCH_OFF",
+     "title": "Jit Branch Disabled",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.MAIN_DEBUG_JIT_REGISTER_CACHE_OFF",
+     "title": "Jit Register Cache Disabled",
+     "description": "",
+     "inverted": false
+    }
+   ],
+   "title": "Debug"
+  }
+ },
+ "settings": {
+  "BooleanSetting.GFX_BACKEND_MULTITHREADING": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "BackendMultithreading",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_CACHE_HIRES_TEXTURES": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "CacheHiresTextures",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_CPU_CULL": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "CPUCull",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_CROP_CUSTOM": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "CropCustom",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_CROP_TO_ASPECT_RATIO": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "Crop",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_DISABLE_FOG": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "DisableFog",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_DUMP_BASE_TEXTURES": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "DumpBaseTextures",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_DUMP_EFB_TARGET": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "DumpEFBTarget",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_DUMP_MIP_TEXTURES": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "DumpMipTextures",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_DUMP_TEXTURES": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "DumpTextures",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_DUMP_XFB_TARGET": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "DumpXFBTarget",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_ENABLE_GPU_TEXTURE_DECODING": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "EnableGPUTextureDecoding",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_ENABLE_PIXEL_LIGHTING": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "EnablePixelLighting",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_ENABLE_VALIDATION_LAYER": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "EnableValidationLayer",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_ENABLE_WIREFRAME": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "WireFrame",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_ENHANCE_ARBITRARY_MIPMAP_DETECTION": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Enhancements",
+   "key": "ArbitraryMipmapDetection",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_ENHANCE_DISABLE_COPY_FILTER": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Enhancements",
+   "key": "DisableCopyFilter",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_ENHANCE_FORCE_TRUE_COLOR": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Enhancements",
+   "key": "ForceTrueColor",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_FAST_DEPTH_CALC": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "FastDepthCalc",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_BBOX_ENABLE": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "BBoxEnable",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_COPY_EFB_SCALED": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "EFBScaledCopy",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_DEFER_EFB_COPIES": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "DeferEFBCopies",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_DISABLE_COPY_TO_VRAM": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "DisableCopyToVRAM",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_EFB_ACCESS_ENABLE": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "EFBAccessEnable",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_EFB_DEFER_INVALIDATION": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "EFBAccessDeferInvalidation",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_EFB_EMULATE_FORMAT_CHANGES": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "EFBEmulateFormatChanges",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_FAST_TEXTURE_SAMPLING": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "FastTextureSampling",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_IMMEDIATE_XFB": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "ImmediateXFBEnable",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_SKIP_DUPLICATE_XFBS": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "SkipDuplicateXFBs",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_SKIP_EFB_COPY_TO_RAM": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "EFBToTextureEnable",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_SKIP_XFB_COPY_TO_RAM": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "XFBToTextureEnable",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_VERTEX_ROUNDING": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "VertexRounding",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HACK_VI_SKIP": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hacks",
+   "key": "VISkip",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_HIRES_TEXTURES": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "HiresTextures",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_INTERNAL_RESOLUTION_FRAME_DUMPS": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "InternalResolutionFrameDumps",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": false
+  },
+  "BooleanSetting.GFX_LOG_RENDER_TIME_TO_FILE": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "LogRenderTimeToFile",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_MODS_ENABLE": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "EnableMods",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_OVERLAY_PROJ_STATS": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "OverlayProjStats",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_OVERLAY_STATS": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "OverlayStats",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_PREFER_VS_FOR_LINE_POINT_EXPANSION": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "PreferVSForLinePointExpansion",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_SAVE_TEXTURE_CACHE_TO_STATE": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "SaveTextureCacheToState",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_SHOW_FPS": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "ShowFPS",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_SHOW_FTIMES": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "ShowFTimes",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_SHOW_GRAPHS": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "ShowGraphs",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_SHOW_INTERNAL_RESOLUTION": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "ShowInternalResolution",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_SHOW_SPEED": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "ShowSpeed",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_SHOW_SPEED_COLORS": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "ShowSpeedColors",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_SHOW_VPS": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "ShowVPS",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_SHOW_VTIMES": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "ShowVTimes",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_STEREO_SWAP_EYES": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Stereoscopy",
+   "key": "StereoSwapEyes",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_TEXFMT_OVERLAY_ENABLE": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "TexFmtOverlayEnable",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_VSYNC": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Hardware",
+   "key": "VSync",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_WAIT_FOR_SHADERS_BEFORE_STARTING": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "WaitForShadersBeforeStarting",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.GFX_WIDESCREEN_HACK": {
+   "type": "boolean",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "wideScreenHack",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.LOGGER_WRITE_TO_FILE": {
+   "type": "boolean",
+   "file": "Logger",
+   "section": "Options",
+   "key": "WriteToFile",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": false
+  },
+  "BooleanSetting.MAIN_ACCURATE_CPU_CACHE": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "AccurateCPUCache",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_ALLOW_SD_WRITES": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "WiiSDCardAllowWrites",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_AUDIO_FILL_GAPS": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "AudioFillGaps",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_AUDIO_PRESERVE_PITCH": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "AudioPreservePitch",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_AUTO_DISC_CHANGE": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "AutoDiscChange",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_CPU_THREAD": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "CPUThread",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_CUSTOM_RTC_ENABLE": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "EnableCustomRTC",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_DEBUG_JIT_BRANCH_OFF": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Debug",
+   "key": "JitBranchOff",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_DEBUG_JIT_ENABLE_PROFILING": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Debug",
+   "key": "JitEnableProfiling",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_DEBUG_JIT_FLOATING_POINT_OFF": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Debug",
+   "key": "JitFloatingPointOff",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_DEBUG_JIT_INTEGER_OFF": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Debug",
+   "key": "JitIntegerOff",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_DEBUG_JIT_LOAD_STORE_FLOATING_OFF": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Debug",
+   "key": "JitLoadStoreFloatingOff",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_DEBUG_JIT_LOAD_STORE_OFF": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Debug",
+   "key": "JitLoadStoreOff",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_DEBUG_JIT_LOAD_STORE_PAIRED_OFF": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Debug",
+   "key": "JitLoadStorePairedOff",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_DEBUG_JIT_OFF": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Debug",
+   "key": "JitOff",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_DEBUG_JIT_PAIRED_OFF": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Debug",
+   "key": "JitPairedOff",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_DEBUG_JIT_REGISTER_CACHE_OFF": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Debug",
+   "key": "JitRegisterCacheOff",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_DEBUG_JIT_SYSTEM_REGISTERS_OFF": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Debug",
+   "key": "JitSystemRegistersOff",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_EMULATE_INFINITY_BASE": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "EmulatedUSBDevices",
+   "key": "EmulateInfinityBase",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_EMULATE_SKYLANDER_PORTAL": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "EmulatedUSBDevices",
+   "key": "EmulateSkylanderPortal",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_EMULATE_WII_SPEAK": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "EmulatedUSBDevices",
+   "key": "EmulateWiiSpeak",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_ENABLE_CHEATS": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "EnableCheats",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_ENABLE_SAVESTATES": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "EnableSaveStates",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_FASTMEM": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "Fastmem",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_FASTMEM_ARENA": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "FastmemArena",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_FAST_DISC_SPEED": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "FastDiscSpeed",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_LARGE_ENTRY_POINTS_MAP": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "LargeEntryPointsMap",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_MMU": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "MMU",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_OSD_MESSAGES": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Interface",
+   "key": "OnScreenDisplayMessages",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_OVERCLOCK_ENABLE": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "OverclockEnable",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_OVERRIDE_REGION_SETTINGS": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "OverrideRegionSettings",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_PAGE_TABLE_FASTMEM": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "PageTableFastmem",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_PAUSE_ON_PANIC": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "PauseOnPanic",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_RAM_OVERRIDE_ENABLE": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "RAMOverrideEnable",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_RECURSIVE_ISO_PATHS": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "General",
+   "key": "RecursiveISOPaths",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_SKIP_IPL": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "SkipIPL",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_TIME_TRACKING": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "General",
+   "key": "EnablePlayTimeTracking",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_USE_PANIC_HANDLERS": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Interface",
+   "key": "UsePanicHandlers",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_VI_OVERCLOCK_ENABLE": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "VIOverclockEnable",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_WIIMOTE_CONTINUOUS_SCANNING": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "WiimoteContinuousScanning",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_WIIMOTE_ENABLE_SPEAKER": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "WiimoteEnableSpeaker",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_WII_SD_CARD": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "WiiSDCard",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_WII_SD_CARD_ENABLE_FOLDER_SYNC": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "WiiSDCardEnableFolderSync",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_WII_SPEAK_MUTED": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "EmulatedUSBDevices",
+   "key": "WiiSpeakMuted",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.MAIN_WII_WIILINK_ENABLE": {
+   "type": "boolean",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "EnableWiiLink",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.SYSCONF_PAL60": {
+   "type": "boolean",
+   "file": "SYSCONF",
+   "section": "IPL",
+   "key": "E60",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.SYSCONF_PROGRESSIVE_SCAN": {
+   "type": "boolean",
+   "file": "SYSCONF",
+   "section": "IPL",
+   "key": "PGS",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.SYSCONF_SCREENSAVER": {
+   "type": "boolean",
+   "file": "SYSCONF",
+   "section": "IPL",
+   "key": "SSV",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.SYSCONF_WIDESCREEN": {
+   "type": "boolean",
+   "file": "SYSCONF",
+   "section": "IPL",
+   "key": "AR",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "BooleanSetting.SYSCONF_WIIMOTE_MOTOR": {
+   "type": "boolean",
+   "file": "SYSCONF",
+   "section": "BT",
+   "key": "MOT",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "FloatSetting.GFX_STEREO_CONVERGENCE": {
+   "type": "float",
+   "file": "GFX",
+   "section": "Stereoscopy",
+   "key": "StereoConvergence",
+   "default": 20.0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "FloatSetting.GFX_STEREO_DEPTH": {
+   "type": "float",
+   "file": "GFX",
+   "section": "Stereoscopy",
+   "key": "StereoDepth",
+   "default": 20.0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "FloatSetting.MAIN_EMULATION_SPEED": {
+   "type": "float",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "EmulationSpeed",
+   "default": 1.0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "FloatSetting.MAIN_OVERCLOCK": {
+   "type": "float",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "Overclock",
+   "default": 1.0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "FloatSetting.MAIN_VI_OVERCLOCK": {
+   "type": "float",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "VIOverclock",
+   "default": 1.0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_ASPECT_RATIO": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "AspectRatio",
+   "default": 0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_CROP_CUSTOM_BOTTOM": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "CropCustomBottom",
+   "default": 0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_CROP_CUSTOM_LEFT": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "CropCustomLeft",
+   "default": 0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_CROP_CUSTOM_RIGHT": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "CropCustomRight",
+   "default": 0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_CROP_CUSTOM_TOP": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "CropCustomTop",
+   "default": 0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_EFB_SCALE": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "InternalResolution",
+   "default": 1,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_ENHANCE_FORCE_TEXTURE_FILTERING": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Enhancements",
+   "key": "ForceTextureFiltering",
+   "default": 0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_ENHANCE_MAX_ANISOTROPY": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Enhancements",
+   "key": "MaxAnisotropy",
+   "default": 0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_MSAA": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "MSAA",
+   "default": 1,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_PERF_SAMP_WINDOW": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "PerfSampWindowMS",
+   "default": 1000,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_PNG_COMPRESSION_LEVEL": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "PNGCompressionLevel",
+   "default": 6,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_SAFE_TEXTURE_CACHE_COLOR_SAMPLES": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "SafeTextureCacheColorSamples",
+   "default": 128,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_SHADER_COMPILATION_MODE": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Settings",
+   "key": "ShaderCompilationMode",
+   "default": 0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.GFX_STEREO_MODE": {
+   "type": "int",
+   "file": "GFX",
+   "section": "Stereoscopy",
+   "key": "StereoMode",
+   "default": 0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.MAIN_AUDIO_BUFFER_SIZE": {
+   "type": "int",
+   "file": "Dolphin",
+   "section": "DSP",
+   "key": "AudioBufferSize",
+   "default": 80,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.MAIN_AUDIO_VOLUME": {
+   "type": "int",
+   "file": "Dolphin",
+   "section": "DSP",
+   "key": "Volume",
+   "default": 100,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.MAIN_CPU_CORE": {
+   "type": "int",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "CPUCore",
+   "default": null,
+   "dynamic": true,
+   "expression": "NativeLibrary.DefaultCPUCore()",
+   "core": true
+  },
+  "IntSetting.MAIN_FALLBACK_REGION": {
+   "type": "int",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "FallbackRegion",
+   "default": 2,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.MAIN_GC_LANGUAGE": {
+   "type": "int",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "SelectedLanguage",
+   "default": 0,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.MAIN_SERIAL_PORT_1": {
+   "type": "int",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "SerialPort1",
+   "default": 255,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.MAIN_SLOT_A": {
+   "type": "int",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "SlotA",
+   "default": 8,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.MAIN_SLOT_B": {
+   "type": "int",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "SlotB",
+   "default": 255,
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "IntSetting.SYSCONF_LANGUAGE": {
+   "type": "int",
+   "file": "SYSCONF",
+   "section": "IPL",
+   "key": "LNG",
+   "default": null,
+   "dynamic": true,
+   "expression": "0x01",
+   "core": true
+  },
+  "IntSetting.SYSCONF_SENSOR_BAR_POSITION": {
+   "type": "int",
+   "file": "SYSCONF",
+   "section": "BT",
+   "key": "BAR",
+   "default": null,
+   "dynamic": true,
+   "expression": "0x01",
+   "core": true
+  },
+  "IntSetting.SYSCONF_SENSOR_BAR_SENSITIVITY": {
+   "type": "int",
+   "file": "SYSCONF",
+   "section": "BT",
+   "key": "SENS",
+   "default": null,
+   "dynamic": true,
+   "expression": "0x03",
+   "core": true
+  },
+  "IntSetting.SYSCONF_SOUND_MODE": {
+   "type": "int",
+   "file": "SYSCONF",
+   "section": "IPL",
+   "key": "SND",
+   "default": null,
+   "dynamic": true,
+   "expression": "0x01",
+   "core": true
+  },
+  "IntSetting.SYSCONF_SPEAKER_VOLUME": {
+   "type": "int",
+   "file": "SYSCONF",
+   "section": "BT",
+   "key": "SPKV",
+   "default": null,
+   "dynamic": true,
+   "expression": "0x58",
+   "core": true
+  },
+  "StringSetting.MAIN_GFX_BACKEND": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "GFXBackend",
+   "default": null,
+   "dynamic": true,
+   "expression": "NativeLibrary.GetDefaultGraphicsBackendConfigName()",
+   "core": true
+  },
+  "Virtual.CPU_BOOST": {
+   "type": "int",
+   "file": "",
+   "section": "",
+   "key": "",
+   "default": 1024,
+   "dynamic": false,
+   "expression": null,
+   "virtual": true
+  },
+  "Virtual.DSP_ENGINE": {
+   "type": "int",
+   "file": "",
+   "section": "",
+   "key": "",
+   "default": 0,
+   "dynamic": false,
+   "expression": null,
+   "virtual": true
+  },
+  "Virtual.MEM1_MB": {
+   "type": "int",
+   "file": "",
+   "section": "",
+   "key": "",
+   "default": 24,
+   "dynamic": false,
+   "expression": null,
+   "virtual": true
+  },
+  "Virtual.MEM2_MB": {
+   "type": "int",
+   "file": "",
+   "section": "",
+   "key": "",
+   "default": 64,
+   "dynamic": false,
+   "expression": null,
+   "virtual": true
+  },
+  "Virtual.SYNC_GPU": {
+   "type": "int",
+   "file": "",
+   "section": "",
+   "key": "",
+   "default": 1,
+   "dynamic": false,
+   "expression": null,
+   "virtual": true
+  }
+ },
+ "skipped": [
+  {
+   "menu": "CONFIG",
+   "kind": "RunRunnable",
+   "title": "User Data"
+  },
+  {
+   "menu": "CONFIG_GENERAL",
+   "kind": "RunRunnable",
+   "title": "Generate a New Statistics Identity"
+  },
+  {
+   "menu": "CONFIG_INTERFACE",
+   "kind": "SingleChoiceSetting",
+   "title": "Change App Theme"
+  },
+  {
+   "menu": "CONFIG_INTERFACE",
+   "kind": "SingleChoiceSetting",
+   "title": "Change App Theme"
+  },
+  {
+   "menu": "CONFIG_INTERFACE",
+   "kind": "SingleChoiceSetting",
+   "title": "Change Theme Mode"
+  },
+  {
+   "menu": "CONFIG_INTERFACE",
+   "kind": "SwitchSetting",
+   "title": "Use Black Backgrounds"
+  },
+  {
+   "menu": "CONFIG_PATHS",
+   "kind": "FilePicker",
+   "title": "Default ISO"
+  },
+  {
+   "menu": "CONFIG_PATHS",
+   "kind": "DirectoryPicker",
+   "title": "Wii NAND Root"
+  },
+  {
+   "menu": "CONFIG_PATHS",
+   "kind": "DirectoryPicker",
+   "title": "Dump Path"
+  },
+  {
+   "menu": "CONFIG_PATHS",
+   "kind": "DirectoryPicker",
+   "title": "Load Path"
+  },
+  {
+   "menu": "CONFIG_PATHS",
+   "kind": "DirectoryPicker",
+   "title": "Resource Pack Path"
+  },
+  {
+   "menu": "CONFIG_PATHS",
+   "kind": "DirectoryPicker",
+   "title": "WFS Path"
+  },
+  {
+   "menu": "CONFIG_GAME_CUBE",
+   "kind": "FilePicker",
+   "title": "BIOS"
+  },
+  {
+   "menu": "CONFIG_GAME_CUBE",
+   "kind": "FilePicker",
+   "title": "Game Boy Player ROM"
+  },
+  {
+   "menu": "CONFIG_GAME_CUBE",
+   "kind": "DirectoryPicker",
+   "title": "Saves"
+  },
+  {
+   "menu": "CONFIG_WII",
+   "kind": "FilePicker",
+   "title": "SD Card Path"
+  },
+  {
+   "menu": "CONFIG_WII",
+   "kind": "DirectoryPicker",
+   "title": "SD Sync Folder"
+  },
+  {
+   "menu": "CONFIG_WII",
+   "kind": "RunRunnable",
+   "title": "Pack SD Card Now"
+  },
+  {
+   "menu": "CONFIG_WII",
+   "kind": "RunRunnable",
+   "title": "Unpack SD Card Now"
+  },
+  {
+   "menu": "CONFIG_ACHIEVEMENTS",
+   "kind": "SwitchSetting",
+   "title": "Enable Achievements"
+  },
+  {
+   "menu": "CONFIG_ACHIEVEMENTS",
+   "kind": "RunRunnable",
+   "title": "Log In"
+  },
+  {
+   "menu": "CONFIG_ACHIEVEMENTS",
+   "kind": "RunRunnable",
+   "title": "Log Out"
+  },
+  {
+   "menu": "CONFIG_ADVANCED",
+   "kind": "DateTimeChoiceSetting",
+   "title": "Set Custom RTC"
+  },
+  {
+   "menu": "HOTKEYS",
+   "kind": "InputMappingControlSetting",
+   "title": ""
+  },
+  {
+   "menu": "WIIMOTE",
+   "kind": "SwitchSetting",
+   "title": "Real Balance Board"
+  },
+  {
+   "menu": "ENHANCEMENTS",
+   "kind": "StringSingleChoiceSetting",
+   "title": "Post-Processing Effect"
+  },
+  {
+   "menu": "CONFIG_LOG",
+   "kind": "SingleChoiceSetting",
+   "title": "Verbosity"
+  },
+  {
+   "menu": "CONFIG_LOG",
+   "kind": "RunRunnable",
+   "title": "Enable all Log Types"
+  },
+  {
+   "menu": "CONFIG_LOG",
+   "kind": "RunRunnable",
+   "title": "Disable all Log Types"
+  },
+  {
+   "menu": "CONFIG_LOG",
+   "kind": "RunRunnable",
+   "title": "Clear Log file"
+  },
+  {
+   "menu": "CONFIG_LOG",
+   "kind": "LogSwitchSetting",
+   "title": ""
+  },
+  {
+   "menu": "DEBUG",
+   "kind": "RunRunnable",
+   "title": "Wipe Jit Block Profiling Data"
+  },
+  {
+   "menu": "DEBUG",
+   "kind": "RunRunnable",
+   "title": "Write Jit Block Log Dump"
+  }
+ ]
+}
