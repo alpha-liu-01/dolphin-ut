@@ -15,7 +15,7 @@
 # per-second FPS/speed shown on screen is also in that log only if the OSD prints it (it does not).
 # The game is /home/phablet/dolphin-ut-games/*.wbfs (the first one), or $GAME.
 mode=${1:-ogl}; secs=${2:-60}; [ $# -ge 2 ] && shift 2 || shift $#
-U=/home/phablet/dolphin-ut-user-w
+U=${DOLPHIN_UT_USER:-/home/phablet/dolphin-ut-user-w}  # another user folder: DOLPHIN_UT_USER=...
 mkdir -p "$U/Config"
 . /home/phablet/dolphin-ut-probe/ut-env.sh
 ut_qt6_wayland

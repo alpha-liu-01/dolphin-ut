@@ -166,7 +166,7 @@ Steps:
 
 Exit: start from the library, play, switch to another app and back (the game paused and resumed), rotate, exit through the menu. No stale frames and no hangs.
 
-#### Status (2026-11-15): on-screen tests done; fixes for fullscreen and the statistics size waiting for a re-test
+#### Status (2026-11-15): done (fullscreen and statistics fixes confirmed on screen)
 
 Notes: `stage3.2-emulation.md`.
 - Steps 1, 2, 4 and the pause/resume of step 5 were already done and tested on screen in 3.0. Pausing also stops the audio: the CPU's stepping turns the sound stream off.
@@ -200,6 +200,32 @@ Steps:
 7. Multi-touch: several controls at once, including stick and buttons together; check that `fts_ts` reports enough points (10 in stage 1's Qt log).
 
 Exit: the GameCube test game and a Wii game are playable with touch only, with the overlay edited and saved.
+
+#### Status (2026-11-15): done (3.3a and 3.3b passed on screen; a latched L/R now also holds the analog trigger, unlike the Android app, to re-test)
+
+- 3.3b: the Android "Overlay Controls" menu and edit mode, drawn into the game picture with ImGui:
+  - Edit Layout (drag, saved per layout and orientation in `Config/TouchOverlay.ini`);
+  - Toggle Controls and Latching Controls;
+  - Adjust Controls (scale and opacity);
+  - Relative Stick Center;
+  - Choose Controller;
+  - Touch IR Pointer (recenter, mode, double tap button);
+  - Reset Overlay;
+  - plus Show Overlay.
+
+  It opens from a "Controls" button at the top centre until the 3.4 menu exists. Settings are saved in Android's `Dolphin.ini` keys, and the overlay is rebuilt, with old textures retired safely. The pages were checked from screen captures; touch interaction is for the on-screen tests.
+
+Notes: `stage3.3-overlay.md`.
+- Built:
+  - the five Android layouts (GameCube, Wii Remote upright with the pointer, sideways, + Nunchuk, Classic), each in landscape and portrait;
+  - the Android graphics;
+  - Android's sizes and default positions, generated from the Android sources by `ut/tools/gen-overlay-defaults.py`;
+  - Android's touch behavior, including digital L/R also pressing the analog trigger;
+  - settings under the Android app's own `Dolphin.ini` keys.
+- Portrait gives the game the top half, as Android does. This needed a small host-side addition to the presenter (`Presenter::SetDrawArea`).
+- The images are ImGui user textures, freed with the on-screen UI.
+- All layouts were checked from `mirscreencast` captures over adb.
+- Haptics: the Android overlay has no haptic feedback on presses, so step 4's "haptic feedback on press" is not an Android feature; dropped unless the user wants it. The Android app does pass the game's **rumble** to the phone's vibrator (`DolphinVibratorManager`, "Device Sensors: Motor"); that belongs to 3.5, through hfd-service like the 3.0 Vibrate test.
 
 ### 3.4 In-game menu (medium)
 

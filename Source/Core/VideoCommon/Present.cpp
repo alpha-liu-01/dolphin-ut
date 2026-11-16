@@ -602,6 +602,14 @@ void Presenter::ResizeSurface(int width, int height)
   m_surface_resized.Set();
 }
 
+void Presenter::SetDrawArea(float left, float top, float right, float bottom)
+{
+  m_draw_area_left = left;
+  m_draw_area_top = top;
+  m_draw_area_right = right;
+  m_draw_area_bottom = bottom;
+}
+
 void* Presenter::GetNewSurfaceHandle()
 {
   void* handle = m_new_surface_handle;
@@ -750,9 +758,12 @@ void Presenter::UpdateDrawRectangle()
     g_Config.fAspectRatioHackH = 1;
   }
 
-  // The rendering window size
-  const float win_width = static_cast<float>(m_backbuffer_width);
-  const float win_height = static_cast<float>(m_backbuffer_height);
+  // The rendering window size: the part of the backbuffer the frontend gave the picture
+  // (SetDrawArea), by default all of it.
+  const float area_left = m_draw_area_left * m_backbuffer_width;
+  const float area_top = m_draw_area_top * m_backbuffer_height;
+  const float win_width = (m_draw_area_right - m_draw_area_left) * m_backbuffer_width;
+  const float win_height = (m_draw_area_bottom - m_draw_area_top) * m_backbuffer_height;
   const float win_aspect_ratio = win_width / win_height;
 
   // FIXME: this breaks at very low widget sizes
@@ -817,8 +828,10 @@ void Presenter::UpdateDrawRectangle()
     int_draw_height = rect.GetHeight();
   }
 
-  m_target_rectangle.left = static_cast<int>(std::round(win_width / 2.0 - int_draw_width / 2.0));
-  m_target_rectangle.top = static_cast<int>(std::round(win_height / 2.0 - int_draw_height / 2.0));
+  m_target_rectangle.left =
+      static_cast<int>(std::round(area_left + win_width / 2.0 - int_draw_width / 2.0));
+  m_target_rectangle.top =
+      static_cast<int>(std::round(area_top + win_height / 2.0 - int_draw_height / 2.0));
   m_target_rectangle.right = m_target_rectangle.left + int_draw_width;
   m_target_rectangle.bottom = m_target_rectangle.top + int_draw_height;
 }

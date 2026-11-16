@@ -18,7 +18,7 @@ class GameWindow : public QWindow
 public:
   GameWindow();
 
-  void SetOverlay(TouchOverlay* overlay) { m_overlay = overlay; }
+  void SetOverlay(TouchOverlay* overlay);
 
   // The window's size in device pixels, from the platform window. Computing it as logical size
   // times the device pixel ratio is off by a pixel or two with a fractional QT_SCALE_FACTOR.

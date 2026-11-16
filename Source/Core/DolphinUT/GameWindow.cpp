@@ -100,9 +100,18 @@ void GameWindow::exposeEvent(QExposeEvent* event)
   }
 }
 
+void GameWindow::SetOverlay(TouchOverlay* overlay)
+{
+  m_overlay = overlay;
+  if (m_overlay)
+    m_overlay->SetWindowSize(QSizeF(PhysicalSize()));
+}
+
 void GameWindow::resizeEvent(QResizeEvent* event)
 {
   QWindow::resizeEvent(event);
   const QSize physical = PhysicalSize();
+  if (m_overlay)
+    m_overlay->SetWindowSize(QSizeF(physical));
   emit SizeChanged(physical.width(), physical.height(), static_cast<float>(devicePixelRatio()));
 }

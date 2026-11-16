@@ -2,7 +2,9 @@
 
 Goal (`stage3-roadmap.md`): start, run, pause and stop a game the phone way.
 
-Status (2026-11-15): most of it was already built and tested on screen in 3.0. 3.2 adds:
+Status (2026-11-15): **done** (re-test passed: fullscreen with the panel hidden upright and in landscape, still fullscreen after an app switch, the library back with its panel after Exit, readable statistics).
+
+Most of it was already built and tested on screen in 3.0. 3.2 adds:
 - Back/Escape handling;
 - the FPS and speed display switch;
 - a suspend test;
@@ -189,7 +191,7 @@ With the Developer switch "Hide this window while playing" off, the panel stays.
 
 Dolphin sizes its on-screen UI (statistics, messages) by `WindowSystemInfo::render_surface_scale`. `dolphin-ut` filled it with Qt's device pixel ratio, which was 2.625 in 3.0 and became 1 when 3.1 dropped `QT_SCALE_FACTOR` for Lomiri Components. It is now Lomiri's grid-unit scale, `GRID_UNIT_PX / 8` = 2.625 (`LomiriIntegration::GridUnitScale()`), as in 3.0. The touch overlay is not affected: it sizes itself from the window.
 
-## Re-test (stopped here)
+## Re-test
 
 The fixed build is on the phone. Run it from an interactive `adb shell` (as the user did for M5), so Ctrl+C works:
 

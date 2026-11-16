@@ -12,6 +12,7 @@
 #include "VideoCommon/VideoCommon.h"
 
 #include <array>
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <tuple>
@@ -92,6 +93,10 @@ public:
   void ChangeSurface(void* new_surface_handle);
   // The size is in pixels. Window systems that can't be queried for it (Wayland) rely on it.
   void ResizeSurface(int width, int height);
+  // Keeps the picture inside part of the window, as fractions of the backbuffer (by default all of
+  // it). The Ubuntu Touch frontend uses the top half in portrait, with the touch controls below, as
+  // the Android app's portrait layout does with its views. Any thread; applied at the next present.
+  void SetDrawArea(float left, float top, float right, float bottom);
   bool SurfaceResizedTestAndClear() { return m_surface_resized.TestAndClear(); }
   bool SurfaceChangedTestAndClear() { return m_surface_changed.TestAndClear(); }
   void* GetNewSurfaceHandle();
@@ -148,6 +153,11 @@ private:
   int m_new_surface_height = 0;
   Common::Flag m_surface_changed;
   Common::Flag m_surface_resized;
+
+  std::atomic<float> m_draw_area_left = 0.0f;
+  std::atomic<float> m_draw_area_top = 0.0f;
+  std::atomic<float> m_draw_area_right = 1.0f;
+  std::atomic<float> m_draw_area_bottom = 1.0f;
 
   // The presentation rectangle.
   // Width and height correspond to the final output resolution.

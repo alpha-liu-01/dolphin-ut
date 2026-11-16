@@ -23,17 +23,12 @@
 #include "Core/BootManager.h"
 #include "Core/Config/GraphicsSettings.h"
 #include "Core/Config/MainSettings.h"
-#include "Core/HW/Wiimote.h"
-#include "Core/HW/WiimoteEmu/ExtensionPort.h"
-#include "Core/HW/WiimoteEmu/WiimoteEmu.h"
 #include "Core/State.h"
 #include "Core/System.h"
 #include "DiscIO/Enums.h"
 #include "DolphinUT/GameWindow.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include "DolphinUT/TouchOverlay.h"
-#include "InputCommon/ControllerEmu/ControlGroup/Attachments.h"
-#include "InputCommon/ControllerEmu/Setting/NumericSetting.h"
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
 #include "UICommon/GameFile.h"
 #include "UICommon/UICommon.h"
@@ -231,31 +226,6 @@ void Emulator::start(const QString& path, const QString& backend)
     m_launcher->hide();
   m_game_window->show();
 
-  TouchOverlay::Layout layout = TouchOverlay::Layout::GameCube;
-  bool sideways_option = false;
-  if (!gamecube)
-  {
-    // The layout follows Wii Remote 1's configured extension, as on Android. (Desktop Dolphin's
-    // default profile has a Nunchuk attached; games then read the remote as held upright.)
-    const auto* attachments = static_cast<ControllerEmu::Attachments*>(
-        Wiimote::GetWiimoteGroup(0, WiimoteEmu::WiimoteGroup::Attachments));
-    const int extension = attachments->GetSelectedAttachment();
-    for (auto& setting :
-         Wiimote::GetWiimoteGroup(0, WiimoteEmu::WiimoteGroup::Options)->numeric_settings)
-    {
-      if (setting->GetININame() == WiimoteEmu::Wiimote::SIDEWAYS_OPTION)
-        sideways_option = static_cast<ControllerEmu::NumericSetting<bool>*>(setting.get())->GetValue();
-    }
-    layout = extension == WiimoteEmu::ExtensionNumber::NUNCHUK ?
-                 TouchOverlay::Layout::WiiRemoteNunchuk :
-                 TouchOverlay::Layout::WiiRemoteSideways;
-    appendLog(QStringLiteral("Wii Remote 1: extension %1, sideways option %2, overlay %3")
-                  .arg(extension)
-                  .arg(sideways_option ? QStringLiteral("on") : QStringLiteral("off"))
-                  .arg(extension == WiimoteEmu::ExtensionNumber::NUNCHUK ?
-                           QStringLiteral("Wii Remote + Nunchuk") :
-                           QStringLiteral("Wii Remote sideways")));
-  }
   TouchOverlay::Actions actions;
   actions.exit = [] { RequestStopFromAnyThread(); };
   actions.save_state = [this] {
@@ -266,7 +236,16 @@ void Emulator::start(const QString& path, const QString& backend)
     appendLog(QStringLiteral("load state slot %1").arg(TEST_STATE_SLOT));
     State::Load(Core::System::GetInstance(), TEST_STATE_SLOT);
   };
-  m_overlay = std::make_unique<TouchOverlay>(layout, sideways_option, std::move(actions));
+  // Controls are sized by the screen's shorter side, as in the Android app.
+  const QSize screen = m_game_window->screen()->size() * m_game_window->devicePixelRatio();
+  m_overlay = std::make_unique<TouchOverlay>(!gamecube, std::min(screen.width(), screen.height()),
+                                             std::move(actions));
+  static constexpr const char* type_names[] = {"GameCube", "Wii Remote", "Wii Remote sideways",
+                                               "Wii Remote + Nunchuk", "Classic Controller",
+                                               "none"};
+  appendLog(QStringLiteral("overlay: %1, controller %2")
+                .arg(QString::fromLatin1(type_names[static_cast<int>(m_overlay->GetType())]))
+                .arg(m_overlay->GetControllerIndex() + 1));
   m_game_window->SetOverlay(m_overlay.get());
 
   const WindowSystemInfo wsi = MakeWindowSystemInfo(m_game_window);
@@ -401,7 +380,15 @@ void Emulator::OnGameWindowSizeChanged(int width, int height, float scale)
   appendLog(QStringLiteral("game window size %1x%2 (scale %3)").arg(width).arg(height).arg(scale));
   g_controller_interface.SetRenderSurfaceSize(width, height, scale);
   if (g_presenter)
+  {
     g_presenter->ResizeSurface(width, height);
+    // As the Android app's portrait layout (layout-port/fragment_emulation.xml): the picture in the
+    // top half, the touch controls below.
+    if (height > width)
+      g_presenter->SetDrawArea(0.0f, 0.0f, 1.0f, 0.5f);
+    else
+      g_presenter->SetDrawArea(0.0f, 0.0f, 1.0f, 1.0f);
+  }
 }
 
 void Emulator::appendLog(const QString& text)

@@ -16,6 +16,9 @@ add_executable(dolphin-ut
   GameWindow.h
   LomiriIntegration.cpp
   LomiriIntegration.h
+  OverlayLayout.cpp
+  OverlayLayout.h
+  OverlayDefaults.inc
   TouchOverlay.cpp
   TouchOverlay.h
 )
@@ -32,6 +35,20 @@ set_target_properties(dolphin-ut PROPERTIES AUTOMOC ON)
 # QQmlApplicationEngine::loadFromModule("DolphinUT", "Main") finds it.
 qt_policy(SET QTP0001 NEW)
 qt_policy(SET QTP0004 NEW)
+# The Android app's overlay graphics (drawable-xxhdpi, this phone's density), bundled as Qt resources
+# under :/overlay/ (stage 3.3).
+file(GLOB DOLPHIN_UT_OVERLAY_IMAGES
+     "${PROJECT_SOURCE_DIR}/Source/Android/app/src/main/res/drawable-xxhdpi/gcpad_*.png"
+     "${PROJECT_SOURCE_DIR}/Source/Android/app/src/main/res/drawable-xxhdpi/gcwii_*.png"
+     "${PROJECT_SOURCE_DIR}/Source/Android/app/src/main/res/drawable-xxhdpi/wiimote_*.png"
+     "${PROJECT_SOURCE_DIR}/Source/Android/app/src/main/res/drawable-xxhdpi/nunchuk_*.png"
+     "${PROJECT_SOURCE_DIR}/Source/Android/app/src/main/res/drawable-xxhdpi/classic_*.png")
+qt_add_resources(dolphin-ut "overlay_images"
+  PREFIX "/overlay"
+  BASE "${PROJECT_SOURCE_DIR}/Source/Android/app/src/main/res/drawable-xxhdpi"
+  FILES ${DOLPHIN_UT_OVERLAY_IMAGES}
+)
+
 qt_add_qml_module(dolphin-ut
   URI DolphinUT
   VERSION 1.0
