@@ -51,5 +51,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libpulse-dev:arm64 libasound2-dev:arm64 libbluetooth-dev:arm64 \
  && rm -rf /var/lib/apt/lists/*
 
+# Click packaging (stage 5, ut/click/build-click.sh): `click build`, and the Qt 6 Wayland shell
+# integration the phone lacks (stage 0), unpacked from UBports' arm64 packages into
+# /opt/ut-bundle to be copied into the click: the xdg-shell plugin and libQt6WlShellIntegration.
+RUN apt-get update && apt-get install -y --no-install-recommends click \
+ && mkdir -p /tmp/debs /opt/ut-bundle && cd /tmp/debs \
+ && apt-get download qt6-wayland:arm64 libqt6wlshellintegration6:arm64 \
+ && for d in *.deb; do dpkg-deb -x "$d" /opt/ut-bundle; done \
+ && ls /opt/ut-bundle/usr/lib/aarch64-linux-gnu/qt6/plugins/wayland-shell-integration/libxdg-shell.so \
+       /opt/ut-bundle/usr/lib/aarch64-linux-gnu/libQt6WlShellIntegration.so.6 \
+ && rm -rf /tmp/debs /var/lib/apt/lists/*
+
 COPY aarch64-linux-gnu.cmake /opt/aarch64-linux-gnu.cmake
 WORKDIR /src

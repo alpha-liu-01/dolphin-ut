@@ -52,19 +52,25 @@ echo "running: $mode: $* (for ${secs}s, log $log)"
 case "$mode" in ut*) bin=./dolphin-ut ;; *) bin=./dolphin-emu ;; esac
 $bin "$@" > "$log" 2>&1 &
 p=$!
-( while kill -0 $p 2>/dev/null; do cp /proc/$p/maps "$maps.tmp" 2>/dev/null && mv "$maps.tmp" "$maps"; sleep 2; done ) &
+( while kill -0 $p 2>/dev/null; do cp /proc/$p/maps "$maps.tmp" 2>/dev/null && [ -s "$maps.tmp" ] && mv "$maps.tmp" "$maps"; sleep 2; done ) &
 i=0; while [ $i -lt "$secs" ] && kill -0 $p 2>/dev/null; do sleep 1; i=$((i+1)); done
 if kill -0 $p 2>/dev/null; then
   kill -INT $p
   j=0; while [ $j -lt 15 ] && kill -0 $p 2>/dev/null; do sleep 1; j=$((j+1)); done
   if kill -0 $p 2>/dev/null; then echo "still running 15 s after SIGINT (a Confirm-on-Stop dialog?), sending a second SIGINT"; kill -INT $p; sleep 3; kill -9 $p 2>/dev/null; fi
-  echo "stopped after ${i}s"
+  wait $p 2>/dev/null; st=$?
+  # A crash while shutting down (status 128+signal, other than the SIGINT/SIGKILL sent here).
+  case $st in 0|130|137) echo "stopped after ${i}s" ;; *) echo "stopped after ${i}s, but exited with status $st (signal $((st-128)) while shutting down?)" ;; esac
 else
   wait $p; st=$?; echo "exited by itself after ${i}s (status $st)"
   if [ $st -ge 128 ]; then
     echo "crashed (signal $((st-128))); crash data:"
     python3 /home/phablet/dolphin-ut-probe/crash-resolve.py "$log" "$maps"
     ls -la core* 2>/dev/null | sed 's/^/  core dump: /'
+    # The next run starts by deleting core and overwriting the log, so keep this crash's data.
+    keep="$U/crash-$(date +%m%d-%H%M%S)-$mode"
+    mkdir -p "$keep" && cp "$log" "$maps" "$keep/" 2>/dev/null && mv core* "$keep/" 2>/dev/null
+    echo "  crash data kept in $keep"
   fi
 fi
 tr -cd '\11\12\40-\176' < "$log" | grep -E " E\[| W\[|Panic|panic|Fatal|fatal|crash|Segmentation|Aborted" \

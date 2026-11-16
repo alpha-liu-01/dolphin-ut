@@ -299,7 +299,7 @@ Steps:
 
 Exit: the first-pass settings change behavior on the phone and persist.
 
-#### Status (2026-11-16): first pass done (on-screen tests passed); the second pass is open
+#### Status (2026-11-16): first pass done (on-screen tests passed); the second pass moved to after stage 5 (see "Stage 3 closed")
 
 Notes: `stage3.6-settings.md`.
 - **On-screen tests passed**: global and game settings, Internal Resolution, Show FPS, per-game Video Backend. CPU Boost: Need for Speed went from 38–50 % to 82–100 % of full speed. With the emulated CPU clock at 85 % it matches the Android app (30–35 fps, VPS 50).
@@ -363,7 +363,7 @@ Launcher environment (shared with stage 5): `PULSE_PROP="media.role=multimedia"`
 
 Exit: a fresh install on the phone starts the test game with these defaults.
 
-#### Status (2026-11-16): built; on-screen tests open
+#### Status (2026-11-16): done (both on-screen tests passed)
 
 Notes: `stage3.8-defaults.md`.
 - **Port defaults without touching Core** (`PortDefaults.{h,cpp}`): dual core, save states and covers are written into the user's Dolphin.ini once per user folder (`[UbuntuTouch] DefaultsVersion`), and only where the user has no value. A fresh folder booted Need for Speed on Vulkan in dual core at 100 % speed.
@@ -383,9 +383,27 @@ Kept and folded in: controllers (3.5), touch controls (3.3), window and lifecycl
 
 ## Deferred to after stage 3
 
+- **The 3.6 second pass:** settings from the in-game menu (the settings pages live in the library window, hidden during a game), a Yes/No answer for Dolphin's alerts (today: logged, shown, ignored), Hotkeys, RetroAchievements, and the remaining skipped items.
+- From 3.7: Install WAD, Import Wii Save, Import BootMii NAND Backup, Load Wii System Menu, Online System Update; export through content-hub and the zip import/export of the user data.
 - Cheats (Gecko / Action Replay), Riivolution, Skylanders and Infinity Base, NetPlay, RetroAchievements, GBA link, disc conversion, Wii system update, the user data import/export screen. All exist in the Android app and can follow the same pattern later.
 - A TV / big-screen layout.
 - Translations of the new QML strings (Dolphin's gettext catalogs cover the core and DolphinQt only).
+
+## Stage 3 closed (2026-11-16)
+
+All phases are done; 3.6 is done in its first pass, and its second pass moved to "Deferred to after stage 3".
+
+The exit below is met on the phone, with the development entry (unconfined, `dev-install.sh`) standing in for an installed app, and a new user folder standing in for a fresh install:
+- the library with covers (3.1);
+- GameCube and Wii games with the touch overlay (3.3) and a Bluetooth pad on default mappings (3.5);
+- app switching, screen lock and rotation (3.2);
+- save states from the in-game menu, on by default (3.4, 3.8);
+- exit to the library (3.4);
+- settings, global and per game (3.6).
+
+Known problems carried out of stage 3:
+- **Wind Waker hangs the GPU on Vulkan** (found in 3.1), and Vulkan is the default. The 3.8 fallback covers Vulkan failing to start, not a hang during play. Until stage 4 settles it, choose OpenGL ES for that game in its game settings.
+- Under confinement, nothing has been tested yet (stage 5).
 
 ## Exit for stage 3
 
@@ -408,6 +426,8 @@ No stale frames, no hangs, no crashes along the way.
 | Visual style | QtQuick Controls Material (closest to the Android app), or Lomiri Components / Suru (native Ubuntu Touch look) | **User preference (S3.0): the native Ubuntu Touch look.** Lomiri Components (`qml6-module-lomiri-components`, on the phone) for the app screens from 3.1 on; the Android app's layout is kept, only the styling changes. The in-game overlay is drawn by Dolphin (option A), so the style does not apply to it |
 | CPU boost while a game runs (3.0 benchmark) | none (schedutil alone: about 41 %); uclamp_min on the emulation threads at 512 (65 %) or 1024 (79 %), dropped at pause and stop | **Decided (user, 2026-11-15): a setting (3.6), on by default (3.8), per game too.** Heat is not an issue on this phone |
 | Dual core default (3.8) | upstream's Linux default (single core) or dual core as on Android | **Decided (user, 2026-11-15): dual core** |
+| Save states default (3.4, 3.8) | off as on Android, or on | **Decided (user, 2026-11-16): on** ("Save states are quite helpful") |
+| 3.6 second pass | now, or after packaging | **After stage 5** (recommendation at the close of stage 3): the exit below is met without it, and packaging holds the larger unknowns |
 | Per-game settings (3.6) | | **Required (user, 2026-11-15)**: the best backend differs by game |
 | DolphinQt in the click package | ship it as an "advanced" second app, or leave it out | leave it out; keep it for debugging over adb |
 | Where the code lives | `Source/Core/DolphinUT/` (a new frontend) or `ut/frontend/` | `Source/Core/DolphinUT/` |

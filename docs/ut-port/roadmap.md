@@ -2,6 +2,8 @@
 
 Written 2026-11-14, and updated the same day after the search for existing Wayland work (`wayland-prior-work.md`). Sources: this repository at `f9cb5f1c08` (upstream master), the stone-ut documents (`../stone-ut/docs/`, mainly `roadmap-hardware-2.md` items 3, 10 and 11), upstream pull requests, and a read-only probe of the phone over adb. Nothing was built, installed or changed on the phone.
 
+Updated 2026-11-16 at the close of stage 3: stage 3's summary, stage 4 narrowed (with a spike on custom GPU drivers), stages 5 and 6 revised, and the order of the remaining stages ("Roadmap").
+
 ## Conclusion
 
 The problem is not OpenGL versus OpenGL ES. It is X11 versus Wayland.
@@ -84,6 +86,11 @@ Dolphin's emulation core does not change. The port only touches host-side code: 
 ## Roadmap
 
 Each stage has a goal, planned steps and an exit check. Later stages add "Implementation notes" and "Events" sections, as in the stone-ut documents.
+
+**Order from here (2026-11-16): stage 5 next, then stage 4, then stage 6.**
+- **Stage 5 (packaging)** turns the development entry into an installable app, and it holds the largest unknowns: gamepads under confinement, the JIT and the CPU boost under AppArmor, and content-hub import as a confined app. What it finds may change code, so it comes before polishing.
+- **Stage 4 (narrowed)** is no longer a broad measurement campaign: stage 3 settled speed and defaults. What remains is Wind Waker's Vulkan hang, a compatibility table, a long run as an installed app, frame pacing and the custom driver spike. The Wind Waker steps can start any time if it bites first.
+- **Stage 6** collects the features left out of stage 3: the 3.6 second pass and the deferred Android features.
 
 ### 0. Probe the phone (no Dolphin code)
 
@@ -214,81 +221,135 @@ Goal: someone can pick up the phone and play, without a keyboard and mouse, in a
 
 Removed from the old stage 3: Widgets UI scaling, `RenderToMain` as a shipped default, Confirm on Stop handling. Deferred to after stage 3: cheats, Riivolution, Skylanders and Infinity Base, NetPlay, achievements, GBA link, disc conversion, system update, TV layout, translations of the new strings.
 
-Status (2026-11-15): **3.0 done** (`stage3.0-foundations.md`). **3.1 (game library) done** (`stage3.1-library.md`): a native Lomiri library with the Android tabs, GameTDB covers (on by default, user decision), details, grid options and game folders. **3.6 (settings) first pass done** (`stage3.6-settings.md`): the Android app's settings menus generated from its sources and bound to Dolphin's own config objects; per-game settings; the CPU Boost setting (38–50 % → 82–100 % of full speed in Need for Speed); Dolphin's alerts are logged, shown and ignored instead of ending the app. **3.7 (files and storage) done** (`stage3.7-storage.md`; on-screen tests passed): games in ~/Documents/Dolphin/Games (reachable over MTP and by a click), the user folder in the app's own data folder, screenshots in ~/Pictures/Dolphin, content-hub import and share, file and folder pickers, and a development entry in the app drawer. **3.8 (defaults) built, on-screen tests open** (`stage3.8-defaults.md`): dual core, save states and covers on by default (written once per user folder, never over the user's values), Vulkan with an automatic OpenGL ES fallback.
-
-**3.5 (controllers and mapping) done** (`stage3.5-controllers.md`): Controllers pages after the Android app's, input detection, profiles, SDL gamepad defaults, automatic mapping of a new gamepad, rumble on the phone's vibrator.
-
-**3.4 (in-game menu) done** (`stage3.4-menu.md`): the Android menu as a left panel in the game picture; menus keep drawing while paused (redraws queued through the paused CPU thread).
-
-**3.3a (touch overlay: Android layouts, graphics and touch) done**, all on-screen tests passed (`stage3.3-overlay.md`). **3.3b (the Android overlay customization: edit mode, toggles, latching, scale and opacity, controller, pointer options, reset) done**, drawn into the game picture with ImGui; the user found the menu size "perfect". One improvement over Android: a latched L/R also holds the analog trigger. Next: 3.4 (in-game menu). Portrait puts the game in the top half (`Presenter::SetDrawArea`, a host-side VideoCommon addition).
-
-**3.2 (emulation screen and lifecycle) done** (`stage3.2-emulation.md`). What 3.2 fixed:
-- the top panel stayed over the game; Lomiri needs `set_fullscreen` after mapping, with no other window of the app showing;
-- the statistics were too small (Dolphin's UI scale is now the grid-unit scale).
-- App switching, screen lock, Escape, closing from the spread and a SIGSTOP/SIGCONT suspend test all passed.
-- Found while testing: Wind Waker hangs the GPU on Vulkan (`VK_ERROR_DEVICE_LOST`, KGSL "GPU hang detected"), in DolphinQt too. OpenGL ES works. Stage 4.
-- **Window architecture A, decided by the user:** Dolphin's renderer draws the touch overlay; no subsurface. The condition: the Android overlay customization UX is reimplemented (3.3). Portrait gets its own default layout, as on Android.
-- On screen, everything works:
-  - touch controls, including the Wii Remote + Nunchuk layout and the D-pad;
-  - landscape kept, pause on app switch, screen kept on, one spread entry, Exit;
-  - vibration (hfd-service).
-- Benchmark from a Need for Speed race save state (screen on, no input):
-  - the CPU clock was the limit: schedutil holds the big cores near 1228 MHz;
-  - uclamp_min on the emulation threads (no root needed) doubled the speed (41 % → 79 % Vulkan, 86 % OpenGL ES);
-  - dual core beats single core;
-  - OpenGL ES beat Vulkan in this game, while Vulkan looked better with Newer SMB.
-- User decisions:
-  - a CPU boost setting, on by default (heat is not an issue);
-  - dual core by default;
-  - per-game settings are required;
-  - expose all of the Android app's features, or more;
-  - the native Ubuntu Touch look (Lomiri Components) for the app screens.
-
 Exit: from a fresh install, a GameCube and a Wii game start from the library, play with touch and with a Bluetooth gamepad, survive switching apps and rotation, save and load states from the in-game menu, and exit to the library, with no stale frames, hangs or crashes.
 
-### 4. Performance and correctness on Adreno 619
+#### Status (2026-11-16): done; the 3.6 second pass moved to stage 6
 
-Goal: know what runs well, and why the rest does not.
+Notes: `stage3-roadmap.md` (phases, decisions, "Stage 3 closed") and one document per phase, `stage3.0-foundations.md` to `stage3.8-defaults.md`.
+
+| Phase | Result |
+| --- | --- |
+| 3.0 Foundations | `Source/Core/DolphinUT/` (target `dolphin-ut`), a QML shell on OpenGL ES. **Window architecture A** (user): the touch overlay and menus are drawn by Dolphin's renderer into the game picture, no subsurface. Benchmark: the CPU clock is the limit; uclamp_min on the emulation threads doubles the speed, and dual core beats single core |
+| 3.1 Game library | A native Lomiri library with the Android tabs, GameTDB covers, details, grid options and game folders |
+| 3.2 Emulation screen | A fullscreen game window (Lomiri needs `set_fullscreen` after mapping, with no other window of the app showing), landscape, keep-display-on, pause on app switch and screen lock, vibration |
+| 3.3 Touch overlay | The Android layouts and graphics through `InputOverrider`, and the Android customization (edit mode, toggles, latching, scale, opacity). Portrait puts the game in the top half |
+| 3.4 In-game menu | The Android menu as a panel in the picture: pause, screenshot, save states, overlay, Wii Remotes, disc, reset, exit |
+| 3.5 Controllers | Controllers pages after the Android app's, input detection, profiles, SDL gamepad defaults, automatic mapping of a new pad, rumble |
+| 3.6 Settings (first pass) | The Android settings menus generated from its sources, bound to Dolphin's own config objects; per-game settings; the CPU Boost setting; Dolphin's alerts logged, shown and ignored instead of ending the app |
+| 3.7 Files and storage | Games in ~/Documents/Dolphin/Games (reachable over MTP and by a click), the user folder in the app's own data folder, screenshots in ~/Pictures/Dolphin, content-hub import and share, file and folder pickers, path settings, a development entry in the app drawer |
+| 3.8 Defaults | Dual core, save states and covers on by default, written once per user folder and never over the user's values; Vulkan, with OpenGL ES when Vulkan fails to start |
+
+Speed at the close: Need for Speed: Most Wanted, the hardest game tested, went from 50–60 % (single core, no boost, start of stage 3) to 100 % of full speed with dual core and the boost. Newer SMB runs at full speed.
+
+User decisions: window architecture A; the native Ubuntu Touch look (Lomiri Components); a CPU boost setting, on by default (heat is not an issue); dual core by default; per-game settings; all of the Android app's features, or more; covers on; save states on.
+
+Carried forward:
+- **Wind Waker hangs the GPU on Vulkan** (`VK_ERROR_DEVICE_LOST`, KGSL "GPU hang detected"), in DolphinQt too; OpenGL ES works. Vulkan is the default, so the game hangs out of the box until stage 4 settles it. Meanwhile, its game settings can choose OpenGL ES.
+- Nothing has run confined yet: the development entry is unconfined (stage 5).
+- The 3.6 second pass and the deferred Android features (stage 6).
+
+### 4. Performance and correctness on Adreno 619 (narrowed 2026-11-16)
+
+Goal: know what runs well, fix or work around what does not, and decide on custom GPU drivers.
+
+**What stage 3 already settled.** This stage was planned as a broad measurement campaign. Stage 3 answered its main questions on the way:
+- the CPU clock was the limit, and the CPU boost (uclamp_min 1024, no root) doubles the speed (3.0, 3.6);
+- dual core beats single core, and is the default (3.0, 3.8);
+- Vulkan is the default, with OpenGL ES when Vulkan fails to start, and per game in the game settings (3.6, 3.8);
+- Need for Speed: Most Wanted, at 50–60 % in races at the start of stage 3, runs at full speed.
+
+So the stage is not skipped, but it shrinks to the steps below. Steps 1 and 2 matter most: a game that hangs out of the box is the one known bug a new user would hit.
 
 Planned steps:
-1. Compare GLES and Vulkan on a fixed set of games and scenes at 1× internal resolution, each scene started from a save state (`dolphin-ut --state-slot N`, with the `perf:` log line every 5 s; 3.0). Single vs dual core (`-C Dolphin.Core.CPUThread=…`) on the same scenes. First data point: Need for Speed: Most Wanted (GameCube) at 50–60 % in races on Vulkan, single core, where Dolphin MMJ on Android reached full speed some years ago. Measure frame time, shader stutter (ubershaders, asynchronous compilation, the shader cache across runs), CPU and GPU clocks, and temperature over 15 minutes. `../stone-ut/tools/phone-debug/fps-panel.py` already reads panel vsync and KGSL load.
-2. Frame pacing: 60 Hz games on a 120 Hz Mir output, and the 60 Hz system setting (`stone-refresh-rate 60`), compared.
-3. CPU placement and clocks. **3.0 found this is the main limit** (`stage3.0-foundations.md`):
-   - Left alone, the threads run at 70–83 % busy, just under the big cluster's `hispeed_load` of 85 %. The A78s stay at 1228–1516 MHz, and dual-core threads drift to the little cores.
-   - uclamp_min 1024 on the threads (allowed without root) gives about 1950 MHz and twice the speed.
-   - To do here:
-     - settle the boost value (1024 in 3.0; heat is not an issue on this phone, per the user; record temperature and battery over 15 minutes anyway);
-     - check whether the GPU governor (`mod_percent`) needs a hint too (the GPU reached 685–700 MHz, 66 % busy, once the CPU was boosted);
-     - check Lomiri's cgroup for a launched app (the tests ran in adbd's).
-4. GPU driver workarounds: list where this phone's blob shows the bugs that `DriverDetails.cpp` guards only on Android (risk 6). Report results to the user, who decides whether and how the fork changes those entries.
-   - First case (3.1): Wind Waker (`GZLP01`) hangs the GPU on Vulkan about 10 s in (KGSL "GPU hang detected", three faults, then the context is dropped), in DolphinQt too.
-   - Ruled out: ubershaders, the EFB/XFB copy and access options, backend multithreading, fog.
-   - The Android-only Qualcomm entries are unlikely to cover it: `BUG_BROKEN_TEV_COLOR_ZERO` starts at driver 700, and this phone has V@530.
-   - Next steps:
-     - bisect Dolphin's Vulkan feature use (dual-source blending, logic ops, framebuffer fetch, …);
-     - compare with Android Dolphin on the same driver (Waydroid, not set up yet);
-     - check whether the game's per-game GFX settings matter.
+1. **Wind Waker on Vulkan** (`GZLP01`, found in 3.1): the GPU hangs about 10 s in (KGSL "GPU hang detected", three faults, then the context is dropped), in DolphinQt too. OpenGL ES works.
+   - Ruled out: ubershaders, the EFB/XFB copy and access options, backend multithreading, fog. The Android-only Qualcomm entries are unlikely to cover it: `BUG_BROKEN_TEV_COLOR_ZERO` starts at driver 700, and this phone has V@530.
+   - Next: bisect Dolphin's Vulkan feature use (dual-source blending, logic ops, framebuffer fetch, …); check the game's own GFX settings; try a custom driver (step 6); compare with Android Dolphin on the same driver (Waydroid, not set up) if still unclear.
+   - Host-side, whatever the cause: check what the app does today when the device is lost during play, and make it end the game cleanly and offer OpenGL ES for that game (a per-game setting), instead of hanging.
+   - A fix that changes how Dolphin draws the game (shader generation, `DriverDetails` entries) is the user's decision and change (risk 6, "Rules for this fork").
+2. **The backend for known problem games, out of the box.** If step 1 finds no Vulkan fix, the port starts known problem games on OpenGL ES by default: a per-game backend choice, host-side, set the way 3.8 sets its defaults. The user decides.
+3. **A small compatibility table.** The user's games on both backends, from save states (`--state-slot`, the `perf:` log line), in dual core with the boost. It feeds step 2 and the OpenStore description.
+4. **A 15-minute run as an installed app.** Started from the app drawer (Lomiri's cgroup, not adbd's): temperature, battery drain, CPU and GPU clocks with the boost at 1024. Settle the boost value, and whether the GPU governor (`mod_percent`) needs a hint.
+5. **Frame pacing.** 60 Hz games on the 120 Hz Mir output against the 60 Hz system setting (`stone-refresh-rate 60`), with `../stone-ut/tools/phone-debug/fps-panel.py`.
+6. **Custom Vulkan drivers: a spike** (user request, 2026-11-16). The Android app lets users install a driver, for example a Mesa Turnip build from K11MCH1/AdrenoToolsDrivers, and loads it through libadrenotools, which hooks Android's linker namespaces. That library cannot work under libhybris. Found on the phone:
+   - Vulkan goes from `libvulkan.so.1` (libhybris) to Android's own loader `/system/lib64/libvulkan.so`, then to the vendor driver `/vendor/lib64/hw/vulkan.adreno.so`, chosen by the system property `ro.hardware.vulkan=adreno`. Presentation on Wayland goes through `vulkanplatform_wayland.so`, which gives Android's loader a native window.
+   - libhybris' Vulkan settings are only `HYBRIS_VULKANPLATFORM` and `HYBRIS_VULKANPLATFORM_DIR`: nothing selects another driver for one app.
 
-Exit: a results table per game and backend, and a recommended default backend and settings for this phone.
+   Routes, in order:
+   - **Turnip's Android build, loaded by libhybris in place of the vendor driver, for this app's process only.** Android's loader and hybris' Wayland presentation stay as they are. It needs a way to redirect the driver load in one process: a libhybris hook, or the "updatable driver" namespace of Android's loader, which is what adrenotools uses on Android.
+   - **A native (glibc) Mesa Turnip with its KGSL backend.** No libhybris, and Vulkan 1.3. But Mesa presents on Wayland through `linux-dmabuf`, which Lomiri does not offer (stage 0's globals), so frames would have to reach the screen another way, for example a dma-buf imported into the hybris EGL surface. Larger.
+   - Replacing the vendor driver for the whole system: needs root, affects every app, and a click cannot do it. Not pursued.
+
+   Also check that Turnip supports the A619 on this kernel's KGSL (5.4).
+
+   If the first route works, the feature can follow the Android app: a "GPU driver" setting (global and per game), a driver zip that the user picks with the file picker, and the system driver as the default. The app does not bundle or download drivers. They are third-party binaries, and some in that repository are Qualcomm's, which cannot be redistributed.
+
+   The spike ends with a yes or no, and what a yes would take.
+7. **Risk 6.** List where this phone's blob shows the bugs that `DriverDetails.cpp` guards only on Android, and report to the user.
+
+Exit:
+- Wind Waker runs on Vulkan, or starts on OpenGL ES by default;
+- a results table for the tested games;
+- a verdict on custom drivers.
+
+#### Status (2026-11-16): on-screen tests S4-M1…M4 done; two decisions open
+
+- **S4-M2 passed:** marking dual-source blending broken gives no hang and nothing broken.
+- **S4-M3 passed:** a lost GPU restarts the game on OpenGL ES.
+- **S4-M4 passed** on OpenGL ES (the game's own setting): about 18 minutes at ~99% with no slowdown, about 2% battery in 16 minutes, barely warm.
+- **S4-M1:** Turnip's picture is right. Every Turnip game crashed when it stopped (SIGBUS in `vkDestroyDevice`). The cause: Mesa calls `pthread_barrier_*`, which libhybris does not hook. Fixed in `VulkanDriver.cpp`, which supplies glibc's barrier functions through `hybris_set_hook_callback`.
+
+Notes: `stage4-adreno.md`.
+- **Wind Waker's hang is dual-source blending** in Qualcomm's V@530 Vulkan driver (bisected over Dolphin's optional Vulkan features). Marking it broken (`BUG_BROKEN_DUAL_SOURCE_BLENDING`, Dolphin's existing mechanism) or switching it off removes the hang. That `DriverDetails` line is the user's decision and change.
+- **A lost GPU no longer leaves a frozen game:** at the first `VK_ERROR_DEVICE_LOST` the game stops and starts again on OpenGL ES, with a note (one alert instead of thousands).
+- **Custom Vulkan drivers work under libhybris** (step 6: yes), with no root. A 7.7 KB stand-in `libvndksupport.so` (`ut/vkdriver/`, built without the NDK) lets Android's Vulkan loader load a driver from a folder the app chooses at start. Mesa Turnip v26.0.0 R8 runs Wind Waker with no hang, and Need for Speed at 100 %. The settings and install UI follow the on-screen tests.
+- Compatibility table, the Android-only Qualcomm entries (risk 6), and scripts for the long run and frame pacing: in the notes.
 
 ### 5. Packaging and distribution
 
 Goal: an installable click package.
 
 Planned steps:
-1. A clickable project (`clickable.yaml`, CMake builder, arm64, framework `ubuntu-touch-24.04-1.x` or whatever the phone reports). The app it launches is the QML frontend `dolphin-ut` (stage 3); DolphinQt is not shipped. Bundle Dolphin's `Sys/` data and the libraries the system does not provide. That includes Qt 6's `wayland-shell-integration/libxdg-shell.so` and `libQt6WlShellIntegration.so.6` from UBports' `libqt6wlshellintegration6` (same Qt 6.10.2), with `QT_PLUGIN_PATH` set by the launcher. The system has no Qt 6 shell plugin (stage 0).
-2. AppArmor. Likely policy groups: `audio`, `keep-display-on`, `content_exchange`, plus OpenGL/Wayland, which the default template allows. Gamepad access to `/dev/input/event*` is not in any policy group. Options: the `unconfined` template (OpenStore allows it with a justification), or a narrower custom rule. Decide after stage 3 shows exactly what is needed. Check whether the JIT's RWX/`mprotect` use triggers any denial.
-3. Desktop file: `X-Lomiri-Touch=true`, and a lifecycle exemption if one is needed for audio while paused. The launcher must export `PULSE_PROP="media.role=multimedia"` (stage 2: otherwise the volume keys do not apply) and `QT_PLUGIN_PATH` for the bundled xdg-shell plugin.
+1. A clickable project (`clickable.yaml`, CMake builder, arm64, the framework the phone reports; it runs 24.04-2.x). The app it launches is the QML frontend `dolphin-ut` (stage 3); DolphinQt is not shipped. Bundle Dolphin's `Sys/` data and the libraries the system does not provide. That includes Qt 6's `wayland-shell-integration/libxdg-shell.so` and `libQt6WlShellIntegration.so.6` from UBports' `libqt6wlshellintegration6` (same Qt 6.10.2), with `QT_PLUGIN_PATH` set by the launcher. The system has no Qt 6 shell plugin (stage 0).
+2. AppArmor. The policy groups follow from stage 3 (`stage3.7-storage.md`; the phone has policy version 2404.2):
+   - `audio`, `keep-display-on`, `networking` (GameTDB covers);
+   - `content_exchange`, `content_exchange_source` (Import Games, Share);
+   - `document_files` (~/Documents/Dolphin/Games, `<card>/Documents`), `picture_files` (screenshots).
+
+   Check under the real profile: content-hub import (the rename or hard link out of `HubIncoming` may be refused, and the copy fallback should then work), vibration (hfd-service), the CPU boost (`sched_setattr` with uclamp on the app's own threads), and the JIT's RWX and `mprotect` use.
+
+   Gamepads: `/dev/input/event*` is in no policy group. Options: the `unconfined` template (OpenStore allows it with a justification; most of the limits above would then not apply), or a narrower custom rule. Decide from what the confined tests show.
+3. Desktop file and hooks:
+   - `X-Lomiri-Touch=true`. A click runs as one instance by default, so it does not need `X-Lomiri-Single-Instance`, which the development entry does (3.7).
+   - A `content-hub` hook with `{"destination": ["all"]}`, as `dev-install.sh` writes for the development entry.
+   - A launcher that sets what `ut/phone-debug/launch-dolphin.sh` sets: `QT_QPA_PLATFORM=wayland`, `QT_PLUGIN_PATH` for the bundled xdg-shell plugin, `QT_WAYLAND_DISABLE_WINDOWDECORATION=1`, and `PULSE_PROP="media.role=multimedia"` (stage 2: otherwise the volume keys do not apply). The TLS variables come from the session.
+   - Nothing else to configure: the user folder follows `APP_ID` (3.7), and the defaults are written at the first start (3.8), so no `Dolphin.ini` is shipped.
+   - A lifecycle exemption only if one turns out to be needed (Lomiri stops an app in the background; the game pauses itself first).
+   - The click's user folder is a new, empty one (`~/.local/share/<package>`). Remove the development entry (`dev-install.sh remove`) once the click works, so the drawer has one Dolphin.
 4. GPL compliance: link to the exact source commit of this fork in the package and on the OpenStore page.
 5. OpenStore submission, after testing on a second Ubuntu Touch 24.04 device if one is available. Other devices will have other Adreno or Mali blobs and other libhybris builds.
 
 Exit: the click installs from a file on a clean user account, and games run with no manual setup.
 
-### 6. Later (optional)
+#### Status (2026-11-16): done (on-screen tests and the fullscreen re-test passed); the OpenStore submission waits on the user's decisions
 
-- The QML frontend moved to stage 3 (`stage3-roadmap.md`). The deferred Android features (cheats, Riivolution, Skylanders and Infinity Base, NetPlay, achievements, GBA link, disc conversion, system update, TV layout) are listed there.
-- Wii Remote support: Bluetooth passthrough is unlikely on a Halium BlueZ stack. Emulated Wiimote with the touch overlay and motion from the phone's sensors (sensorfw) is the practical route.
-- A newer Vulkan, if Dolphin features need it. The A619 gets Vulkan 1.3 from newer Adreno drivers, but replacing vendor GPU blobs is risky (`roadmap-hardware-2.md` item 10). Mesa turnip with the KGSL backend is a research project of its own.
+Notes: `stage5-packaging.md`.
+- **The click** (`ut/click/`, `build-click.sh`, `install-click.sh`): `dolphin-ut.alphaliu01` (provisional name), framework `ubuntu-touch-24.04-2.x`, 13.7 MB. It holds the binary, `Sys/`, the launcher, the hooks and the bundled Qt 6 xdg-shell plugin. The cross container now has `click` and the plugin. Installed through the click service on the system bus (24.04 has no `pkcon`), or from the File Manager through OpenStore.
+- **Confined, it works except gamepads:** Vulkan, dual core and the CPU boost (Need for Speed at 100 %), audio, covers, keep-display-on, Wii. It needed:
+  - a launcher with shell builtins only;
+  - absolute Wayland and PulseAudio socket paths (Lomiri gives clicks `XDG_RUNTIME_DIR=~/.cache`);
+  - `memfd_create` for Dolphin's memory arena (`Common/MemArenaUnix.cpp`; `/dev/shm` names are denied).
+- **Gamepads:** the confined template denies `/dev/input` and udev's data, and a click cannot override a deny. **Decided (user): the unconfined template**; OpenStore reviews it by hand. Checked: unconfined, the evdev devices are back.
+- **Fullscreen through Lomiri:** Lomiri keeps one saved window state per app it manages, so the library came back fullscreen after a game, and the game came back from an app switch without the panel's 63 px (a strip of wallpaper). Both windows now correct their state (S5-M6 passed).
+- Open: OpenStore submission (name, maintainer, title, screenshots, a pushed commit), and a second device.
+
+### 6. Feature completeness (after stages 5 and 4)
+
+- **The 3.6 second pass:** settings from the in-game menu (the settings pages are in the library window, hidden during a game), a Yes/No answer for Dolphin's alerts (today they are logged, shown and ignored), Hotkeys, RetroAchievements, and the remaining skipped settings.
+- **Wii file actions** (3.7): Install WAD, Import Wii Save, Import BootMii NAND Backup, Load Wii System Menu, Online System Update. They are small now that the file picker exists.
+- Export through content-hub (save states, memory cards), and the zip import/export of the user data.
+- The other Android features deferred in stage 3: cheats, Riivolution, Skylanders and Infinity Base, NetPlay, GBA link, disc conversion, a TV layout, translations of the new strings.
+- Wii Remote support: Bluetooth passthrough is unlikely on a Halium BlueZ stack. Emulated Wii Remotes with the touch overlay and motion from the phone's sensors (sensorfw) is the practical route.
+- A newer Vulkan: see stage 4 step 6 (custom drivers).
 - Feeding Ubuntu Touch findings back to #14962 (or its successor): as reports by the user on the PR, not as agent pull requests.
 
 ## Risks
@@ -296,7 +357,7 @@ Exit: the click installs from a file on a clean user account, and games run with
 1. **Qt6 on Mir 1.8's Wayland frontend** may lack protocols Qt 6.10 prefers, for xdg-shell versions, fractional scaling or decorations. If native Qt Wayland misbehaves, the fallback is ROCKNIX's NoGUI Wayland window (patch 015) for games, with the Qt UI only for menus, as ROCKNIX ships it. Stage 0 found that Qt 6 has no shell integration plugin on the phone and needs a bundled `libxdg-shell.so`. With it, Qt 6 reaches xdg-shell + Wayland-EGL on Mir's `xdg_wm_base` v1. Stage 1 step 5 settles the rest. A related point: click apps get `QT_QPA_PLATFORM=ubuntumirclient;wayland-egl;xcb`, and Dolphin must never pick `ubuntumirclient` (stage 2 step 3).
 2. **The imported PR moves.** #14962 is open and still being reviewed. Known bugs at import: washed-out colors on KDE, and a splitter that cannot be dragged during a game. Its history will be rewritten before it merges, and it could be rejected or replaced. Pinning a hash and keeping the port's own fixes in separate commits keeps that manageable. If it is abandoned, this fork carries it alone.
 3. **libhybris' Wayland EGL window** has quirks around swaps, resizes and buffer queues (see the GasTube crash). Dolphin recreates surfaces more often than most apps.
-4. **An old Vulkan driver (1.1.128, 2022).** Dolphin supports 1.0+, but old Adreno blobs have known bugs. Android users usually avoid them with custom drivers, which this phone cannot load (no adrenotools under libhybris). GLES may end up as the default backend.
+4. **An old Vulkan driver (1.1.128, 2022).** Dolphin supports 1.0+, but old Adreno blobs have known bugs. Android users usually avoid them with custom drivers, and adrenotools does not work under libhybris. Vulkan ended up the default anyway (faster in most tests, 3.8), with OpenGL ES as the fallback. Wind Waker hangs on it (stage 4 step 1); a custom driver route is stage 4 step 6.
 5. **libhybris and glibc threads.** Dolphin creates GL contexts on several threads. libhybris needs extra static TLS in some programs (`GLIBC_TUNABLES=glibc.rtld.optional_static_tls=65536` was needed for Python in stone-ut). Watch for TLS-related `dlopen` failures.
 6. **Qualcomm workarounds keyed on `OS_ANDROID`.** `DriverDetails.cpp` enables `BUG_SLOW_OPTIMAL_IMAGE_TO_BUFFER_COPY` (Vulkan) and `BUG_BROKEN_TEV_COLOR_ZERO` (GL ≥ 700, Vulkan ≥ `0x802bc000`) only on Android. Here the same blob runs, but Dolphin reports `OS_LINUX`, so they stay off. That can show up as wrong colors or slow EFB copies. The TEV entry changes the generated pixel shaders (`PixelShaderGen.cpp`), and the copy entry changes the Vulkan texture readback (`VKTexture.cpp`). They are the user's decision and the user's change (see "Rules for this fork").
 7. **Confinement versus gamepads.** `/dev/input` is not reachable from the default click profile. The answer may be an unconfined click, which is a review step at the OpenStore.
@@ -315,14 +376,16 @@ Exit: the click installs from a file on a clean user account, and games run with
 | Qt platform | `Source/Core/DolphinQt/Main.cpp`, `MainWindow.cpp`, `RenderWidget.cpp` | #14962, plus a port commit for `ubuntumirclient` |
 | NoGUI Wayland window (fallback only) | `Source/Core/DolphinNoGUI/PlatformWayland.cpp` | ported from ROCKNIX 015 if needed |
 | QML frontend: library, emulation screen, touch overlay, in-game menu, mapping, settings | new `Source/Core/DolphinUT/` (target `dolphin-ut`), using `UICommon`, `Core`, `InputCommon/ControllerInterface/Touch` (`InputOverrider`); possibly a small overlay renderer in `VideoCommon` (stage 3.0 decision) | port |
-| Packaging | new `ut/` directory: clickable config, AppArmor, desktop file, build scripts | port |
+| Packaging | `ut/click/` (manifest, AppArmor, desktop file, content-hub, launcher, build and install scripts), `ut/docker/Dockerfile` (click and the bundled Qt 6 Wayland plugin) | port |
+| Memory arena | `Source/Core/Common/MemArenaUnix.cpp`: `memfd_create` before `shm_open` (stage 5; confined clicks may not create files in `/dev/shm`) | port, upstream candidate |
 | Docs | this folder | port |
 
 ## Not checked yet
 
-- Whether a native Qt6 Widgets window works on Lomiri's `wayland-0`. Qt 6 needs a bundled xdg-shell plugin there; the Widgets test moved to stage 1 step 5.
-- Frame pacing on the 120 Hz panel: swap-interval-1 windows ran at 83–87 fps, not vsync-locked (stage 0 M1). Measure with `fps-panel.py` in stage 4.
-- A wired USB controller, and the BETOP T6's button-to-code layout.
+Updated 2026-11-16. Settled since the first version: the Qt 6 Widgets window (stage 1), Bluetooth gamepads (stage 0 M3, 3.5), wired USB controllers (stage 1: OTG works; the DualShock 4 clone is rejected by `hid-sony`), and the BETOP T6's layout (3.5: SDL3's database knows it in Xbox mode).
+
+- Frame pacing on the 120 Hz panel: swap-interval-1 windows ran at 83–87 fps, not vsync-locked (stage 0 M1). Stage 4 step 5.
 - The full GLES extension list and Vulkan feature set on a window surface, as opposed to the pbuffer and headless probes in stone-ut.
-- Whether Bluetooth gamepads enumerate at all on this kernel.
 - How Android Dolphin performs on this exact phone. crDroid is no longer installed, so there is no same-device baseline. Published results for SM4375 / Snapdragon 4 Gen 1 phones are the closest reference.
+- Anything under click confinement (stage 5).
+- microSD under confinement (unconfined, a game folder on a card works: S3.7-M7).

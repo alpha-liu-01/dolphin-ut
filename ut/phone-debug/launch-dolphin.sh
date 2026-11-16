@@ -14,5 +14,14 @@ export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 export PULSE_PROP="media.role=multimedia"
 log=/home/phablet/dolphin-ut-launch.log
 [ -f "$log" ] && mv -f "$log" "$log.1"
+# Test arguments for one Lomiri-managed start (the drawer passes none): a file with, for example,
+#   --start "/home/phablet/Documents/Dolphin/Games/x.iso"
+# is read once and deleted. Lomiri treats a process it started differently from one run over adb
+# (stage 5: it keeps window states per app).
+args=/home/phablet/dolphin-ut-launch.args
+if [ -f "$args" ]; then
+  eval "set -- $(cat "$args") \"\$@\""
+  rm -f "$args"
+fi
 cd /home/phablet/dolphin-ut-arm64 || exit 1
 exec ./dolphin-ut "$@" > "$log" 2>&1

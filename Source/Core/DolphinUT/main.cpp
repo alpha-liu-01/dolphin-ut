@@ -19,6 +19,7 @@
 #include <QTimer>
 #include <QWindow>
 
+#include "Common/FileUtil.h"
 #include "Common/MsgHandler.h"
 #include "Common/StringUtil.h"
 #include "DolphinUT/Controllers.h"
@@ -27,6 +28,7 @@
 #include "DolphinUT/SettingsModel.h"
 #include "DolphinUT/PortDefaults.h"
 #include "DolphinUT/Storage.h"
+#include "DolphinUT/VulkanDriver.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
 
@@ -106,7 +108,8 @@ void AddCommandLineConfigLayer(int argc, char** argv)
 // wait (3.6 second pass), it logs the message, shows it on screen, and continues, as "Ignore" does.
 bool OnMsgAlert(const char* caption, const char* text, bool yes_no, Common::MsgType style)
 {
-  Emulator::NoteAlert(text);
+  if (Emulator::NoteAlert(text))
+    return true;
   Emulator::LogFromAnyThread(QStringLiteral("alert (%1): %2 — %3")
                                  .arg(QString::fromUtf8(caption), QString::fromUtf8(text),
                                       yes_no ? QStringLiteral("continuing") :
@@ -128,6 +131,18 @@ void OnQuitSignal(int)
 
 int main(int argc, char** argv)
 {
+  // Stage 4: a custom Vulkan driver (a folder with vulkan.adreno.so, e.g. Mesa Turnip), set up before
+  // libhybris starts (VulkanDriver.h). The stand-in libvndksupport.so is next to the binary, in
+  // lib/hybris/. Only from the environment for now; a setting comes with the feature.
+  if (const char* folder = std::getenv("DOLPHIN_UT_GPU_DRIVER"); folder && *folder)
+  {
+    std::string error;
+    const bool ok =
+        VulkanDriver::Use(folder, File::GetExeDirectory() + "/lib/hybris", &error);
+    std::printf("[dolphin-ut] GPU driver %s: %s\n", folder, ok ? "in use" : error.c_str());
+    std::fflush(stdout);
+  }
+
   // SDL (the controller backend) would install its own SIGINT/SIGTERM handlers when controllers are
   // initialized, replacing ours and turning the signals into a game stop instead of an app quit.
   // Lomiri closes apps with SIGTERM, so the app must handle it itself.
@@ -223,6 +238,10 @@ int main(int argc, char** argv)
     QTimer::singleShot(1500, &emulator, [&emulator, start_path, backend] {
       emulator.start(QString::fromStdString(start_path), QString::fromStdString(backend));
     });
+    // --stop-after MS: exit the game back to the library, as the in-game menu's Exit does.
+    const std::string stop_after = ArgumentValue(argc, argv, nullptr, "--stop-after");
+    if (!stop_after.empty())
+      QTimer::singleShot(1500 + std::atoi(stop_after.c_str()), &emulator, [&emulator] { emulator.stop(); });
   }
 
   // SIGINT/SIGTERM (adb tests, the session ending): stop the game and quit cleanly.

@@ -28,6 +28,8 @@ add_executable(dolphin-ut
   PortDefaults.h
   Storage.cpp
   Storage.h
+  VulkanDriver.cpp
+  VulkanDriver.h
   OverlayLayout.h
   OverlayDefaults.inc
   TouchOverlay.cpp

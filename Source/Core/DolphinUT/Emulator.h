@@ -55,9 +55,10 @@ public:
   static void LogFromAnyThread(const QString& text);
   static void RequestStopFromAnyThread();
   static bool GameWindowHasFocus();
-  // From the message alert handler: notes "Failed to initialize video backend!" during a boot, so a
-  // failed Vulkan start can be retried with OpenGL ES (3.8).
-  static void NoteAlert(const char* text);
+  // From the message alert handler (any thread). Notes "Failed to initialize video backend!" during
+  // a boot (3.8) and VK_ERROR_DEVICE_LOST during play (stage 4), so the game can be restarted on
+  // OpenGL ES. Returns true for an alert to drop: the repeats after a lost device (thousands).
+  static bool NoteAlert(const char* text);
 
 signals:
   void stateChanged();
@@ -90,8 +91,11 @@ private:
   // Starting straight back to Uninitialized).
   QString m_boot_path;
   bool m_boot_reached_running = false;
-  // This run is the OpenGL ES retry after Vulkan failed: say so on screen once it runs.
-  bool m_vulkan_fell_back = false;
+  // This run is the OpenGL ES retry after Vulkan failed: the note to show once it runs.
+  QString m_fallback_note;
+  // Requests for a normal library window since it was shown again (Lomiri may answer with
+  // fullscreen again; at most 3).
+  int m_library_normal_requests = 0;
   QString m_state = QStringLiteral("idle");
   QString m_log;
 };

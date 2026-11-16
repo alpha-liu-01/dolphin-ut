@@ -58,7 +58,7 @@ If Vulkan fails to start, the game starts again on OpenGL ES at once, instead of
   - `GFXBackend` stayed unset in Dolphin.ini.
 - **The user's values are kept.** With `CPUThread = False` set and `DefaultsVersion` removed, the next start set only the save states, and kept dual core off. The start after that set nothing.
 
-## Manual tests (stopped here)
+## Manual tests
 
 Screen on, unlocked.
 
@@ -84,3 +84,11 @@ Yes, I saw exactly those.
 Remove the fake library afterwards: `rm -r /home/phablet/dolphin-ut-fakevk`.
 
 Send the answers, and the log if something fails (`/home/phablet/dolphin-ut-launch.log` for M1, `/home/phablet/dolphin-ut-user-w/run-ut-start.log` for M2).
+
+## Results (2026-11-16)
+
+**Both tests passed** (user):
+- M1: a first launch from the app drawer had dual core and save states on, and the save state items were back in the in-game menu.
+- M2: with Vulkan hidden, the game started by itself on OpenGL ES and showed the yellow note.
+
+**3.8 done.** With it, stage 3 is closed (`stage3-roadmap.md`, "Stage 3 closed").

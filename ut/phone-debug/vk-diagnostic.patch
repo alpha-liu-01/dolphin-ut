@@ -1,0 +1,64 @@
+# Stage 4 diagnostic (docs/ut-port/stage4-adreno.md), not for commit. Apply: git apply ut/phone-debug/vk-diagnostic.patch
+# DOLPHIN_UT_VK_DISABLE=dualsrc,bbox,... switches optional Vulkan features off;
+# DOLPHIN_UT_VK_BUG_DSB=1 marks dual-source blending broken (DriverDetails::OverrideBug).
+diff --git a/Source/Core/VideoBackends/Vulkan/VulkanContext.cpp b/Source/Core/VideoBackends/Vulkan/VulkanContext.cpp
+index 67fb4b05e6..068cf6b19f 100644
+--- a/Source/Core/VideoBackends/Vulkan/VulkanContext.cpp
++++ b/Source/Core/VideoBackends/Vulkan/VulkanContext.cpp
+@@ -5,7 +5,9 @@
+ 
+ #include <algorithm>
+ #include <array>
++#include <cstdlib>
+ #include <cstring>
++#include <string>
+ 
+ #include "Common/Assert.h"
+ #include "Common/Contains.h"
+@@ -532,6 +534,32 @@ void VulkanContext::PopulateBackendInfoFeatures(BackendInfo* backend_info, VkPhy
+   if (DriverDetails::HasBug(DriverDetails::BUG_BROKEN_DYNAMIC_SAMPLER_INDEXING))
+     backend_info->bSupportsDynamicSamplerIndexing = false;
+ 
++  // STAGE 4 DIAGNOSTIC, NOT FOR COMMIT (docs/ut-port/stage4-adreno.md): switch optional features
++  // off to bisect a GPU hang, e.g. DOLPHIN_UT_VK_DISABLE=dualsrc,gs,bbox
++  if (const char* list = std::getenv("DOLPHIN_UT_VK_DISABLE"))
++  {
++    const std::string names = std::string(",") + list + ",";
++    const auto off = [&names](const char* name, bool& flag) {
++      if (names.find(std::string(",") + name + ",") == std::string::npos)
++        return;
++      WARN_LOG_FMT(VIDEO, "DOLPHIN_UT_VK_DISABLE: {} was {}, now off", name, flag);
++      flag = false;
++    };
++    off("dualsrc", backend_info->bSupportsDualSourceBlend);
++    off("gs", backend_info->bSupportsGeometryShaders);
++    off("gs", backend_info->bSupportsGSInstancing);
++    off("bbox", backend_info->bSupportsBBox);
++    off("bbox", backend_info->bSupportsFragmentStoresAndAtomics);
++    off("ssaa", backend_info->bSupportsSSAA);
++    off("depthclamp", backend_info->bSupportsDepthClamp);
++    off("largepoints", backend_info->bSupportsLargePoints);
++    off("primrestart", backend_info->bSupportsPrimitiveRestart);
++    off("revdepth", backend_info->bSupportsReversedDepthRange);
++    off("dynidx", backend_info->bSupportsDynamicSamplerIndexing);
++    off("palette", backend_info->bSupportsPaletteConversion);
++    off("lodbias", backend_info->bSupportsLodBiasInSampler);
++  }
++
+   if (DriverDetails::HasBug(DriverDetails::BUG_BROKEN_DISCARD_WITH_EARLY_Z))
+   {
+     PanicAlertFmtT(
+@@ -1064,6 +1092,13 @@ void VulkanContext::InitDriverDetails()
+   DriverDetails::Init(DriverDetails::API_VULKAN, vendor, driver,
+                       static_cast<double>(m_device_info.driverVersion),
+                       DriverDetails::Family::UNKNOWN, std::move(device_name));
++  // STAGE 4 DIAGNOSTIC, NOT FOR COMMIT: DOLPHIN_UT_VK_BUG_DSB=1 marks dual-source blending broken.
++  if (std::getenv("DOLPHIN_UT_VK_BUG_DSB"))
++  {
++    WARN_LOG_FMT(VIDEO, "DOLPHIN_UT_VK_BUG_DSB: broken-dual-source-blending on (driver {:#x})",
++                 m_device_info.driverVersion);
++    DriverDetails::OverrideBug(DriverDetails::BUG_BROKEN_DUAL_SOURCE_BLENDING, true);
++  }
+ }
+ 
+ bool VulkanContext::SupportsExclusiveFullscreen(const WindowSystemInfo& wsi, VkSurfaceKHR surface)

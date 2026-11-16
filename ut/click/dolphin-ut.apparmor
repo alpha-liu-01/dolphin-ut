@@ -1,0 +1,13 @@
+{
+    "policy_groups": [
+        "audio",
+        "keep-display-on",
+        "networking",
+        "content_exchange",
+        "content_exchange_source",
+        "document_files",
+        "picture_files"
+    ],
+    "template": "unconfined",
+    "policy_version": 2404.2
+}

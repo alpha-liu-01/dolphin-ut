@@ -26,16 +26,36 @@ namespace Common
 MemArena::MemArena() = default;
 MemArena::~MemArena() = default;
 
-void MemArena::GrabSHMSegment(size_t size, std::string_view base_name)
+namespace
 {
+int CreateSHMFile(std::string_view base_name)
+{
+#ifdef __linux__
+  // An anonymous memory file first: it has no name in /dev/shm, so nothing to unlink, and it works
+  // where creating files in /dev/shm is not allowed (a confined Ubuntu Touch app's AppArmor profile
+  // allows only shmfd-* there).
+  const int memfd = memfd_create(std::string(base_name).c_str(), MFD_CLOEXEC);
+  if (memfd != -1)
+    return memfd;
+  WARN_LOG_FMT(MEMMAP, "memfd_create failed: {}", strerror(errno));
+#endif
   const std::string file_name = fmt::format("/{}.{}", base_name, getpid());
-  m_shm_fd = shm_open(file_name.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
-  if (m_shm_fd == -1)
+  const int fd = shm_open(file_name.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
+  if (fd == -1)
   {
     ERROR_LOG_FMT(MEMMAP, "shm_open failed: {}", strerror(errno));
-    return;
+    return -1;
   }
   shm_unlink(file_name.c_str());
+  return fd;
+}
+}  // namespace
+
+void MemArena::GrabSHMSegment(size_t size, std::string_view base_name)
+{
+  m_shm_fd = CreateSHMFile(base_name);
+  if (m_shm_fd == -1)
+    return;
   if (ftruncate(m_shm_fd, size) < 0)
     ERROR_LOG_FMT(MEMMAP, "Failed to allocate low memory space");
 }

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Dolphin
+Comment=GameCube and Wii emulator
+Exec=launcher.sh
+Icon=dolphin-ut.svg
+Terminal=false
+X-Lomiri-Touch=true

@@ -49,6 +49,10 @@ namespace
 {
 // Set by Emulator::NoteAlert (any thread) when the video backend failed to initialize.
 std::atomic<bool> s_video_backend_failed = false;
+// Set when Vulkan reports a lost device during play (stage 4: the driver hangs the GPU on Wind
+// Waker); the repeats are counted, not shown.
+std::atomic<bool> s_device_lost = false;
+std::atomic<int> s_device_lost_repeats = 0;
 std::atomic<Emulator*> s_instance = nullptr;
 std::atomic<bool> s_game_window_active = false;
 
@@ -84,6 +88,17 @@ QString AppStateName(Qt::ApplicationState state)
     return QStringLiteral("active");
   }
   return QStringLiteral("?");
+}
+
+QString WindowStateName(Qt::WindowStates state)
+{
+  if (state & Qt::WindowFullScreen)
+    return QStringLiteral("fullscreen");
+  if (state & Qt::WindowMaximized)
+    return QStringLiteral("maximized");
+  if (state & Qt::WindowMinimized)
+    return QStringLiteral("minimized");
+  return QStringLiteral("normal");
 }
 }  // namespace
 
@@ -166,6 +181,27 @@ void Emulator::SetLauncherWindow(QWindow* window)
   m_launcher = window;
   if (!window || m_controllers_initialized)
     return;
+  // Lomiri decides the windows' states and sizes (stage 5: fullscreen carried over between them).
+  connect(window, &QWindow::windowStateChanged, this, [this, window](Qt::WindowState state) {
+    appendLog(QStringLiteral("library window: %1").arg(WindowStateName(state)));
+    // Lomiri keeps one saved window state per app and gives it to the next window it maps: the
+    // library, shown again after a game, came back fullscreen (S5). Ask for a normal window.
+    if ((state & Qt::WindowFullScreen) && !m_game_window && window->isVisible() &&
+        m_library_normal_requests < 3)
+    {
+      ++m_library_normal_requests;
+      QTimer::singleShot(0, window, [this, window] {
+        appendLog(QStringLiteral("library window: asking for a normal window"));
+        window->showNormal();
+      });
+    }
+  });
+  const auto log_size = [this, window] {
+    if (window->isVisible())
+      appendLog(QStringLiteral("library window size %1x%2").arg(window->width()).arg(window->height()));
+  };
+  connect(window, &QWindow::widthChanged, this, log_size);
+  connect(window, &QWindow::heightChanged, this, log_size);
   window->create();
   UICommon::InitControllers(MakeWindowSystemInfo(window));
   m_controllers_initialized = true;
@@ -231,6 +267,8 @@ void Emulator::start(const QString& path, const QString& backend)
   m_boot_path = path;
   m_boot_reached_running = false;
   s_video_backend_failed = false;
+  s_device_lost = false;
+  s_device_lost_repeats = 0;
 
   // An explicit backend applies to this run only (the current-run layer is never saved). Without
   // one, the configured backend is used, including per-game settings: the core activates it at
@@ -260,6 +298,9 @@ void Emulator::start(const QString& path, const QString& backend)
   connect(m_game_window, &GameWindow::MenuRequested, this, [this] {
     if (m_overlay)
       m_overlay->ToggleMenu();
+  });
+  connect(m_game_window, &QWindow::windowStateChanged, this, [this](Qt::WindowState state) {
+    appendLog(QStringLiteral("game window: %1").arg(WindowStateName(state)));
   });
   connect(m_game_window, &QWindow::activeChanged, this,
           [this] { s_game_window_active = m_game_window && m_game_window->isActive(); });
@@ -351,7 +392,10 @@ void Emulator::FinishStop()
   s_game_window_active = false;
   m_paused_by_app_state = false;
   if (m_launcher && !m_launcher->isVisible())
+  {
+    m_library_normal_requests = 0;
     m_launcher->show();
+  }
   if (m_launcher && m_controllers_initialized)
     g_controller_interface.ChangeWindow(MakeWindowSystemInfo(m_launcher).render_window);
 }
@@ -394,11 +438,10 @@ void Emulator::OnCoreStateChanged(Core::State state)
   if (state == Core::State::Running || state == Core::State::Paused)
   {
     m_boot_reached_running = true;
-    if (m_vulkan_fell_back)
+    if (!m_fallback_note.isEmpty())
     {
-      m_vulkan_fell_back = false;
-      OSD::AddMessage("Vulkan failed to start: this game runs on OpenGL ES.", 10000,
-                      OSD::Color::YELLOW);
+      OSD::AddMessage(m_fallback_note.toStdString(), 10000, OSD::Color::YELLOW);
+      m_fallback_note.clear();
     }
   }
 
@@ -407,17 +450,33 @@ void Emulator::OnCoreStateChanged(Core::State state)
     // Vulkan (the default backend) failed to start: try OpenGL ES for this run instead of leaving
     // the user at the library with an error. The configured backend stays as it is, so Vulkan is
     // tried again next time; Settings (global or per game) can pick OpenGL ES for good.
-    const bool vulkan_failed = s_video_backend_failed.exchange(false) && !m_boot_reached_running &&
-                               g_video_backend && g_video_backend->GetConfigName() == "Vulkan";
-    m_vulkan_fell_back = false;
+    // The same when the driver lost the device during play (stage 4: Wind Waker hangs the GPU on
+    // this phone's Vulkan driver). Nothing reaches the screen after that, so the game is stopped at
+    // the first error (NoteAlert) and started again on OpenGL ES; its progress since the start is
+    // lost either way.
+    const bool vulkan = g_video_backend && g_video_backend->GetConfigName() == "Vulkan";
+    const bool vulkan_failed =
+        s_video_backend_failed.exchange(false) && !m_boot_reached_running && vulkan;
+    const bool device_lost = s_device_lost.exchange(false) && vulkan;
+    m_fallback_note.clear();
     FinishStop();
-    if (vulkan_failed && !m_boot_path.isEmpty())
+    if ((vulkan_failed || device_lost) && !m_boot_path.isEmpty())
     {
-      appendLog(QStringLiteral("Vulkan failed to start: retrying with OpenGL ES for this run"));
+      appendLog(device_lost ?
+                    QStringLiteral("Vulkan lost the GPU (%1 more errors not shown): restarting "
+                                   "with OpenGL ES for this run")
+                        .arg(s_device_lost_repeats.load()) :
+                    QStringLiteral("Vulkan failed to start: retrying with OpenGL ES for this run"));
+      const QString note =
+          device_lost ? QStringLiteral("The GPU driver stopped responding on Vulkan: this game "
+                                       "restarted on OpenGL ES. Game settings can choose it for "
+                                       "good.") :
+                        QStringLiteral("Vulkan failed to start: this game runs on OpenGL ES.");
       const QString path = m_boot_path;
-      QTimer::singleShot(0, this, [this, path] {
+      QTimer::singleShot(0, this, [this, path, note] {
         start(path, QStringLiteral("OGL"));
-        m_vulkan_fell_back = m_game_window != nullptr;
+        if (m_game_window)
+          m_fallback_note = note;
       });
     }
   }
@@ -505,9 +564,22 @@ bool Emulator::GameWindowHasFocus()
   return s_game_window_active;
 }
 
-void Emulator::NoteAlert(const char* text)
+bool Emulator::NoteAlert(const char* text)
 {
+  const std::string_view message(text);
   // Core::EmuThread's message when the backend's Initialize fails (not translated).
-  if (std::string_view(text) == "Failed to initialize video backend!")
+  if (message == "Failed to initialize video backend!")
     s_video_backend_failed = true;
+  // The Vulkan backend's "Failed to submit command buffer: VK_ERROR_DEVICE_LOST" and the like:
+  // every later submit fails too. Stop the game at the first one.
+  if (message.find("VK_ERROR_DEVICE_LOST") != std::string_view::npos)
+  {
+    if (s_device_lost.exchange(true))
+    {
+      ++s_device_lost_repeats;
+      return true;
+    }
+    RequestStopFromAnyThread();
+  }
+  return false;
 }

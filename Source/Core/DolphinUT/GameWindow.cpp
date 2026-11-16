@@ -3,19 +3,37 @@
 
 #include "DolphinUT/GameWindow.h"
 
+#include <algorithm>
+
 #include <QExposeEvent>
+#include <QGuiApplication>
 #include <QKeyEvent>
 #include <QTimer>
 #include <QResizeEvent>
+#include <QScreen>
 #include <QTouchEvent>
 #include <qpa/qplatformwindow.h>
 
+#include "DolphinUT/Emulator.h"
 #include "DolphinUT/TouchOverlay.h"
 
 GameWindow::GameWindow()
 {
   setTitle(QStringLiteral("Dolphin"));
   setFlag(Qt::WindowDoesNotAcceptFocus, false);
+  // Sizes settle in steps (a rotation passes through the size without the panel for ~0.2 s), so
+  // check once things are quiet.
+  m_fullscreen_check.setSingleShot(true);
+  m_fullscreen_check.setInterval(500);
+  connect(&m_fullscreen_check, &QTimer::timeout, this, &GameWindow::CheckFullscreen);
+  connect(this, &QWindow::activeChanged, this, [this] {
+    if (isActive())
+    {
+      // Back from another app: a new situation, with its own retries.
+      m_fullscreen_retries = 0;
+      m_fullscreen_check.start();
+    }
+  });
 }
 
 bool GameWindow::event(QEvent* event)
@@ -100,6 +118,41 @@ void GameWindow::exposeEvent(QExposeEvent* event)
   }
 }
 
+// Lomiri managing the app (started from the drawer, not over adb) keeps window states per app, and
+// does not always give the fullscreen window the whole screen: after switching back to the app,
+// the game came back 2400x1017 in landscape, the size without the 63 px panel, with the panel
+// hidden, so the wallpaper showed in a strip below the picture (S5). Asking for fullscreen again,
+// as a rotation does, gives it the whole screen.
+void GameWindow::CheckFullscreen()
+{
+  if (!m_fullscreen_requested || !isExposed() || !screen() ||
+      QGuiApplication::applicationState() != Qt::ApplicationActive)
+  {
+    return;
+  }
+  const QSize size = PhysicalSize();
+  const QSize full = screen()->size() * devicePixelRatio();
+  const bool covers = std::min(size.width(), size.height()) >= std::min(full.width(), full.height()) &&
+                      std::max(size.width(), size.height()) >= std::max(full.width(), full.height());
+  if (covers)
+  {
+    m_fullscreen_retries = 0;
+    return;
+  }
+  if (m_fullscreen_retries >= 3)
+    return;
+  ++m_fullscreen_retries;
+  Emulator::LogFromAnyThread(QStringLiteral("game window %1x%2 does not cover the screen (%3x%4): "
+                                            "asking for fullscreen again (%5)")
+                                 .arg(size.width())
+                                 .arg(size.height())
+                                 .arg(full.width())
+                                 .arg(full.height())
+                                 .arg(m_fullscreen_retries));
+  setWindowStates(Qt::WindowNoState);
+  showFullScreen();
+}
+
 void GameWindow::SetOverlay(TouchOverlay* overlay)
 {
   m_overlay = overlay;
@@ -114,4 +167,6 @@ void GameWindow::resizeEvent(QResizeEvent* event)
   if (m_overlay)
     m_overlay->SetWindowSize(QSizeF(physical));
   emit SizeChanged(physical.width(), physical.height(), static_cast<float>(devicePixelRatio()));
+  if (m_fullscreen_requested)
+    m_fullscreen_check.start();
 }

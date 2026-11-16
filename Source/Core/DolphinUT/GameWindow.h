@@ -4,6 +4,7 @@
 #pragma once
 
 #include <QElapsedTimer>
+#include <QTimer>
 #include <QWindow>
 
 class TouchOverlay;
@@ -41,7 +42,13 @@ protected:
   void exposeEvent(QExposeEvent* event) override;
 
 private:
+  // Lomiri sometimes leaves the fullscreen window at the size without its top panel (stage 5):
+  // after an app switch, and at the first start of an app it manages. Ask again if so.
+  void CheckFullscreen();
+
   TouchOverlay* m_overlay = nullptr;
   QElapsedTimer m_back_pressed;
   bool m_fullscreen_requested = false;
+  QTimer m_fullscreen_check;
+  int m_fullscreen_retries = 0;
 };

@@ -20,6 +20,8 @@ if [ "$1" = remove ]; then
   exit 0
 fi
 mkdir -p "$apps" "$peers"
+# The desktop file runs it directly (adb push keeps the host's mode, which may lack +x: exit 203/EXEC).
+chmod +x "$probe/launch-dolphin.sh"
 cat > "$apps/dolphin-ut.desktop" <<DESKTOP
 [Desktop Entry]
 Type=Application
