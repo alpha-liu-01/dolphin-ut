@@ -32,6 +32,60 @@ Window {
         }
     }
 
+    // The page stack's depth under the settings opened over a game (0: none open).
+    property int gameSettingsDepth: 0
+
+    // Stage 6.1: the in-game menu's Settings. The window is shown over the paused game; leaving the
+    // settings (their Back) returns to it.
+    Connections {
+        target: emulator
+        function onSettingsRequested() {
+            window.gameSettingsDepth = pageStack.depth
+            pageStack.push(Qt.resolvedUrl("SettingsPage.qml"), { menuTag: "SETTINGS", returnsToGame: true })
+        }
+        function onSettingsClosed() {
+            while (window.gameSettingsDepth > 0 && pageStack.depth > window.gameSettingsDepth)
+                pageStack.pop()
+            window.gameSettingsDepth = 0
+        }
+        // Dolphin's alerts and questions (stage 6.1): the thread that asked waits for the answer.
+        function onQuestionAsked(id, caption, text, yesNo, warning) {
+            PopupUtils.open(questionDialog, mainView,
+                            { questionId: id, title: caption, text: text, yesNo: yesNo, warning: warning })
+        }
+    }
+
+    // The buttons of DolphinQt's and the Android app's alert: Yes/No or OK, and for warnings
+    // "Ignore for this session" (no more alerts until the app restarts).
+    Component {
+        id: questionDialog
+        Dialog {
+            id: dialog
+            property int questionId
+            property bool yesNo
+            property bool warning
+            function answer(button) {
+                emulator.answerQuestion(dialog.questionId, button)
+                PopupUtils.close(dialog)
+            }
+            Button {
+                text: dialog.yesNo ? "Yes" : "OK"
+                color: theme.palette.normal.positive
+                onClicked: dialog.answer(dialog.yesNo ? 1 : 0)
+            }
+            Button {
+                visible: dialog.yesNo
+                text: "No"
+                onClicked: dialog.answer(0)
+            }
+            Button {
+                visible: dialog.warning
+                text: "Ignore for this session"
+                onClicked: dialog.answer(2)
+            }
+        }
+    }
+
     // Games shared from another app (the File Manager's share, content-hub's destination role; stage
     // 3.7). Import Games (ImportPage) brings them the other way, and both end in storage.importFiles.
     property var sharedTransfer: null

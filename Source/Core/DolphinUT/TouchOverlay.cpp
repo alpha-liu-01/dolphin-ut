@@ -220,6 +220,9 @@ void TouchOverlay::ReleaseAll()
 void TouchOverlay::ToggleMenu()
 {
   std::lock_guard lock(m_mutex);
+  // A question stays until it is answered.
+  if (m_menu == Menu::Question)
+    return;
   // As the Android app's Back: closes whatever page is open, or opens the in-game menu.
   if (m_menu == Menu::None)
   {
@@ -230,6 +233,24 @@ void TouchOverlay::ToggleMenu()
   {
     m_menu = Menu::None;
   }
+}
+
+void TouchOverlay::ShowQuestion(int id, std::string caption, std::string text, bool yes_no,
+                                bool warning, std::function<void(int id, int button)> answer)
+{
+  std::lock_guard lock(m_mutex);
+  // Nothing stays held while the game waits for the answer.
+  ReleaseAll();
+  const Menu before = m_menu == Menu::Question ? m_question.menu_before : m_menu;
+  m_question = {id, std::move(caption), std::move(text), yes_no, warning, std::move(answer), before};
+  m_menu = Menu::Question;
+}
+
+void TouchOverlay::CloseQuestion(int id)
+{
+  std::lock_guard lock(m_mutex);
+  if (m_menu == Menu::Question && m_question.id == id)
+    m_menu = m_question.menu_before;
 }
 
 bool TouchOverlay::WantsPausedRedraw() const
@@ -953,7 +974,9 @@ void TouchOverlay::Draw()
     DrawGameMenu();
   else
     OSD::SetObscuredPixelsLeft(0);
-  if (m_menu != Menu::None && m_menu != Menu::Editing && !game_menu)
+  if (m_menu == Menu::Question)
+    DrawQuestion();
+  else if (m_menu != Menu::None && m_menu != Menu::Editing && !game_menu)
     DrawMenu();
 
   m_draw_time += std::chrono::steady_clock::now() - start;
@@ -1213,6 +1236,74 @@ void TouchOverlay::DrawMenu()
   ImGui::PopFont();
 }
 
+void TouchOverlay::DrawQuestion()
+{
+  // DolphinQt's and the Android app's alert, in the middle of the picture, sized as the overlay's
+  // dialogs: the caption, the text, then Yes/No or OK, and "Ignore for this session" for warnings.
+  const float short_side = static_cast<float>(std::min(m_window_size.width(), m_window_size.height()));
+  const float ui_scale = std::max(ImGui::GetStyle().FontScaleMain, 1.0f);
+  ImGui::PushFont(nullptr, std::max(short_side * 0.045f / ui_scale, 12.0f));
+  const float line = ImGui::GetFontSize();
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(line * 0.9f, line * 0.8f));
+  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(line * 0.5f, line * 0.45f));
+  ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(line * 0.5f, line * 0.45f));
+  ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, line * 0.4f);
+  ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, line * 0.25f);
+
+  const bool landscape = !Portrait();
+  const float width = std::min(static_cast<float>(m_window_size.width()) * 0.92f,
+                               line * (landscape ? 28.0f : 20.0f));
+  ImGui::SetNextWindowPos(ImVec2(static_cast<float>(m_window_size.width()) / 2,
+                                 static_cast<float>(m_window_size.height()) / 2),
+                          ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+  ImGui::SetNextWindowSizeConstraints(ImVec2(width, 0),
+                                      ImVec2(width, static_cast<float>(m_window_size.height()) * 0.9f));
+  ImGui::SetNextWindowBgAlpha(0.96f);
+  ImGui::SetNextWindowFocus();
+  const std::string title = m_question.caption + "###dolphin-ut-question";
+  constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+                                     ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
+                                     ImGuiWindowFlags_AlwaysAutoResize;
+  if (ImGui::Begin(title.c_str(), nullptr, flags))
+  {
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextUnformatted(m_question.text.c_str());
+    ImGui::PopTextWrapPos();
+    ImGui::Spacing();
+
+    int button = -1;
+    const float spacing = ImGui::GetStyle().ItemSpacing.x;
+    const float half = (ImGui::GetContentRegionAvail().x - spacing) / 2;
+    if (m_question.yes_no)
+    {
+      if (ImGui::Button("Yes", ImVec2(half, 0)))
+        button = 1;
+      ImGui::SameLine();
+      if (ImGui::Button("No", ImVec2(half, 0)))
+        button = 0;
+    }
+    else if (ImGui::Button("OK", ImVec2(-FLT_MIN, 0)))
+    {
+      button = 0;
+    }
+    if (m_question.warning && ImGui::Button("Ignore for this session", ImVec2(-FLT_MIN, 0)))
+      button = 2;
+
+    if (button >= 0)
+    {
+      // Gone at once; Emulator closes it too once the answer arrives.
+      m_menu = m_question.menu_before;
+      RunOnUIThread([answer = m_question.answer, id = m_question.id, button] {
+        if (answer)
+          answer(id, button);
+      });
+    }
+  }
+  ImGui::End();
+  ImGui::PopStyleVar(5);
+  ImGui::PopFont();
+}
+
 void TouchOverlay::DrawGameMenu()
 {
   // The Android app's in-game menu (MenuFragment): a panel along the left edge, the game's title on
@@ -1290,6 +1381,8 @@ void TouchOverlay::DrawGameMenu()
         if (ImGui::Button("Load State", full))
           OpenPage(Menu::LoadState);
       }
+      if (m_actions.open_settings && ImGui::Button("Settings", full))
+        action(m_actions.open_settings, true);
       if (ImGui::Button("Overlay Controls", full))
         m_menu = Menu::Main;
       if (m_wii && ImGui::Button("Refresh Wii Remotes", full))

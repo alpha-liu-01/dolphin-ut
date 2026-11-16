@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 
 #include <QObject>
@@ -13,6 +14,7 @@
 
 #include "Common/CommonTypes.h"
 #include "Common/HookableEvent.h"
+#include "Common/MsgHandler.h"
 #include "Common/WindowSystemInfo.h"
 #include "Core/Core.h"
 
@@ -29,6 +31,9 @@ class Emulator : public QObject
   Q_PROPERTY(QString log READ log NOTIFY logChanged)
   Q_PROPERTY(bool hideLauncherWhilePlaying MEMBER m_hide_launcher NOTIFY settingsChanged)
   Q_PROPERTY(bool pauseWhenInactive MEMBER m_pause_when_inactive NOTIFY settingsChanged)
+  // The library window is shown over a running game (stage 6.1: the in-game menu's Settings, or a
+  // question from Dolphin); the game waits paused behind it.
+  Q_PROPERTY(bool overGame READ IsOverGame NOTIFY overGameChanged)
 
 public:
   explicit Emulator(LomiriIntegration* lomiri, QObject* parent = nullptr);
@@ -46,6 +51,16 @@ public:
   Q_INVOKABLE void appendLog(const QString& text);
   // Pauses a running game or resumes a paused one.
   Q_INVOKABLE void togglePause();
+  // The in-game menu's Settings (stage 6.1): the library window over the paused game, with the
+  // settings. returnToGame closes them (also when their page goes) and resumes the game.
+  Q_INVOKABLE void openSettingsOverGame();
+  Q_INVOKABLE void returnToGame();
+  // For tests over adb: the newest open question (0: none).
+  int LatestQuestionId() const { return m_answers.empty() ? 0 : m_answers.rbegin()->first; }
+  // The answer to questionAsked: 0 OK or No, 1 Yes, 2 Ignore for this session.
+  Q_INVOKABLE void answerQuestion(int id, int button);
+
+  bool IsOverGame() const { return m_over_game > 0; }
 
 
   // Load this slot once the game runs (0: none).
@@ -59,9 +74,22 @@ public:
   // a boot (3.8) and VK_ERROR_DEVICE_LOST during play (stage 4), so the game can be restarted on
   // OpenGL ES. Returns true for an alert to drop: the repeats after a lost device (thousands).
   static bool NoteAlert(const char* text);
+  // Dolphin's alerts and questions (stage 6.1), from any thread: a dialog in the library window,
+  // shown over the game if one runs, as DolphinQt's and the Android app's handlers do. The calling
+  // thread waits for the answer. Returns Yes for a question; true otherwise.
+  static bool AskFromAnyThread(const char* caption, const char* text, bool yes_no,
+                               Common::MsgType style);
 
 signals:
   void stateChanged();
+  // The in-game menu's Settings: the library window, shown over the paused game, opens them.
+  void settingsRequested();
+  // The settings over the game are closed: their pages go.
+  void settingsClosed();
+  void overGameChanged();
+  // A dialog for Dolphin's alert ID; answered with answerQuestion.
+  void questionAsked(int id, const QString& caption, const QString& text, bool yesNo, bool warning);
+  void questionAnswered(int id);
   void logChanged();
   void settingsChanged();
 
@@ -70,6 +98,21 @@ private:
   void OnApplicationStateChanged(Qt::ApplicationState state);
   void OnGameWindowSizeChanged(int width, int height, float scale);
   void FinishStop();
+  // Show the library window over the game, pausing it (counted: settings and questions can
+  // overlap); the last End hides the window again and resumes the game if it was running.
+  // pause: false for Dolphin's questions, whose asking thread (CPU or GPU) is blocked: pausing the
+  // core from here could wait for it.
+  void BeginOverGame(const QString& reason, bool pause = true);
+  void EndOverGame(const QString& reason);
+  enum class AskingThread
+  {
+    UI,
+    CPU,
+    GPU,
+    Other,
+  };
+  bool Ask(const QString& caption, const QString& text, bool yes_no, Common::MsgType style,
+           AskingThread thread);
   WindowSystemInfo MakeWindowSystemInfo(QWindow* window) const;
 
   LomiriIntegration* m_lomiri;
@@ -96,6 +139,14 @@ private:
   // Requests for a normal library window since it was shown again (Lomiri may answer with
   // fullscreen again; at most 3).
   int m_library_normal_requests = 0;
+  // BeginOverGame calls not yet ended, whether the in-game settings are one of them, and whether
+  // the game ran before the first (to resume it after the last).
+  int m_over_game = 0;
+  bool m_settings_over_game = false;
+  bool m_resume_after_over_game = false;
+  // Open questions (nested if two threads ask): id -> answer, -1 until answered.
+  std::map<int, int> m_answers;
+  int m_next_question_id = 1;
   QString m_state = QStringLiteral("idle");
   QString m_log;
 };

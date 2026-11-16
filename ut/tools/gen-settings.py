@@ -348,6 +348,21 @@ for tag, menu in menus.items():
 
 used = {item["setting"] for menu in menus.values() for item in menu["items"] if "setting" in item}
 
+# Settings that cannot change while a game runs (stage 6.1), as the Android app decides
+# (SettingsItem.isEditable): each setting type's NOT_RUNTIME_EDITABLE list, and every SYSCONF
+# setting. The virtual settings take the lock of the settings they stand for.
+for kind in ("BooleanSetting", "IntSetting", "StringSetting", "FloatSetting"):
+    source = (settings_dir / f"model/{kind}.kt").read_text()
+    match = re.search(r"NOT_RUNTIME_EDITABLE_ARRAY\s*=\s*arrayOf\(([^)]*)\)", source)
+    for name in re.findall(r"\w+", match.group(1)) if match else []:
+        if f"{kind}.{name}" in definitions:
+            definitions[f"{kind}.{name}"]["lockedWhileRunning"] = True
+for name, d in definitions.items():
+    if d.get("file") == "SYSCONF":
+        d["lockedWhileRunning"] = True
+for name in ("Virtual.DSP_ENGINE", "Virtual.MEM1_MB", "Virtual.MEM2_MB"):
+    definitions[name]["lockedWhileRunning"] = True
+
 # Dolphin's own settings: name -> (type, system, section, key).
 core = {}
 for path in sorted((root / "Source/Core/Core/Config").glob("*.cpp")):

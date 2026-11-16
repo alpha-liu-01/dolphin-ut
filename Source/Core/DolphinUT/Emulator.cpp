@@ -13,10 +13,12 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
+#include <QEventLoop>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QMetaObject>
 #include <QScreen>
+#include <QThread>
 #include <QTimer>
 #include <QWindow>
 #include <qpa/qplatformnativeinterface.h>
@@ -336,6 +338,7 @@ void Emulator::start(const QString& path, const QString& backend)
     appendLog(QStringLiteral("reset"));
     Core::System::GetInstance().GetProcessorInterface().ResetButton_Tap();
   };
+  actions.open_settings = [this] { openSettingsOverGame(); };
   // Controls are sized by the screen's shorter side, as in the Android app.
   const QSize screen = m_game_window->screen()->size() * m_game_window->devicePixelRatio();
   m_overlay = std::make_unique<TouchOverlay>(!gamecube, std::min(screen.width(), screen.height()),
@@ -391,6 +394,13 @@ void Emulator::FinishStop()
   }
   s_game_window_active = false;
   m_paused_by_app_state = false;
+  if (m_over_game > 0 || m_settings_over_game)
+  {
+    m_over_game = 0;
+    m_settings_over_game = false;
+    m_resume_after_over_game = false;
+    emit overGameChanged();
+  }
   if (m_launcher && !m_launcher->isVisible())
   {
     m_library_normal_requests = 0;
@@ -502,6 +512,215 @@ void Emulator::OnApplicationStateChanged(Qt::ApplicationState state)
     m_paused_by_app_state = false;
     appendLog(QStringLiteral("resumed (app active)"));
   }
+}
+
+void Emulator::openSettingsOverGame()
+{
+  if (m_settings_over_game || !m_game_window || !m_launcher)
+    return;
+  m_settings_over_game = true;
+  BeginOverGame(QStringLiteral("settings"));
+  emit settingsRequested();
+}
+
+void Emulator::returnToGame()
+{
+  if (!m_settings_over_game)
+    return;
+  m_settings_over_game = false;
+  EndOverGame(QStringLiteral("settings"));
+  emit settingsClosed();
+}
+
+void Emulator::BeginOverGame(const QString& reason, bool pause)
+{
+  if (!m_game_window || !m_launcher)
+    return;
+  auto& system = Core::System::GetInstance();
+  if (m_over_game++ == 0)
+  {
+    m_resume_after_over_game = pause && Core::GetState(system) == Core::State::Running;
+    if (m_resume_after_over_game)
+      Core::SetState(system, Core::State::Paused);
+    // The game window stays mapped (its surface is the video backend's); the library window is
+    // shown on top of it, as Lomiri stacks an app's windows.
+    m_launcher->show();
+    m_launcher->raise();
+    m_launcher->requestActivate();
+    emit overGameChanged();
+  }
+  appendLog(QStringLiteral("library over the game: %1 (%2 open)").arg(reason).arg(m_over_game));
+}
+
+void Emulator::EndOverGame(const QString& reason)
+{
+  if (m_over_game == 0)
+    return;
+  appendLog(QStringLiteral("library over the game closed: %1 (%2 left)").arg(reason).arg(m_over_game - 1));
+  if (--m_over_game > 0)
+    return;
+  emit overGameChanged();
+  if (!m_game_window)
+    return;
+  if (m_launcher && m_hide_launcher)
+    m_launcher->hide();
+  m_game_window->requestActivate();
+  auto& system = Core::System::GetInstance();
+  if (m_resume_after_over_game && Core::GetState(system) == Core::State::Paused)
+    Core::SetState(system, Core::State::Running);
+  m_resume_after_over_game = false;
+}
+
+bool Emulator::AskFromAnyThread(const char* caption, const char* text, bool yes_no,
+                                Common::MsgType style)
+{
+  Emulator* const instance = s_instance;
+  if (!instance)
+    return true;  // before the UI exists: continue, as the port did before 6.1
+  const QString caption_text = QString::fromUtf8(caption);
+  const QString message = QString::fromUtf8(text);
+  if (QThread::currentThread() == instance->thread())
+    return instance->Ask(caption_text, message, yes_no, style, AskingThread::UI);
+
+  // As DolphinQt's handler: while the UI thread asks for the CPU or GPU thread, it declares itself
+  // that thread, so a call that would wait for it (Core::CPUThreadGuard, ...) does not deadlock.
+  const bool cpu_thread = Core::IsCPUThread();
+  const bool gpu_thread = Core::IsGPUThread();
+  bool answer = false;
+  QMetaObject::invokeMethod(
+      instance,
+      [&] {
+        if (cpu_thread)
+          Core::DeclareAsCPUThread();
+        if (gpu_thread)
+          Core::DeclareAsGPUThread();
+        answer = instance->Ask(caption_text, message, yes_no, style,
+                               cpu_thread ? AskingThread::CPU :
+                               gpu_thread ? AskingThread::GPU :
+                                            AskingThread::Other);
+        if (cpu_thread)
+          Core::UndeclareAsCPUThread();
+        if (gpu_thread)
+          Core::UndeclareAsGPUThread();
+      },
+      Qt::BlockingQueuedConnection);
+  return answer;
+}
+
+bool Emulator::Ask(const QString& caption, const QString& text, bool yes_no, Common::MsgType style,
+                   AskingThread thread)
+{
+  auto& system = Core::System::GetInstance();
+  const Core::State state = Core::GetState(system);
+  const bool game_shown = m_game_window && m_overlay && !m_settings_over_game &&
+                          (state == Core::State::Running || state == Core::State::Paused);
+  // The thread that draws the game: the GPU thread in dual core, the CPU thread in single core.
+  const bool dual_core = system.IsDualCoreMode();
+  const bool drawing_thread_asks = dual_core ? thread == AskingThread::GPU :
+                                               thread == AskingThread::CPU;
+
+  // Where the question goes (S6.1-M3: Lomiri has no xdg-activation, so the library window shown
+  // during a game without a recent tap can stay behind it):
+  // - The thread that draws the game asked: nothing can be drawn while it waits, so as 3.6 did,
+  //   the message goes on screen once it returns, and the game continues ("Yes" to a question,
+  //   Dolphin's "Ignore and continue").
+  // - A game is on screen: in the picture, over everything (TouchOverlay::ShowQuestion). If the
+  //   CPU thread asked (dual core), the game presents nothing meanwhile, so redraws are pushed
+  //   through the paused-redraw path; this thread is declared the CPU thread while it asks, so
+  //   Core::RunOnCPUThread runs them here.
+  // - Otherwise (no game, a boot, the settings over the game): a dialog in the library window.
+  if (m_game_window && drawing_thread_asks)
+  {
+    std::string first_line = text.toStdString();
+    first_line = first_line.substr(0, first_line.find("\n\n"));
+    OSD::AddMessage(caption.toStdString() + ": " + first_line, 8000,
+                    style == Common::MsgType::Information ? OSD::Color::YELLOW : OSD::Color::RED);
+    appendLog(QStringLiteral("alert from the thread that draws the game: shown on screen, continuing"));
+    return true;
+  }
+
+  const int id = m_next_question_id++;
+  m_answers[id] = -1;
+  const bool warning = style == Common::MsgType::Warning;
+  QTimer redraw;
+  int redraws = 0;
+  if (game_shown)
+  {
+    appendLog(QStringLiteral("question %1 in the game picture").arg(id));
+    m_overlay->ShowQuestion(id, caption.toStdString(), text.toStdString(), yes_no, warning,
+                            [this](int answered, int button) { answerQuestion(answered, button); });
+    if (thread == AskingThread::CPU || state == Core::State::Paused)
+    {
+      redraw.setInterval(33);
+      connect(&redraw, &QTimer::timeout, this, [&system, &redraws] {
+        ++redraws;
+        Core::RunOnCPUThread(system, [] {
+          AsyncRequests::GetInstance()->PushEvent([] {
+            if (!g_presenter)
+              return;
+            PresentInfo info{};
+            GetVideoEvents().before_present_event.Trigger(info);
+            g_presenter->Present();
+          });
+        });
+      });
+      redraw.start();
+    }
+  }
+  else
+  {
+    BeginOverGame(QStringLiteral("question %1").arg(id), false);
+    if (m_launcher && !m_launcher->isVisible())
+      m_launcher->show();
+    emit questionAsked(id, caption, text, yes_no, warning);
+  }
+
+  // A nested event loop, as a modal dialog's: the UI keeps running while this waits. Quitting the
+  // app (SIGTERM) ends every event loop, which counts as No / OK.
+  QEventLoop loop;
+  const auto connection = connect(this, &Emulator::questionAnswered, &loop, [&loop, id](int answered) {
+    if (answered == id)
+      loop.quit();
+  });
+  if (m_answers[id] < 0)
+    loop.exec();
+  disconnect(connection);
+  redraw.stop();
+  if (redraws > 0)
+    appendLog(QStringLiteral("question %1: %2 redraws pushed while it waited").arg(id).arg(redraws));
+  const int button = m_answers[id];
+  m_answers.erase(id);
+  if (game_shown)
+  {
+    if (m_overlay)
+      m_overlay->CloseQuestion(id);
+  }
+  else
+  {
+    EndOverGame(QStringLiteral("question %1").arg(id));
+  }
+
+  appendLog(QStringLiteral("question %1 answered: %2")
+                .arg(id)
+                .arg(button == 1 ? QStringLiteral("yes") :
+                     button == 2 ? QStringLiteral("ignore for this session") :
+                     button == 0 ? (yes_no ? QStringLiteral("no") : QStringLiteral("ok")) :
+                                   QStringLiteral("none (quitting)")));
+  if (button == 2)
+  {
+    Config::SetCurrent(Config::MAIN_USE_PANIC_HANDLERS, false);
+    return true;
+  }
+  return yes_no ? button == 1 : true;
+}
+
+void Emulator::answerQuestion(int id, int button)
+{
+  const auto it = m_answers.find(id);
+  if (it == m_answers.end() || it->second >= 0)
+    return;
+  it->second = button;
+  emit questionAnswered(id);
 }
 
 void Emulator::togglePause()

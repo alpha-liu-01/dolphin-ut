@@ -5,6 +5,7 @@
 
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <thread>
 
@@ -48,6 +49,10 @@ public:
   // slider, text).
   Q_INVOKABLE QVariantMap menu(const QString& tag) const;
   Q_INVOKABLE QVariant value(const QString& name) const;
+  // Whether the setting cannot change while a game runs (stage 6.1): the Android app's
+  // NOT_RUNTIME_EDITABLE lists and the SYSCONF settings (settings.json, "lockedWhileRunning").
+  // setValue and clear refuse such a setting while a game runs.
+  Q_INVOKABLE bool lockedWhileRunning(const QString& name) const;
   Q_INVOKABLE void setValue(const QString& name, const QVariant& value);
   // Game settings: whether the game's layer sets it, and removing it there ("Long press a setting
   // to clear it").
@@ -74,7 +79,10 @@ signals:
 private:
   void Changed();
 
+  bool IsLockedNow(const std::string& name) const;
+
   QJsonObject m_menus;
+  std::set<std::string> m_locked_while_running;
   std::map<std::string, Binding> m_bindings;
   QString m_game_id;
   int m_revision = 0;

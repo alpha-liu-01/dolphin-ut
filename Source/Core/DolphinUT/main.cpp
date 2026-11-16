@@ -7,7 +7,9 @@
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
+#include <chrono>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <QGuiApplication>
@@ -32,9 +34,11 @@
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
 
+#include "Core/Core.h"
+#include "Core/System.h"
 #include "UICommon/CommandLineParse.h"
+#include "VideoCommon/AsyncRequests.h"
 #include "UICommon/UICommon.h"
-#include "VideoCommon/OnScreenDisplay.h"
 
 namespace
 {
@@ -101,24 +105,19 @@ void AddCommandLineConfigLayer(int argc, char** argv)
   CommandLineParse::ParseArguments(parser.get(), arguments);
 }
 
-// Dolphin's panic alerts and assertion questions ("An error occurred … Ignore and continue?").
-// Without a handler, Dolphin answers "no" on Linux, and an assertion then ends the app with SIGTRAP
-// (S3.6: Wind Waker loading a save state made while its GPU had hung). DolphinQt and the Android
-// app ask the user; until the port has a dialog that can be answered while the game's own threads
-// wait (3.6 second pass), it logs the message, shows it on screen, and continues, as "Ignore" does.
+// Dolphin's panic alerts and questions ("An error occurred … Ignore and continue?"). Without a
+// handler, Dolphin answers "no" on Linux, and an assertion then ends the app with SIGTRAP (S3.6).
+// As DolphinQt and the Android app: a dialog (Yes/No, or OK; warnings also offer "Ignore for this
+// session"), over the game if one runs, while the asking thread waits (stage 6.1). Repeats after a
+// lost GPU are dropped first (stage 4).
 bool OnMsgAlert(const char* caption, const char* text, bool yes_no, Common::MsgType style)
 {
   if (Emulator::NoteAlert(text))
     return true;
   Emulator::LogFromAnyThread(QStringLiteral("alert (%1): %2 — %3")
                                  .arg(QString::fromUtf8(caption), QString::fromUtf8(text),
-                                      yes_no ? QStringLiteral("continuing") :
-                                               QStringLiteral("shown")));
-  std::string first_line = text;
-  first_line = first_line.substr(0, first_line.find("\n\n"));
-  OSD::AddMessage(std::string(caption) + ": " + first_line, 8000,
-                  style == Common::MsgType::Information ? OSD::Color::YELLOW : OSD::Color::RED);
-  return true;
+                                      yes_no ? QStringLiteral("asking") : QStringLiteral("shown")));
+  return Emulator::AskFromAnyThread(caption, text, yes_no, style);
 }
 
 std::atomic<bool> s_quit_requested = false;
@@ -241,6 +240,63 @@ int main(int argc, char** argv)
     const std::string stop_after = ArgumentValue(argc, argv, nullptr, "--stop-after");
     if (!stop_after.empty())
       QTimer::singleShot(1500 + std::atoi(stop_after.c_str()), &emulator, [&emulator] { emulator.stop(); });
+  }
+
+  // Stage 6.1 test aids over adb. --settings-after MS / --return-after MS: open the in-game menu's
+  // Settings over the game, and return to it. --test-alert KIND@MS: one of Dolphin's alerts from a
+  // worker thread, as the core's threads raise them (KIND: question, warning, info).
+  // --answer-after MS:BUTTON: answer the newest dialog (0 OK/No, 1 Yes, 2 Ignore for this session).
+  if (const std::string after = ArgumentValue(argc, argv, nullptr, "--settings-after"); !after.empty())
+    QTimer::singleShot(std::atoi(after.c_str()), &emulator, [&emulator] { emulator.openSettingsOverGame(); });
+  if (const std::string after = ArgumentValue(argc, argv, nullptr, "--return-after"); !after.empty())
+    QTimer::singleShot(std::atoi(after.c_str()), &emulator, [&emulator] { emulator.returnToGame(); });
+  if (const std::string alert = ArgumentValue(argc, argv, nullptr, "--test-alert"); !alert.empty())
+  {
+    const std::string kind = alert.substr(0, alert.find('@'));
+    const int delay = std::atoi(alert.substr(alert.find('@') + 1).c_str());
+    // cpu-question / gpu-warning: from a job on the CPU thread, or an event on the GPU thread
+    // (dual core), the threads Dolphin's own alerts come from during a game.
+    if (kind == "cpu-question" || kind == "gpu-warning")
+    {
+      QTimer::singleShot(delay, &emulator, [kind] {
+        Core::RunOnCPUThread(Core::System::GetInstance(), [kind] {
+          if (kind == "cpu-question")
+          {
+            const bool answer = AskYesNoFmt("Test question from the CPU thread. Continue?");
+            Emulator::LogFromAnyThread(QStringLiteral("test alert cpu-question returned %1")
+                                           .arg(answer ? "true" : "false"));
+            return;
+          }
+          AsyncRequests::GetInstance()->PushEvent([] {
+            const bool answer = PanicAlertFmt("Test warning from the GPU thread.");
+            Emulator::LogFromAnyThread(QStringLiteral("test alert gpu-warning returned %1")
+                                           .arg(answer ? "true" : "false"));
+          });
+        });
+      });
+    }
+    else
+    std::thread([kind, delay] {
+      std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+      bool answer = false;
+      if (kind == "question")
+        answer = AskYesNoFmt("Test question from a worker thread. Continue?");
+      else if (kind == "warning")
+        answer = PanicAlertFmt("Test warning from a worker thread.");
+      else
+        answer = SuccessAlertFmt("Test information from a worker thread.");
+      Emulator::LogFromAnyThread(QStringLiteral("test alert %1 returned %2")
+                                     .arg(QString::fromStdString(kind))
+                                     .arg(answer ? "true" : "false"));
+    }).detach();
+  }
+  if (const std::string answer = ArgumentValue(argc, argv, nullptr, "--answer-after"); !answer.empty())
+  {
+    const int delay = std::atoi(answer.substr(0, answer.find(':')).c_str());
+    const int button = std::atoi(answer.substr(answer.find(':') + 1).c_str());
+    QTimer::singleShot(delay, &emulator, [&emulator, button] {
+      emulator.answerQuestion(emulator.LatestQuestionId(), button);
+    });
   }
 
   // SIGINT/SIGTERM (adb tests, the session ending): stop the game and quit cleanly.

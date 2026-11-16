@@ -239,7 +239,16 @@ SettingsModel::SettingsModel(QObject* parent) : QObject(parent)
 {
   QFile file(QStringLiteral(":/settings/settings.json"));
   if (file.open(QIODevice::ReadOnly))
-    m_menus = QJsonDocument::fromJson(file.readAll()).object().value(QStringLiteral("menus")).toObject();
+  {
+    const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
+    m_menus = root.value(QStringLiteral("menus")).toObject();
+    const QJsonObject settings = root.value(QStringLiteral("settings")).toObject();
+    for (auto it = settings.begin(); it != settings.end(); ++it)
+    {
+      if (it.value().toObject().value(QStringLiteral("lockedWhileRunning")).toBool())
+        m_locked_while_running.insert(it.key().toStdString());
+    }
+  }
 
   m_bindings = {
 #include "DolphinUT/SettingsTable.inc"
@@ -286,6 +295,17 @@ QVariantMap SettingsModel::menu(const QString& tag) const
   return m_menus.value(tag).toObject().toVariantMap();
 }
 
+bool SettingsModel::lockedWhileRunning(const QString& name) const
+{
+  return m_locked_while_running.contains(name.toStdString());
+}
+
+bool SettingsModel::IsLockedNow(const std::string& name) const
+{
+  return m_locked_while_running.contains(name) &&
+         !Core::IsUninitialized(Core::System::GetInstance());
+}
+
 QVariant SettingsModel::value(const QString& name) const
 {
   const auto it = m_bindings.find(name.toStdString());
@@ -295,7 +315,7 @@ QVariant SettingsModel::value(const QString& name) const
 void SettingsModel::setValue(const QString& name, const QVariant& value)
 {
   const auto it = m_bindings.find(name.toStdString());
-  if (it == m_bindings.end())
+  if (it == m_bindings.end() || IsLockedNow(it->first))
     return;
   const bool game = !m_game_id.isEmpty();
   it->second.set(game, value);
@@ -320,7 +340,7 @@ bool SettingsModel::overridden(const QString& name) const
 void SettingsModel::clear(const QString& name)
 {
   const auto it = m_bindings.find(name.toStdString());
-  if (it == m_bindings.end() || m_game_id.isEmpty())
+  if (it == m_bindings.end() || m_game_id.isEmpty() || IsLockedNow(it->first))
     return;
   it->second.clear(true);
   Config::GetLayer(Config::LayerType::LocalGame)->Save();

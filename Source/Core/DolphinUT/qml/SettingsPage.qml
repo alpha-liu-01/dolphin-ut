@@ -15,15 +15,37 @@ Page {
     property string menuTag: "SETTINGS"
     // The page that opened a game's settings closes them when it goes.
     property bool closesGame: false
+    // Opened from the in-game menu (stage 6.1): leaving this page returns to the game.
+    property bool returnsToGame: false
     property string gameTitle: ""
     readonly property var menuData: settingsModel.menu(menuTag)
     readonly property bool gameMode: settingsModel.gameId !== ""
+    // Stage 6.1: with a game running (Settings from the in-game menu), the settings that cannot
+    // change then are greyed out, as in the Android app.
+    readonly property bool gameRunning: emulator.state !== "idle"
+    function lockedOf(name) {
+        return gameRunning && name !== undefined && settingsModel.lockedWhileRunning(name)
+    }
+    readonly property bool hasLocked: {
+        const items = menuData.items || []
+        for (let i = 0; i < items.length; ++i) {
+            if (lockedOf(items[i].setting))
+                return true
+        }
+        return false
+    }
 
-    Component.onDestruction: if (closesGame) settingsModel.closeGame()
+    Component.onDestruction: {
+        if (closesGame)
+            settingsModel.closeGame()
+        if (returnsToGame)
+            emulator.returnToGame()
+    }
 
     header: PageHeader {
         title: page.menuData.title || "Settings"
-        subtitle: page.gameMode ? "Game settings: " + (page.gameTitle || settingsModel.gameId) : ""
+        subtitle: page.gameMode ? "Game settings: " + (page.gameTitle || settingsModel.gameId) :
+                  page.returnsToGame ? "The game is paused; Back returns to it." : ""
     }
 
     // Only the page that started an action shows its result (the menus above it are pages too).
@@ -72,6 +94,15 @@ Page {
             id: column
 
             width: parent.width
+
+            Label {
+                width: parent.width
+                padding: units.gu(2)
+                visible: page.hasLocked
+                text: "Greyed-out settings can't be changed while a game is running."
+                wrapMode: Text.Wrap
+                color: theme.palette.normal.backgroundSecondaryText
+            }
 
             Repeater {
                 model: page.menuData.items || []
@@ -147,9 +178,13 @@ Page {
     }
 
     // A value the game overrides: a mark beside the title, and a press and hold clears it.
+    // While a game runs, a setting that cannot change then is greyed out and does not respond.
     component SettingItem: ListItem {
         readonly property var entry: parent ? parent.entry : ({})
         property bool overridden: page.gameMode && page.overriddenOf(entry.setting)
+        readonly property bool locked: page.lockedOf(entry.setting)
+        enabled: !locked
+        opacity: locked ? 0.4 : 1
         onPressAndHold: if (page.gameMode) settingsModel.clear(entry.setting)
     }
 

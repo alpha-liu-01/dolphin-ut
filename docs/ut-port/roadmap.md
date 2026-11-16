@@ -348,6 +348,12 @@ Notes: `stage5-packaging.md`.
 
 ### 6. Feature completeness (after stages 5 and 4)
 
+#### Status (2026-11-16): in progress; phase plan in `stage6-roadmap.md`. 6.1 done (settings during a game, Dolphin's questions); next 6.2
+
+Phases: 6.1 settings during a game and Dolphin's questions; 6.2 the remaining settings (Hotkeys, post-processing, logs, RTC); 6.3 Wii file actions; 6.4 cheats, Riivolution, disc conversion; 6.5 export and user data; 6.6 Wii Remote motion from the phone's sensors; 6.7 RetroAchievements; 6.8 smaller leftovers. Not planned: NetPlay, GBA link, a TV layout (none are in the Android app).
+
+The original list:
+
 - **The 3.6 second pass:** settings from the in-game menu (the settings pages are in the library window, hidden during a game), a Yes/No answer for Dolphin's alerts (today they are logged, shown and ignored), Hotkeys, RetroAchievements, and the remaining skipped settings.
 - **Wii file actions** (3.7): Install WAD, Import Wii Save, Import BootMii NAND Backup, Load Wii System Menu, Online System Update. They are small now that the file picker exists.
 - Export through content-hub (save states, memory cards), and the zip import/export of the user data.

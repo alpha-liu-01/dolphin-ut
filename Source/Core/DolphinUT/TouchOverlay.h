@@ -45,6 +45,8 @@ public:
     std::function<void()> refresh_wiimotes;
     std::function<void(const std::string& path)> change_disc;
     std::function<void()> reset;
+    // Opens the settings over the paused game (stage 6.1).
+    std::function<void()> open_settings;
   };
 
   // wii: the game is a Wii game. screen_short_side: the screen's shorter side in physical pixels;
@@ -58,6 +60,12 @@ public:
   // UI thread.
   // Opens or closes the in-game menu (Back / Escape, as in the Android app).
   void ToggleMenu();
+  // One of Dolphin's alerts or questions, drawn in the game picture over everything else until it
+  // is answered (stage 6.1). ANSWER runs on the UI thread with the button: 0 OK/No, 1 Yes, 2 Ignore
+  // for this session. Whatever page was open comes back afterwards.
+  void ShowQuestion(int id, std::string caption, std::string text, bool yes_no, bool warning,
+                    std::function<void(int id, int button)> answer);
+  void CloseQuestion(int id);
   // While the game is paused, nothing is presented; a menu that is open needs redraws
   // (Emulator::RequestPausedRedraw).
   bool WantsPausedRedraw() const;
@@ -138,6 +146,18 @@ private:
     Controller,
     Pointer,
     Editing,  // "Edit Layout": controls are dragged, "Done" ends it
+    Question,  // one of Dolphin's alerts (stage 6.1); not in DrawMenu's titles
+  };
+
+  struct Question
+  {
+    int id = 0;
+    std::string caption;
+    std::string text;
+    bool yes_no = false;
+    bool warning = false;
+    std::function<void(int id, int button)> answer;
+    Menu menu_before = Menu::None;
   };
 
   // An ImGui mouse event to send once m_mutex is released (the ImGui lock is taken by the video
@@ -175,6 +195,7 @@ private:
   void Draw();
   void DrawMenu();
   void DrawGameMenu();
+  void DrawQuestion();
   void OpenPage(Menu page);
   void OpenTestPage();
   void RetireTextures();
@@ -200,6 +221,7 @@ private:
   QRectF m_game_rect;  // the game picture in the window (from the presenter), for the pointer
 
   Menu m_menu = Menu::None;
+  Question m_question;  // while m_menu is Menu::Question
   std::vector<std::string> m_slot_labels;  // filled when a save/load page opens
   std::vector<std::string> m_discs;        // filled when Change Disc opens
   float m_game_panel_width = 0.0f;         // the in-game menu's panel, as last drawn
