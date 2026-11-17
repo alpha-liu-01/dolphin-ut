@@ -55,3 +55,12 @@ Notes: `stage6.3-wii-files.md`.
 - Dolphin's own code runs on a worker thread, with the Android app's texts. DolphinQt's extras are added where Android lacks them: the NAND import's progress, cancel and keys-file question, and the certificates after an update.
 - The Wii Menu boots as a NAND title (`Emulator::startSystemMenu`).
 
+## 6.4 Per-game tools
+
+#### Status (2026-11-16): done (S6.4-M1–M5 passed)
+
+Notes: `stage6.4-game-tools.md`. The library's long press gains the Android game properties' Start with Riivolution Patches, Set as Default ISO, Convert File and Edit Cheats, in Android's order.
+- **Cheats:** patches, AR and Gecko codes, graphics mods; add, edit, delete, enable; Download Gecko Codes; Android's warnings when cheats or graphics mods are off.
+- **Riivolution:** the patch XMLs for the game with their choices, saved, then a start with the patches.
+- **Convert File:** ISO, GCZ, WIA or RVZ with Android's options and warnings, progress and cancel. Need for Speed (1.46 GB) to RVZ took 17 s on the phone.
+

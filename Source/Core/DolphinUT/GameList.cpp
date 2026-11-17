@@ -274,6 +274,14 @@ QVariantMap GameListModel::details(const QString& path) const
       // A Wii disc can update the Wii's system software (stage 6.3, the Android app's
       // "Perform System Update" in the game properties).
       {QStringLiteral("wiiDisc"), game->GetPlatform() == DiscIO::Platform::WiiDisc},
+      // Stage 6.4, the Android app's game properties: Riivolution and Set as Default ISO for discs,
+      // Convert File where Dolphin allows it, and the IDs the cheats need.
+      {QStringLiteral("disc"), game->GetPlatform() == DiscIO::Platform::GameCubeDisc ||
+                                   game->GetPlatform() == DiscIO::Platform::Triforce ||
+                                   game->GetPlatform() == DiscIO::Platform::WiiDisc},
+      {QStringLiteral("convertible"), game->ShouldAllowConversion()},
+      {QStringLiteral("gametdbId"), ToQString(game->GetGameTDBID())},
+      {QStringLiteral("discNumber"), static_cast<int>(game->GetDiscNumber())},
   };
 
   // As the Android app: the file format, compression and block size only where they mean something.

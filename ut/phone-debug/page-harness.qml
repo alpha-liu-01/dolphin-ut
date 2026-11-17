@@ -6,7 +6,7 @@
 // settings-roundtrip, file-picker, import, userdata, paths-roundtrip, sd-roundtrip, gpu-drivers,
 // gpu-roundtrip (--test-arg ZIP; ZIP.nometa.zip is the failure case), hotkeys,
 // remaining-roundtrip, hotkeys-map, log-sync, settings-tap:MENU (--test-arg ROW) (stage 6.2);
-// wii, wii-roundtrip (stage 6.3);
+// wii, wii-roundtrip (stage 6.3); cheats-roundtrip, riivolution, convert, convert-run (stage 6.4);
 // anything else
 // shows the library.
 import QtQuick
@@ -34,6 +34,11 @@ Window {
         }
     }
     property var testMapping
+    Timer {
+        id: timer2
+        function start(ms) { interval = ms; running = true }
+        onTriggered: { console.log("CONVERT cancel"); discConverter.cancel() }
+    }
     Timer {
         id: timer
         property string page; property string arg; property string base
@@ -171,6 +176,65 @@ Window {
                 stack.push(base + "HotkeysPage.qml")
             }
             else if (page === "wii") stack.push(base + "WiiSystemPage.qml")
+            else if (page === "cheats-roundtrip") {
+                // Stage 6.4: a game's codes (--test-arg GAMEID, --test-arg2 GAMETDBID): counts, then
+                // add, check, toggle, edit and delete one code of each kind, then download Gecko codes.
+                const a = Qt.application.arguments
+                const tdb = a.indexOf("--test-arg2") >= 0 ? a[a.indexOf("--test-arg2") + 1] : arg
+                const count = () => ["patch", "ar", "gecko", "mod"].map(t => t + " " + cheats.items.filter(i => i.type === t).length).join(", ")
+                console.log("CHEATS load " + cheats.load(arg, 0, tdb) + ": " + count())
+                console.log("CHEATS first " + JSON.stringify(cheats.items[0]))
+                console.log("CHEATS bad name '" + cheats.add("patch", "", "", "", "0x80001234:dword:0x00000000") + "'")
+                console.log("CHEATS bad line '" + cheats.add("patch", "T", "", "", "0x80001234:dword:0x00000000\nnonsense") + "'")
+                console.log("CHEATS empty '" + cheats.add("gecko", "T", "", "", "\n") + "'")
+                console.log("CHEATS mixed AR '" + cheats.add("ar", "T", "", "", "00000000 00000000\nABCD-EFGH-1234Q") + "'")
+                console.log("CHEATS add patch '" + cheats.add("patch", "Test patch", "", "", "0x80001234:dword:0x00000000") + "'")
+                console.log("CHEATS add AR '" + cheats.add("ar", "Test AR", "", "", "04001234 00000001") + "'")
+                console.log("CHEATS add Gecko '" + cheats.add("gecko", "Test Gecko", "Tester", "line 1\nline 2", "04001234 00000002") + "'")
+                const mine = cheats.items.filter(i => i.userDefined)
+                console.log("CHEATS mine " + JSON.stringify(mine.map(i => [i.type, i.index, i.name, i.code, i.creator, i.notes])))
+                for (const c of mine) cheats.setEnabled(c.type, c.index, true)
+                const g = cheats.items.filter(i => i.userDefined && i.type === "gecko")[0]
+                console.log("CHEATS edit '" + cheats.edit("gecko", g.index, "Test Gecko 2", "Tester", "", "04001234 00000003") + "'")
+                const shipped = cheats.items.filter(i => !i.userDefined && i.type !== "mod")[0]
+                if (shipped) console.log("CHEATS edit shipped '" + cheats.edit(shipped.type, shipped.index, "x", "", "", "0x80001234:dword:0x00000000") + "'")
+                const ar = cheats.items.filter(i => i.userDefined && i.type === "ar")[0]
+                cheats.remove("ar", ar.index)
+                console.log("CHEATS after: " + count())
+                cheats.downloadFinished.connect((d, n) => console.log("CHEATS download " + d + " added " + n + ": " + count()))
+                console.log("CHEATS download start " + cheats.downloadGecko())
+                stack.push(base + "CheatsPage.qml", { gameId: arg, gametdbId: tdb, gameTitle: "test" })
+            }
+            else if (page === "riivolution") {
+                // Stage 6.4: the patches for a game (--test-arg GAMEID), the first option set to its
+                // first choice, saved; then the page.
+                riivolution.load(arg, 0, 0)
+                console.log("RIIV sd " + riivolution.sdRoot + " xml " + riivolution.xmlFolder)
+                console.log("RIIV discs " + JSON.stringify(riivolution.discs))
+                if (riivolution.discs.length > 0) {
+                    riivolution.setChoice(0, 0, 0, 1)
+                    riivolution.save()
+                    console.log("RIIV after " + JSON.stringify(riivolution.discs[0].sections[0].options[0]))
+                }
+                stack.push(base + "RiivolutionPage.qml", { gameId: arg, gameTitle: "test" })
+            }
+            else if (page === "convert") stack.push(base + "ConvertPage.qml", { path: arg })
+            else if (page === "convert-run") {
+                // Stage 6.4: --test-arg IN --test-arg2 "OUT FORMAT BLOCK COMPRESSION LEVEL SCRUB [CANCEL_MS]".
+                const a = Qt.application.arguments
+                const spec = a[a.indexOf("--test-arg2") + 1].split(" ")
+                console.log("CONVERT info " + JSON.stringify(discConverter.info(arg)))
+                const t0 = Date.now()
+                let last = -1
+                discConverter.progressChanged.connect(() => {
+                    const p = Math.floor(discConverter.progress * 10)
+                    if (p !== last) { last = p; console.log("CONVERT " + Math.round((Date.now() - t0) / 1000) + " s " + Math.round(discConverter.progress * 100) + "% " + discConverter.progressText) }
+                })
+                discConverter.finished.connect((ok, cancelled, out) => console.log("CONVERT finished ok " + ok + " cancelled " + cancelled + " after " + Math.round((Date.now() - t0) / 1000) + " s: " + out))
+                console.log("CONVERT start " + discConverter.convert(arg, spec[0], Number(spec[1]), Number(spec[2]), Number(spec[3]), Number(spec[4]), spec[5] === "1"))
+                if (spec.length > 6) timer2.start(Number(spec[6]))
+                stack.push(base + "ConvertPage.qml", { path: arg })
+            }
             else if (page === "wii-roundtrip") {
                 // Stage 6.3: the Wii Menu's state, then each action's failure path with dummy files
                 // (--test-arg FOLDER with bogus.wad and bogus.bin), then a disc update from GAME

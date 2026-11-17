@@ -33,6 +33,9 @@
 #include "DolphinUT/PortDefaults.h"
 #include "DolphinUT/Storage.h"
 #include "DolphinUT/WiiSystem.h"
+#include "DolphinUT/Cheats.h"
+#include "DolphinUT/DiscConverter.h"
+#include "DolphinUT/Riivolution.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
 
@@ -176,6 +179,9 @@ int main(int argc, char** argv)
   SettingsModel settings_model;
   GpuDrivers gpu_drivers;
   WiiSystem wii_system;
+  Cheats cheats;
+  Riivolution riivolution;
+  DiscConverter disc_converter;
   QObject::connect(&controllers, &Controllers::message, &emulator, &Emulator::appendLog);
   controllers.SetVibrator([&lomiri](int duration_ms) { lomiri.vibrate(duration_ms); });
   qmlRegisterType<GameListFilter>("DolphinUT.Native", 1, 0, "GameListFilter");
@@ -190,6 +196,9 @@ int main(int argc, char** argv)
   engine.rootContext()->setContextProperty(QStringLiteral("storage"), &storage);
   engine.rootContext()->setContextProperty(QStringLiteral("gpuDrivers"), &gpu_drivers);
   engine.rootContext()->setContextProperty(QStringLiteral("wiiSystem"), &wii_system);
+  engine.rootContext()->setContextProperty(QStringLiteral("cheats"), &cheats);
+  engine.rootContext()->setContextProperty(QStringLiteral("riivolution"), &riivolution);
+  engine.rootContext()->setContextProperty(QStringLiteral("discConverter"), &disc_converter);
   // Development: --qml FILE loads that file instead of the app's UI (the phone has no Qt 6 qml
   // runtime), with the same context objects.
   const std::string qml_file = ArgumentValue(argc, argv, nullptr, "--qml");
@@ -237,8 +246,15 @@ int main(int argc, char** argv)
   if (!start_path.empty())
   {
     const std::string backend = ArgumentValue(argc, argv, nullptr, "--backend");
-    QTimer::singleShot(1500, &emulator, [&emulator, start_path, backend] {
-      emulator.start(QString::fromStdString(start_path), QString::fromStdString(backend));
+    // --riivolution: with the choices saved on the Riivolution page (stage 6.4).
+    bool riivolution = false;
+    for (int i = 1; i < argc; ++i)
+      riivolution |= std::string_view(argv[i]) == "--riivolution";
+    QTimer::singleShot(1500, &emulator, [&emulator, start_path, backend, riivolution] {
+      if (riivolution)
+        emulator.startWithRiivolution(QString::fromStdString(start_path));
+      else
+        emulator.start(QString::fromStdString(start_path), QString::fromStdString(backend));
     });
     // --stop-after MS: exit the game back to the library, as the in-game menu's Exit does.
     const std::string stop_after = ArgumentValue(argc, argv, nullptr, "--stop-after");

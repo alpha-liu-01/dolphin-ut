@@ -27,6 +27,9 @@
 #include "Core/Boot/Boot.h"
 #include "Core/BootManager.h"
 #include "Core/CommonTitles.h"
+#include "DiscIO/RiivolutionParser.h"
+#include "DiscIO/Volume.h"
+#include "Common/FileUtil.h"
 #include "Core/Config/GraphicsSettings.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/HW/DVD/DVDInterface.h"
@@ -260,7 +263,7 @@ WindowSystemInfo Emulator::MakeWindowSystemInfo(QWindow* window) const
   return wsi;
 }
 
-void Emulator::start(const QString& path, const QString& backend)
+void Emulator::Boot(const QString& path, const QString& backend, bool riivolution)
 {
   auto& system = Core::System::GetInstance();
   if (Core::GetState(system) != Core::State::Uninitialized || m_game_window)
@@ -270,6 +273,7 @@ void Emulator::start(const QString& path, const QString& backend)
   }
 
   m_boot_path = path;
+  m_boot_riivolution = riivolution;
   m_boot_reached_running = false;
   s_video_backend_failed = false;
   s_device_lost = false;
@@ -368,6 +372,15 @@ void Emulator::start(const QString& path, const QString& backend)
   auto boot = system_menu ?
                   std::make_unique<BootParameters>(BootParameters::NANDTitle{Titles::SYSTEM_MENU}) :
                   BootParameters::GenerateFromFile(path.toStdString());
+  if (riivolution && boot && std::holds_alternative<BootParameters::Disc>(boot->parameters))
+  {
+    const DiscIO::Volume& volume = *std::get<BootParameters::Disc>(boot->parameters).volume;
+    auto patches = DiscIO::Riivolution::GenerateRiivolutionPatchesFromConfig(
+        File::GetUserPath(D_RIIVOLUTION_IDX), volume.GetGameID(), volume.GetRevision(),
+        volume.GetDiscNumber());
+    appendLog(QStringLiteral("Riivolution: %1 patches").arg(patches.size()));
+    AddRiivolutionPatches(boot.get(), std::move(patches));
+  }
   if (!BootManager::BootCore(system, std::move(boot), wsi))
   {
     appendLog(QStringLiteral("BootCore failed"));
@@ -504,8 +517,9 @@ void Emulator::OnCoreStateChanged(Core::State state)
                                        "good.") :
                         QStringLiteral("Vulkan failed to start: this game runs on OpenGL ES.");
       const QString path = m_boot_path;
-      QTimer::singleShot(0, this, [this, path, note] {
-        start(path, QStringLiteral("OGL"));
+      const bool riivolution = m_boot_riivolution;
+      QTimer::singleShot(0, this, [this, path, riivolution, note] {
+        Boot(path, QStringLiteral("OGL"), riivolution);
         if (m_game_window)
           m_fallback_note = note;
       });

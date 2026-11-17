@@ -306,6 +306,7 @@ Page {
             property string gamePath
             property string gameTitle
             property string gameIdText
+            readonly property var details: gameList.details(gamePath)
 
             title: gameTitle
             text: gameIdText
@@ -319,6 +320,43 @@ Page {
                                         { details: gameList.details(dialog.gamePath) })
                 }
             }
+            // Stage 6.4: the Android app's game properties, in its order.
+            Button {
+                text: "Start with Riivolution Patches"
+                visible: dialog.details.disc === true
+                onClicked: {
+                    PopupUtils.close(dialog)
+                    pageStack.push(Qt.resolvedUrl("RiivolutionPage.qml"), {
+                        path: dialog.gamePath, gameId: dialog.details.gameId, revision: dialog.details.revision,
+                        discNumber: dialog.details.discNumber, gameTitle: dialog.details.title
+                    })
+                }
+            }
+            Button {
+                text: "Set as Default ISO"
+                visible: dialog.details.disc === true
+                onClicked: {
+                    settingsModel.setValue("StringSetting.MAIN_DEFAULT_ISO", dialog.gamePath)
+                    PopupUtils.close(dialog)
+                }
+            }
+            Button {
+                text: "Convert File"
+                visible: dialog.details.convertible === true
+                onClicked: {
+                    PopupUtils.close(dialog)
+                    pageStack.push(Qt.resolvedUrl("ConvertPage.qml"), { path: dialog.gamePath })
+                }
+            }
+            Button {
+                // Stage 6.3: the Android app's game properties offer it for Wii discs.
+                text: "Perform System Update"
+                visible: dialog.details.wiiDisc === true
+                onClicked: {
+                    PopupUtils.close(dialog)
+                    pageStack.push(Qt.resolvedUrl("WiiSystemPage.qml"), { discUpdatePath: dialog.gamePath })
+                }
+            }
             Button {
                 text: "Edit Game Settings"
                 onClicked: {
@@ -330,19 +368,20 @@ Page {
                 }
             }
             Button {
+                text: "Edit Cheats"
+                onClicked: {
+                    PopupUtils.close(dialog)
+                    pageStack.push(Qt.resolvedUrl("CheatsPage.qml"), {
+                        gameId: dialog.details.gameId, revision: dialog.details.revision,
+                        gametdbId: dialog.details.gametdbId, gameTitle: dialog.details.title
+                    })
+                }
+            }
+            Button {
                 text: "Clear Game Settings"
                 onClicked: {
                     settingsModel.clearGameSettings(gameList.details(dialog.gamePath).gameId)
                     PopupUtils.close(dialog)
-                }
-            }
-            Button {
-                // Stage 6.3: the Android app's game properties offer it for Wii discs.
-                text: "Perform System Update"
-                visible: gameList.details(dialog.gamePath).wiiDisc === true
-                onClicked: {
-                    PopupUtils.close(dialog)
-                    pageStack.push(Qt.resolvedUrl("WiiSystemPage.qml"), { discUpdatePath: dialog.gamePath })
                 }
             }
             Button {

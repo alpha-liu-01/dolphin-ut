@@ -35,6 +35,12 @@ add_executable(dolphin-ut
   VulkanDriver.cpp
   WiiSystem.cpp
   WiiSystem.h
+  Cheats.cpp
+  Cheats.h
+  Riivolution.cpp
+  Riivolution.h
+  DiscConverter.cpp
+  DiscConverter.h
   VulkanDriver.h
   OverlayLayout.h
   OverlayDefaults.inc
@@ -95,6 +101,9 @@ qt_add_qml_module(dolphin-ut
     qml/GpuDriversPage.qml
     qml/HotkeysPage.qml
     qml/WiiSystemPage.qml
+    qml/CheatsPage.qml
+    qml/RiivolutionPage.qml
+    qml/ConvertPage.qml
 )
 
 target_include_directories(dolphin-ut PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS})

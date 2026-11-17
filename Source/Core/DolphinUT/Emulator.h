@@ -46,7 +46,13 @@ public:
   QString log() const { return m_log; }
 
   // backend: "Vulkan" or "OGL" for this run only; empty for the configured one.
-  Q_INVOKABLE void start(const QString& path, const QString& backend = {});
+  Q_INVOKABLE void start(const QString& path, const QString& backend = {})
+  {
+    Boot(path, backend, false);
+  }
+  // Start with Riivolution Patches (stage 6.4): the choices saved by the Riivolution page, as the
+  // Android app's Run with riivolution (AddRiivolutionPatches).
+  Q_INVOKABLE void startWithRiivolution(const QString& path) { Boot(path, {}, true); }
   // Load Wii System Menu (stage 6.3): the installed Wii Menu, booted from the NAND as the Android
   // app's NativeLibrary.RunSystemMenu (BootParameters::NANDTitle).
   Q_INVOKABLE void startSystemMenu() { start(QString::fromLatin1(SYSTEM_MENU_PATH)); }
@@ -103,6 +109,7 @@ private:
   void OnApplicationStateChanged(Qt::ApplicationState state);
   void OnGameWindowSizeChanged(int width, int height, float scale);
   void FinishStop();
+  void Boot(const QString& path, const QString& backend, bool riivolution);
   // Hotkeys (stage 6.2) only while the game is in front: not over the game or with the app in the
   // background, as the Android app's Hotkeys.setEnabled in onResume and onPause.
   void UpdateHotkeysEnabled();
@@ -141,6 +148,7 @@ private:
   // The game being started, and whether the core reached Running or Paused (a failed boot goes from
   // Starting straight back to Uninitialized).
   QString m_boot_path;
+  bool m_boot_riivolution = false;
   bool m_boot_reached_running = false;
   // This run is the OpenGL ES retry after Vulkan failed: the note to show once it runs.
   QString m_fallback_note;
