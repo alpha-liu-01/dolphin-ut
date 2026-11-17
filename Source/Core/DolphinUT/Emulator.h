@@ -47,6 +47,11 @@ public:
 
   // backend: "Vulkan" or "OGL" for this run only; empty for the configured one.
   Q_INVOKABLE void start(const QString& path, const QString& backend = {});
+  // Load Wii System Menu (stage 6.3): the installed Wii Menu, booted from the NAND as the Android
+  // app's NativeLibrary.RunSystemMenu (BootParameters::NANDTitle).
+  Q_INVOKABLE void startSystemMenu() { start(QString::fromLatin1(SYSTEM_MENU_PATH)); }
+  // start()'s path for the Wii Menu, so the OpenGL ES restart after a Vulkan failure works for it.
+  static constexpr const char* SYSTEM_MENU_PATH = "dolphin-ut:wii-system-menu";
   Q_INVOKABLE void stop();
   Q_INVOKABLE void appendLog(const QString& text);
   // Pauses a running game or resumes a paused one.

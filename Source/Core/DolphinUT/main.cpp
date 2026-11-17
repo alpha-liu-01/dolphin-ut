@@ -32,6 +32,7 @@
 #include "DolphinUT/SettingsModel.h"
 #include "DolphinUT/PortDefaults.h"
 #include "DolphinUT/Storage.h"
+#include "DolphinUT/WiiSystem.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
 
@@ -174,6 +175,7 @@ int main(int argc, char** argv)
   Controllers controllers;
   SettingsModel settings_model;
   GpuDrivers gpu_drivers;
+  WiiSystem wii_system;
   QObject::connect(&controllers, &Controllers::message, &emulator, &Emulator::appendLog);
   controllers.SetVibrator([&lomiri](int duration_ms) { lomiri.vibrate(duration_ms); });
   qmlRegisterType<GameListFilter>("DolphinUT.Native", 1, 0, "GameListFilter");
@@ -187,6 +189,7 @@ int main(int argc, char** argv)
   engine.rootContext()->setContextProperty(QStringLiteral("lomiri"), &lomiri);
   engine.rootContext()->setContextProperty(QStringLiteral("storage"), &storage);
   engine.rootContext()->setContextProperty(QStringLiteral("gpuDrivers"), &gpu_drivers);
+  engine.rootContext()->setContextProperty(QStringLiteral("wiiSystem"), &wii_system);
   // Development: --qml FILE loads that file instead of the app's UI (the phone has no Qt 6 qml
   // runtime), with the same context objects.
   const std::string qml_file = ArgumentValue(argc, argv, nullptr, "--qml");

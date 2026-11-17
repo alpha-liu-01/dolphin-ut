@@ -271,6 +271,9 @@ QVariantMap GameListModel::details(const QString& path) const
       {QStringLiteral("banner"),
        game->GetBannerImage().empty() ? QString() : GameImageProvider::BannerUrl(*game)},
       {QStringLiteral("path"), path},
+      // A Wii disc can update the Wii's system software (stage 6.3, the Android app's
+      // "Perform System Update" in the game properties).
+      {QStringLiteral("wiiDisc"), game->GetPlatform() == DiscIO::Platform::WiiDisc},
   };
 
   // As the Android app: the file format, compression and block size only where they mean something.

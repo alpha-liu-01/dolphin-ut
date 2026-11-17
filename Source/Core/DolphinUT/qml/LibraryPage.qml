@@ -83,6 +83,12 @@ Page {
                     onTriggered: page.openFile()
                 },
                 Action {
+                    // Stage 6.3: the Android main menu's Wii items, on one page.
+                    iconName: "computer-symbolic"
+                    text: "Wii System"
+                    onTriggered: pageStack.push(Qt.resolvedUrl("WiiSystemPage.qml"))
+                },
+                Action {
                     iconName: "input-gaming-symbolic"
                     text: "Controllers"
                     onTriggered: pageStack.push(Qt.resolvedUrl("ControllersPage.qml"))
@@ -328,6 +334,15 @@ Page {
                 onClicked: {
                     settingsModel.clearGameSettings(gameList.details(dialog.gamePath).gameId)
                     PopupUtils.close(dialog)
+                }
+            }
+            Button {
+                // Stage 6.3: the Android app's game properties offer it for Wii discs.
+                text: "Perform System Update"
+                visible: gameList.details(dialog.gamePath).wiiDisc === true
+                onClicked: {
+                    PopupUtils.close(dialog)
+                    pageStack.push(Qt.resolvedUrl("WiiSystemPage.qml"), { discUpdatePath: dialog.gamePath })
                 }
             }
             Button {

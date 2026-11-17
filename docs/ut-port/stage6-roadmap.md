@@ -45,3 +45,13 @@ Notes: `stage6.2-remaining-settings.md`. The generator's "skipped" list is down 
   - "Write Logs to File" (3.6) never took effect: Dolphin's `LogManager` wrote its old state back at exit. Log settings now reach the `LogManager`.
   - Input detection on the mapping pages did not work with the game paused under Settings (6.1).
 
+## 6.3 Wii file actions
+
+#### Status (2026-11-16): done (S6.3-M1–M4 passed; M5 skipped, no files). A GameCube disc started from the Wii Menu crashes in Dolphin's core (MIOS boot with no IOS kernel set): the user's decision, see the notes
+
+Notes: `stage6.3-wii-files.md`.
+- **Library ⋮ → Wii System:** Load Wii System Menu (with the installed version), Perform Online System Update (it installs the Wii Menu first if it is missing, with a region choice), Install WAD, Import Wii Save, Import BootMii NAND Backup.
+- **Perform System Update** on a Wii disc's long press.
+- Dolphin's own code runs on a worker thread, with the Android app's texts. DolphinQt's extras are added where Android lacks them: the NAND import's progress, cancel and keys-file question, and the certificates after an update.
+- The Wii Menu boots as a NAND title (`Emulator::startSystemMenu`).
+

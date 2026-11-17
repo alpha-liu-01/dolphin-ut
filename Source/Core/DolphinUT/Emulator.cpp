@@ -26,6 +26,7 @@
 
 #include "Core/Boot/Boot.h"
 #include "Core/BootManager.h"
+#include "Core/CommonTitles.h"
 #include "Core/Config/GraphicsSettings.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/HW/DVD/DVDInterface.h"
@@ -282,12 +283,13 @@ void Emulator::start(const QString& path, const QString& backend)
   else
     Config::SetCurrent(Config::MAIN_GFX_BACKEND, backend.toStdString());
 
-  const UICommon::GameFile game(path.toStdString());
-  const bool gamecube = game.GetPlatform() == DiscIO::Platform::GameCubeDisc ||
-                        game.GetPlatform() == DiscIO::Platform::Triforce;
+  const bool system_menu = path == QLatin1String(SYSTEM_MENU_PATH);
+  const UICommon::GameFile game(system_menu ? std::string() : path.toStdString());
+  const bool gamecube = !system_menu && (game.GetPlatform() == DiscIO::Platform::GameCubeDisc ||
+                                         game.GetPlatform() == DiscIO::Platform::Triforce);
   appendLog(QStringLiteral("start %1 (%2, %3)")
-                .arg(QFileInfo(path).fileName(), gamecube ? QStringLiteral("GameCube") :
-                                                            QStringLiteral("Wii"),
+                .arg(system_menu ? QStringLiteral("the Wii System Menu") : QFileInfo(path).fileName(),
+                     gamecube ? QStringLiteral("GameCube") : QStringLiteral("Wii"),
                      backend.isEmpty() ?
                          QStringLiteral("configured: %1")
                              .arg(QString::fromStdString(Config::Get(Config::MAIN_GFX_BACKEND))) :
@@ -318,7 +320,9 @@ void Emulator::start(const QString& path, const QString& backend)
   // The in-game menu's actions (the Android app's EmulationActivity.handleMenuAction), all run on
   // the UI thread.
   TouchOverlay::Actions actions;
-  actions.game_title = game.GetName(UICommon::GameFile::Variant::LongAndPossiblyCustom);
+  actions.game_title = system_menu ?
+                           std::string("Wii System Menu") :
+                           game.GetName(UICommon::GameFile::Variant::LongAndPossiblyCustom);
   actions.exit = [] { RequestStopFromAnyThread(); };
   actions.toggle_pause = [this] { togglePause(); };
   actions.screenshot = [] { Core::SaveScreenShot(); };
@@ -361,7 +365,10 @@ void Emulator::start(const QString& path, const QString& backend)
   g_controller_interface.ChangeWindow(wsi.render_window);
   m_lomiri->SetKeepDisplayOn(true);
 
-  if (!BootManager::BootCore(system, BootParameters::GenerateFromFile(path.toStdString()), wsi))
+  auto boot = system_menu ?
+                  std::make_unique<BootParameters>(BootParameters::NANDTitle{Titles::SYSTEM_MENU}) :
+                  BootParameters::GenerateFromFile(path.toStdString());
+  if (!BootManager::BootCore(system, std::move(boot), wsi))
   {
     appendLog(QStringLiteral("BootCore failed"));
     FinishStop();

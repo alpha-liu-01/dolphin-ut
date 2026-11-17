@@ -6,6 +6,7 @@
 // settings-roundtrip, file-picker, import, userdata, paths-roundtrip, sd-roundtrip, gpu-drivers,
 // gpu-roundtrip (--test-arg ZIP; ZIP.nometa.zip is the failure case), hotkeys,
 // remaining-roundtrip, hotkeys-map, log-sync, settings-tap:MENU (--test-arg ROW) (stage 6.2);
+// wii, wii-roundtrip (stage 6.3);
 // anything else
 // shows the library.
 import QtQuick
@@ -168,6 +169,30 @@ Window {
                 console.log("HOTKEYS device " + testMapping.device + " groups " + JSON.stringify(testMapping.groups.map(g => g.name + ":" + g.controls.length)))
                 console.log("HOTKEYS first " + JSON.stringify(testMapping.groups[0].controls))
                 stack.push(base + "HotkeysPage.qml")
+            }
+            else if (page === "wii") stack.push(base + "WiiSystemPage.qml")
+            else if (page === "wii-roundtrip") {
+                // Stage 6.3: the Wii Menu's state, then each action's failure path with dummy files
+                // (--test-arg FOLDER with bogus.wad and bogus.bin), then a disc update from GAME
+                // (--test-arg2 path; a .wbfs usually has no update partition).
+                wiiSystem.refresh()
+                console.log("WII menu installed " + wiiSystem.menuInstalled + " version '" + wiiSystem.menuVersion + "' vWii " + wiiSystem.menuIsVWii)
+                const a = Qt.application.arguments
+                const disc = a.indexOf("--test-arg2") >= 0 ? a[a.indexOf("--test-arg2") + 1] : ""
+                const steps = [
+                    () => wiiSystem.installWad(arg + "/bogus.wad"),
+                    () => wiiSystem.importSave(arg + "/bogus.bin"),
+                    () => wiiSystem.importNand(arg + "/bogus.bin"),
+                    () => wiiSystem.discUpdate(disc),
+                ]
+                let step = 0
+                wiiSystem.progressChanged.connect(() => { if (wiiSystem.progressText !== "") console.log("WII progress " + wiiSystem.progress + "/" + wiiSystem.progressTotal + " " + wiiSystem.progressText.split("\n")[0]) })
+                wiiSystem.finished.connect(function (task, ok, title, message) {
+                    console.log("WII " + task + " " + ok + " '" + title + "' '" + message + "'")
+                    if (++step < steps.length) Qt.callLater(() => console.log("WII start " + steps[step]()))
+                })
+                console.log("WII start " + steps[0]())
+                stack.push(base + "WiiSystemPage.qml")
             }
             else if (page === "hotkeys-map") {
                 // Stage 6.2: map hotkeys to a Pipes device (--test-arg DEVICE, e.g. Pipe/0/hk; the FIFO

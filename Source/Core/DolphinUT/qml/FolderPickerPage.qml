@@ -22,11 +22,17 @@ Page {
     readonly property string currentPath: decodeURIComponent(folders.folder.toString().replace("file://", ""))
 
     signal picked(string path)
+    // Left without a choice (Back). For callers that wait for an answer (stage 6.3: the keys file).
+    signal cancelled()
+    property bool chosen: false
 
     function choose(path) {
+        page.chosen = true
         page.picked(path)
         pageStack.pop()
     }
+
+    Component.onDestruction: if (!chosen) page.cancelled()
 
     header: PageHeader {
         title: page.title

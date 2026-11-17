@@ -33,6 +33,8 @@ add_executable(dolphin-ut
   GpuDrivers.cpp
   GpuDrivers.h
   VulkanDriver.cpp
+  WiiSystem.cpp
+  WiiSystem.h
   VulkanDriver.h
   OverlayLayout.h
   OverlayDefaults.inc
@@ -92,6 +94,7 @@ qt_add_qml_module(dolphin-ut
     qml/UserDataPage.qml
     qml/GpuDriversPage.qml
     qml/HotkeysPage.qml
+    qml/WiiSystemPage.qml
 )
 
 target_include_directories(dolphin-ut PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS})
