@@ -1,5 +1,7 @@
 # Stage 1: build environment and a CPU-only run
 
+> The current build instructions are in [UbuntuTouchSetup.md](../../UbuntuTouchSetup.md). This document records how the build environment came about.
+
 Stage 1 of `roadmap.md`. Goal: an arm64 Dolphin built against the phone's libraries, running the emulation core on the phone without a window, plus the Qt 6 Widgets check left over from stage 0.
 
 Started 2026-11-14:

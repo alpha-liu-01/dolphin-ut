@@ -1,5 +1,7 @@
 # Stage 5: packaging
 
+> How to build and install the click today: [UbuntuTouchSetup.md](../../UbuntuTouchSetup.md). This document records how the packaging came about.
+
 Goal (from `roadmap.md`): an installable click package.
 
 ## What the phone expects

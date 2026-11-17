@@ -8,6 +8,12 @@ of the GNU General Public License, version 2 or later (GPLv2+).
 
 Please read the [FAQ](https://dolphin-emu.org/docs/faq/) before using Dolphin.
 
+> **About this fork:** this repository adds an unofficial port of Dolphin to
+> [Ubuntu Touch](https://ubuntu-touch.io) (`Source/Core/DolphinUT`, packaged as a click). The port
+> is not supported by the Dolphin team; please report problems with it here, not upstream. See
+> [Ubuntu Touch](#ubuntu-touch) below, [UbuntuTouchSetup.md](UbuntuTouchSetup.md) for building it,
+> and [docs/ut-port](docs/ut-port/README.md) for its design notes.
+
 ## System Requirements
 
 ### Desktop
@@ -36,6 +42,21 @@ Please read the [FAQ](https://dolphin-emu.org/docs/faq/) before using Dolphin.
 
 Dolphin can only be installed on devices that satisfy the above requirements. Attempting to install on an unsupported device will fail and display an error message.
 
+### Ubuntu Touch
+
+This fork's port, an app modeled on the Android app with touch controls, settings, gamepads and
+motion controls from the phone's sensors.
+
+* OS
+    * Ubuntu Touch 24.04-2.x (the `ubuntu-touch-24.04-2.x` framework), arm64.
+* Processor
+    * A 64-bit ARMv8 processor.
+* Graphics
+    * The phone's Android GPU driver through libhybris: Vulkan (the default) or OpenGL ES 3.x. A custom
+      Vulkan driver (such as Mesa Turnip on Adreno) can be installed from the app.
+* Tested devices
+    * Redmi Note 12 5G (`sunstone`, Snapdragon 4 Gen 1, Adreno 619). Other devices are untested.
+
 ## Building
 
 You may find building instructions on the appropriate wiki page for your operating system:
@@ -44,6 +65,7 @@ You may find building instructions on the appropriate wiki page for your operati
 * [Linux](https://github.com/dolphin-emu/dolphin/wiki/Building-for-Linux)
 * [macOS](https://github.com/dolphin-emu/dolphin/wiki/Building-for-macOS)
 * [Android](#android-specific-instructions) <!-- TODO: Create a "Building for Android" wiki page and link it here -->
+* [Ubuntu Touch](#ubuntu-touch-specific-instructions) (this fork)
 * [OpenBSD](https://github.com/dolphin-emu/dolphin/wiki/Building-for-OpenBSD) (unsupported)
 
 Before building, make sure to pull all submodules:
@@ -62,6 +84,20 @@ If using Android Studio, import the Gradle project located in `./Source/Android`
 Android apps are compiled using a build system called Gradle. Dolphin's native component,
 however, is compiled using CMake. The Gradle script will attempt to run a CMake build
 automatically while building the Java code.
+
+### Ubuntu Touch-specific instructions
+
+The Ubuntu Touch app is cross-compiled for arm64 in a Docker container that has the phone's own
+libraries (Qt 6 from UBports' 24.04-2.x repository), and packaged as a click:
+
+```sh
+ut/build.sh --release          # build-ut/release/Binaries/dolphin-ut
+ut/click/build-click.sh        # build-ut/<name>_<version>_arm64.click
+ut/click/install-click.sh      # installs it on a phone connected over adb (developer mode)
+```
+
+See [UbuntuTouchSetup.md](UbuntuTouchSetup.md) for the prerequisites, the development build and
+the scripts for running and debugging on a phone.
 
 ## Uninstalling
 

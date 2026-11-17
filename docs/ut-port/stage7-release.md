@@ -6,6 +6,7 @@ Added 2026-11-17 (the user): work around the first OpenStore release, some of it
 | --- | --- | --- |
 | The in-game menu button: hide during play, movable | before the release | done (S7-M1–M5 passed) |
 | Development aids out of the release build | before the release | done over adb (below); one look on screen pending |
+| Build documents and the Readme | before the release | written (below) |
 | Translations of the port's strings | partly after the release | not started; measurement and options in `stage6.8-leftovers.md` |
 | OpenStore submission's decisions (name, maintainer, title, screenshots, a pushed commit) | the release | the user's (stage 5) |
 | RetroAchievements' on-screen tests | when a tester is found | deferred (6.7) |
@@ -116,4 +117,25 @@ Kept in both: Dolphin's own `-u/--user` (user folder) and `-C System.Section.Key
 | Starting it through Lomiri | normal start in the journal (user folder, game list, hotkeys' first start, input devices); closed cleanly. `lomiri-app-launch` itself printed "Lost our connection with the registry" after "Started", a crash of that command-line tool (seen with the screen locked), not of Dolphin |
 
 **S7-M6 (a look).** In the installed Dolphin (from the app drawer, not "Dolphin (dev)"): library ⋮ → **App Log**. Is there only the log, with its note, and no switches, Vibrate button or keyboard field?
+
+## Build documents and the Readme (2026-11-17)
+
+The user's request: complete the build documents and the Readme before the release.
+- **[UbuntuTouchSetup.md](../../UbuntuTouchSetup.md)** (new, at the top of the tree next to Android's `AndroidSetup.md`), for someone building the port:
+  - the target and the one tested phone;
+  - prerequisites (an x86_64 Linux computer with Docker; developer mode and adb for the phone);
+  - the cross container;
+  - the release and development builds;
+  - packaging the click and its settings (`CLICK_NAME`, `CLICK_MAINTAINER`, `CLICK_VERSION`, `CLICK_CONFINED`), and the GPL source link;
+  - installing;
+  - the development loop on a phone (the scripts, the Qt 6 shell plugin for development runs, the GPU driver shim, the development aids, screen captures);
+  - the generated files and when to regenerate them;
+  - where the port's code is, troubleshooting, and the contribution rules.
+- **[Readme.md](../../Readme.md)**, with Dolphin's text unchanged and three additions:
+  - a note at the top that this fork carries an unofficial Ubuntu Touch port, not supported by the Dolphin team, with links;
+  - **Ubuntu Touch** under System Requirements (24.04-2.x arm64; the phone's GPU driver through libhybris; the tested device);
+  - **Ubuntu Touch** in the Building list, and a short "Ubuntu Touch-specific instructions" section with the three commands.
+- **[docs/ut-port/README.md](README.md)** (new): an index of these notes, one line per document.
+- `stage1-build.md` and `stage5-packaging.md` now open with a pointer to `UbuntuTouchSetup.md` for the current instructions.
+- Sizes in the guide were measured: the container image 2.3 GB, the source with submodules about 7 GB (with git's history), each build tree a few hundred MB.
 
