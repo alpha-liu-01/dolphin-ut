@@ -36,6 +36,7 @@
 #include "DolphinUT/Cheats.h"
 #include "DolphinUT/DiscConverter.h"
 #include "DolphinUT/Riivolution.h"
+#include "DolphinUT/UserData.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
 
@@ -182,6 +183,7 @@ int main(int argc, char** argv)
   Cheats cheats;
   Riivolution riivolution;
   DiscConverter disc_converter;
+  UserData user_data;
   QObject::connect(&controllers, &Controllers::message, &emulator, &Emulator::appendLog);
   controllers.SetVibrator([&lomiri](int duration_ms) { lomiri.vibrate(duration_ms); });
   qmlRegisterType<GameListFilter>("DolphinUT.Native", 1, 0, "GameListFilter");
@@ -199,6 +201,7 @@ int main(int argc, char** argv)
   engine.rootContext()->setContextProperty(QStringLiteral("cheats"), &cheats);
   engine.rootContext()->setContextProperty(QStringLiteral("riivolution"), &riivolution);
   engine.rootContext()->setContextProperty(QStringLiteral("discConverter"), &disc_converter);
+  engine.rootContext()->setContextProperty(QStringLiteral("userData"), &user_data);
   // Development: --qml FILE loads that file instead of the app's UI (the phone has no Qt 6 qml
   // runtime), with the same context objects.
   const std::string qml_file = ArgumentValue(argc, argv, nullptr, "--qml");
@@ -247,11 +250,11 @@ int main(int argc, char** argv)
   {
     const std::string backend = ArgumentValue(argc, argv, nullptr, "--backend");
     // --riivolution: with the choices saved on the Riivolution page (stage 6.4).
-    bool riivolution = false;
+    bool with_riivolution = false;
     for (int i = 1; i < argc; ++i)
-      riivolution |= std::string_view(argv[i]) == "--riivolution";
-    QTimer::singleShot(1500, &emulator, [&emulator, start_path, backend, riivolution] {
-      if (riivolution)
+      with_riivolution |= std::string_view(argv[i]) == "--riivolution";
+    QTimer::singleShot(1500, &emulator, [&emulator, start_path, backend, with_riivolution] {
+      if (with_riivolution)
         emulator.startWithRiivolution(QString::fromStdString(start_path));
       else
         emulator.start(QString::fromStdString(start_path), QString::fromStdString(backend));

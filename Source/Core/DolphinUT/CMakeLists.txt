@@ -41,6 +41,8 @@ add_executable(dolphin-ut
   Riivolution.h
   DiscConverter.cpp
   DiscConverter.h
+  UserData.cpp
+  UserData.h
   VulkanDriver.h
   OverlayLayout.h
   OverlayDefaults.inc
@@ -104,6 +106,7 @@ qt_add_qml_module(dolphin-ut
     qml/CheatsPage.qml
     qml/RiivolutionPage.qml
     qml/ConvertPage.qml
+    qml/SharePage.qml
 )
 
 target_include_directories(dolphin-ut PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS})

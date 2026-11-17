@@ -7,6 +7,7 @@
 // gpu-roundtrip (--test-arg ZIP; ZIP.nometa.zip is the failure case), hotkeys,
 // remaining-roundtrip, hotkeys-map, log-sync, settings-tap:MENU (--test-arg ROW) (stage 6.2);
 // wii, wii-roundtrip (stage 6.3); cheats-roundtrip, riivolution, convert, convert-run (stage 6.4);
+// userdata-export, userdata-check, userdata-import, userdata-reset, print-setting, share (--test-arg FILE), userdata (stage 6.5);
 // anything else
 // shows the library.
 import QtQuick
@@ -176,6 +177,46 @@ Window {
                 stack.push(base + "HotkeysPage.qml")
             }
             else if (page === "wii") stack.push(base + "WiiSystemPage.qml")
+            else if (page === "userdata-export") {
+                // Stage 6.5: marker speed 1.5, export to --test-arg ZIP, then speed 1.0 and a file
+                // copied into StateSaves (both should be undone by importing the export).
+                const speed = "FloatSetting.MAIN_EMULATION_SPEED"
+                settingsModel.setValue(speed, 1.5)
+                userData.finished.connect(function (task, ok, cancelled, message) {
+                    console.log("USERDATA " + task + " ok " + ok + " cancelled " + cancelled + " '" + message + "'")
+                    settingsModel.setValue(speed, 1.0)
+                    console.log("USERDATA copy '" + userData.copyIn("/home/phablet/dolphin-ut-probe/ut-env.sh", storage.userFolder + "/StateSaves", false) + "'")
+                    console.log("USERDATA copy again '" + userData.copyIn("/home/phablet/dolphin-ut-probe/ut-env.sh", storage.userFolder + "/StateSaves", false) + "'")
+                    console.log("USERDATA copy outside '" + userData.copyIn("/home/phablet/dolphin-ut-probe/ut-env.sh", "/home/phablet", false) + "'")
+                })
+                console.log("USERDATA into user folder refused " + !userData.exportTo(storage.userFolder + "/x.zip"))
+                console.log("USERDATA export start " + userData.exportTo(arg) + " backup folder " + userData.backupFolder + " new " + userData.newBackupPath())
+                stack.push(base + "UserDataPage.qml")
+            }
+            else if (page === "userdata-check") {
+                // --test-arg FOLDER with notzip.zip, noini.zip, traversal.zip; then imports traversal.zip.
+                for (const f of ["notzip.zip", "noini.zip", "traversal.zip"])
+                    console.log("USERDATA check " + f + " '" + userData.checkBackup(arg + "/" + f) + "'")
+                userData.finished.connect((task, ok, cancelled, message) => console.log("USERDATA " + task + " ok " + ok + " '" + message + "'"))
+                console.log("USERDATA import traversal start " + userData.importFrom(arg + "/traversal.zip"))
+            }
+            else if (page === "userdata-import") {
+                // --test-arg ZIP: import, then quit as the dialog's button does.
+                console.log("USERDATA speed before import " + settingsModel.value("FloatSetting.MAIN_EMULATION_SPEED"))
+                userData.finished.connect(function (task, ok, cancelled, message) {
+                    console.log("USERDATA " + task + " ok " + ok + " '" + message + "'")
+                    if (ok) userData.quitNow()
+                })
+                console.log("USERDATA import start " + userData.importFrom(arg))
+            }
+            else if (page === "userdata-reset") {
+                console.log("USERDATA speed before reset " + settingsModel.value("FloatSetting.MAIN_EMULATION_SPEED") + " dual core " + settingsModel.value("BooleanSetting.MAIN_CPU_THREAD"))
+                console.log("USERDATA reset " + userData.resetSettings())
+                console.log("USERDATA speed after reset " + settingsModel.value("FloatSetting.MAIN_EMULATION_SPEED") + " dual core " + settingsModel.value("BooleanSetting.MAIN_CPU_THREAD"))
+            }
+            else if (page === "share") stack.push(base + "SharePage.qml", { path: arg })
+            else if (page === "userdata") stack.push(base + "UserDataPage.qml")
+            else if (page === "print-setting") console.log("SETTING " + arg + " = " + settingsModel.value(arg))
             else if (page === "cheats-roundtrip") {
                 // Stage 6.4: a game's codes (--test-arg GAMEID, --test-arg2 GAMETDBID): counts, then
                 // add, check, toggle, edit and delete one code of each kind, then download Gecko codes.

@@ -64,3 +64,14 @@ Notes: `stage6.4-game-tools.md`. The library's long press gains the Android game
 - **Riivolution:** the patch XMLs for the game with their choices, saved, then a start with the patches.
 - **Convert File:** ISO, GCZ, WIA or RVZ with Android's options and warnings, progress and cancel. Need for Speed (1.46 GB) to RVZ took 17 s on the phone.
 
+## 6.5 Export and user data
+
+#### Status (2026-11-16): built and checked over adb; on-screen tests S6.5-M1–M5 pending
+
+Notes: `stage6.5-user-data.md`. Config → User Data gains Android's actions:
+- Export User Data: a zip in Documents/Dolphin/Backups, visible over USB.
+- Import User Data: every entry is checked before the folder is emptied, and the app closes without saving afterwards.
+- Reset Dolphin Settings: the port's defaults come back at once.
+
+It also gains single files out (to the File Manager or another app through content-hub) and in (a save state or memory card copied into a folder of the user data), since the user folder is not visible over USB.
+
