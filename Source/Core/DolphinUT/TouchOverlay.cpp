@@ -24,6 +24,7 @@
 
 #include "Common/FileUtil.h"
 #include "Common/StringUtil.h"
+#include "Core/AchievementManager.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/Config/UISettings.h"
 #include "Core/ConfigManager.h"
@@ -1374,12 +1375,19 @@ void TouchOverlay::DrawGameMenu()
       {
         if (ImGui::Button("Quick Save", full) && m_actions.save_state)
           action([save = m_actions.save_state] { save(9); }, true);
+        // Stage 6.7: loading states is off in RetroAchievements' hardcore mode (the core refuses
+        // it); greyed out, as the Android app strikes these through (MenuFragment).
+        const bool hardcore = AchievementManager::GetInstance().IsHardcoreModeActive();
+        ImGui::BeginDisabled(hardcore);
         if (ImGui::Button("Quick Load", full) && m_actions.load_state)
           action([load = m_actions.load_state] { load(9); }, true);
+        ImGui::EndDisabled();
         if (ImGui::Button("Save State", full))
           OpenPage(Menu::SaveState);
+        ImGui::BeginDisabled(hardcore);
         if (ImGui::Button("Load State", full))
           OpenPage(Menu::LoadState);
+        ImGui::EndDisabled();
       }
       if (m_actions.open_settings && ImGui::Button("Settings", full))
         action(m_actions.open_settings, true);

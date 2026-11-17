@@ -73,6 +73,12 @@
     },
     {
      "type": "submenu",
+     "title": "RetroAchievements",
+     "menu": "CONFIG_ACHIEVEMENTS",
+     "globalOnly": true
+    },
+    {
+     "type": "submenu",
      "title": "Advanced",
      "menu": "CONFIG_ADVANCED"
     },
@@ -711,6 +717,88 @@
     }
    ],
    "title": "Wii"
+  },
+  "CONFIG_ACHIEVEMENTS": {
+   "items": [
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.ACHIEVEMENTS_ENABLED",
+     "title": "Enable Achievements",
+     "description": "",
+     "inverted": false
+    },
+    {
+     "type": "achievementsAccount",
+     "title": "Log In",
+     "globalOnly": true,
+     "visibleIf": "BooleanSetting.ACHIEVEMENTS_ENABLED"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.ACHIEVEMENTS_HARDCORE_ENABLED",
+     "title": "Enable Hardcore Mode",
+     "description": "",
+     "inverted": false,
+     "visibleIf": "BooleanSetting.ACHIEVEMENTS_ENABLED"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.ACHIEVEMENTS_UNOFFICIAL_ENABLED",
+     "title": "Enable Unofficial Achievements",
+     "description": "",
+     "inverted": false,
+     "visibleIf": "BooleanSetting.ACHIEVEMENTS_ENABLED"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.ACHIEVEMENTS_ENCORE_ENABLED",
+     "title": "Enable Encore Mode",
+     "description": "",
+     "inverted": false,
+     "visibleIf": "BooleanSetting.ACHIEVEMENTS_ENABLED"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.ACHIEVEMENTS_SPECTATOR_ENABLED",
+     "title": "Enable Spectator Mode",
+     "description": "",
+     "inverted": false,
+     "visibleIf": "BooleanSetting.ACHIEVEMENTS_ENABLED"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.ACHIEVEMENTS_LEADERBOARD_TRACKER_ENABLED",
+     "title": "Show Leaderboard Tracker",
+     "description": "",
+     "inverted": false,
+     "visibleIf": "BooleanSetting.ACHIEVEMENTS_ENABLED"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.ACHIEVEMENTS_CHALLENGE_INDICATORS_ENABLED",
+     "title": "Show Challenge Indicators",
+     "description": "",
+     "inverted": false,
+     "visibleIf": "BooleanSetting.ACHIEVEMENTS_ENABLED"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.ACHIEVEMENTS_PROGRESS_ENABLED",
+     "title": "Enable Progress Notifications",
+     "description": "",
+     "inverted": false,
+     "visibleIf": "BooleanSetting.ACHIEVEMENTS_ENABLED"
+    },
+    {
+     "type": "switch",
+     "setting": "BooleanSetting.ACHIEVEMENTS_SOUND_ENABLED",
+     "title": "Play Sounds for Notifications",
+     "description": "",
+     "inverted": false,
+     "visibleIf": "BooleanSetting.ACHIEVEMENTS_ENABLED"
+    }
+   ],
+   "title": "RetroAchievements"
   },
   "CONFIG_ADVANCED": {
    "items": [
@@ -1852,6 +1940,101 @@
   }
  },
  "settings": {
+  "BooleanSetting.ACHIEVEMENTS_CHALLENGE_INDICATORS_ENABLED": {
+   "type": "boolean",
+   "file": "RetroAchievements",
+   "section": "Achievements",
+   "key": "ChallengeIndicatorsEnabled",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": false
+  },
+  "BooleanSetting.ACHIEVEMENTS_ENABLED": {
+   "type": "boolean",
+   "file": "RetroAchievements",
+   "section": "Achievements",
+   "key": "Enabled",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "lockedWhileRunning": true,
+   "core": false
+  },
+  "BooleanSetting.ACHIEVEMENTS_ENCORE_ENABLED": {
+   "type": "boolean",
+   "file": "RetroAchievements",
+   "section": "Achievements",
+   "key": "EncoreEnabled",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "lockedWhileRunning": true,
+   "core": false
+  },
+  "BooleanSetting.ACHIEVEMENTS_HARDCORE_ENABLED": {
+   "type": "boolean",
+   "file": "RetroAchievements",
+   "section": "Achievements",
+   "key": "HardcoreEnabled",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "lockedWhileRunning": true,
+   "core": false
+  },
+  "BooleanSetting.ACHIEVEMENTS_LEADERBOARD_TRACKER_ENABLED": {
+   "type": "boolean",
+   "file": "RetroAchievements",
+   "section": "Achievements",
+   "key": "LeaderboardTrackerEnabled",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": false
+  },
+  "BooleanSetting.ACHIEVEMENTS_PROGRESS_ENABLED": {
+   "type": "boolean",
+   "file": "RetroAchievements",
+   "section": "Achievements",
+   "key": "ProgressEnabled",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "core": false
+  },
+  "BooleanSetting.ACHIEVEMENTS_SOUND_ENABLED": {
+   "type": "boolean",
+   "file": "RetroAchievements",
+   "section": "Achievements",
+   "key": "SoundFeedback",
+   "default": true,
+   "dynamic": false,
+   "expression": null,
+   "core": false
+  },
+  "BooleanSetting.ACHIEVEMENTS_SPECTATOR_ENABLED": {
+   "type": "boolean",
+   "file": "RetroAchievements",
+   "section": "Achievements",
+   "key": "SpectatorEnabled",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "lockedWhileRunning": true,
+   "core": false
+  },
+  "BooleanSetting.ACHIEVEMENTS_UNOFFICIAL_ENABLED": {
+   "type": "boolean",
+   "file": "RetroAchievements",
+   "section": "Achievements",
+   "key": "UnofficialEnabled",
+   "default": false,
+   "dynamic": false,
+   "expression": null,
+   "lockedWhileRunning": true,
+   "core": false
+  },
   "BooleanSetting.GFX_BACKEND_MULTITHREADING": {
    "type": "boolean",
    "file": "GFX",
@@ -3482,21 +3665,6 @@
    "menu": "CONFIG_INTERFACE",
    "kind": "SwitchSetting",
    "title": "Use Black Backgrounds"
-  },
-  {
-   "menu": "CONFIG_ACHIEVEMENTS",
-   "kind": "SwitchSetting",
-   "title": "Enable Achievements"
-  },
-  {
-   "menu": "CONFIG_ACHIEVEMENTS",
-   "kind": "RunRunnable",
-   "title": "Log In"
-  },
-  {
-   "menu": "CONFIG_ACHIEVEMENTS",
-   "kind": "RunRunnable",
-   "title": "Log Out"
   },
   {
    "menu": "WIIMOTE",

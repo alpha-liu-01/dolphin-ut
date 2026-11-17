@@ -537,6 +537,7 @@ void SettingsModel::setValue(const QString& name, const QVariant& value)
   Emulator::LogFromAnyThread(QStringLiteral("setting %1 = %2%3")
                                  .arg(name, value.toString(),
                                       game ? QStringLiteral(" (game %1)").arg(m_game_id) : QString()));
+  emit valueChanged(name, it->second.get());
   Changed();
 }
 

@@ -38,6 +38,8 @@
 #include "DolphinUT/Riivolution.h"
 #include "DolphinUT/UserData.h"
 #include "DolphinUT/PhoneSensors.h"
+#include "DolphinUT/Achievements.h"
+#include "Core/AchievementManager.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
 
@@ -187,6 +189,13 @@ int main(int argc, char** argv)
   UserData user_data;
   // Stage 6.6: the phone's accelerometer and gyroscope for the phone input device (sensorfwd).
   PhoneSensors phone_sensors;
+  // Stage 6.7: RetroAchievements (starts Dolphin's AchievementManager if enabled).
+  Achievements achievements;
+  QObject::connect(&settings_model, &SettingsModel::valueChanged, &achievements,
+                   [&achievements](const QString& name, const QVariant& value) {
+                     if (name == QLatin1String("BooleanSetting.ACHIEVEMENTS_ENABLED"))
+                       achievements.SetEnabled(value.toBool());
+                   });
   QObject::connect(&controllers, &Controllers::message, &emulator, &Emulator::appendLog);
   controllers.SetVibrator([&lomiri](int duration_ms) { lomiri.vibrate(duration_ms); });
   qmlRegisterType<GameListFilter>("DolphinUT.Native", 1, 0, "GameListFilter");
@@ -205,6 +214,7 @@ int main(int argc, char** argv)
   engine.rootContext()->setContextProperty(QStringLiteral("riivolution"), &riivolution);
   engine.rootContext()->setContextProperty(QStringLiteral("discConverter"), &disc_converter);
   engine.rootContext()->setContextProperty(QStringLiteral("userData"), &user_data);
+  engine.rootContext()->setContextProperty(QStringLiteral("achievements"), &achievements);
   // Development: --qml FILE loads that file instead of the app's UI (the phone has no Qt 6 qml
   // runtime), with the same context objects.
   const std::string qml_file = ArgumentValue(argc, argv, nullptr, "--qml");
@@ -352,6 +362,8 @@ int main(int argc, char** argv)
 
   const int result = app.exec();
   emulator.Shutdown();
+  // Before the config goes (the Achievements object outlives this function's end).
+  AchievementManager::GetInstance().Shutdown();
   UICommon::Shutdown();
   return result;
 }

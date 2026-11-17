@@ -84,6 +84,8 @@ signals:
   void gameChanged();
   void busyChanged();
   void actionFinished(const QString& action, bool ok, const QString& message);
+  // A setting set through setValue (global or for a game), with its new value as read back.
+  void valueChanged(const QString& name, const QVariant& value);
 
 private:
   void Changed();

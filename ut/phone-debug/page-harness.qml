@@ -7,7 +7,7 @@
 // gpu-roundtrip (--test-arg ZIP; ZIP.nometa.zip is the failure case), hotkeys,
 // remaining-roundtrip, hotkeys-map, log-sync, settings-tap:MENU (--test-arg ROW) (stage 6.2);
 // wii, wii-roundtrip (stage 6.3); cheats-roundtrip, riivolution, convert, convert-run (stage 6.4);
-// userdata-export, userdata-check, userdata-import, userdata-reset, print-setting, share (--test-arg FILE), userdata (stage 6.5); motion (--test-arg MODE) (stage 6.6);
+// userdata-export, userdata-check, userdata-import, userdata-reset, print-setting, share (--test-arg FILE), userdata (stage 6.5); motion (--test-arg MODE) (stage 6.6); achievements (--test-arg on|off) (stage 6.7);
 // anything else
 // shows the library.
 import QtQuick
@@ -223,6 +223,14 @@ Window {
                 if (arg !== "") controllers.setWiimoteMotion(0, Number(arg))
                 console.log("MOTION after " + controllers.wiimoteMotion(0))
                 stack.push(base + "WiimotePage.qml", { wiimote: 0 })
+            }
+            else if (page === "achievements") {
+                // Stage 6.7: --test-arg on|off sets Enable Achievements, then the menu.
+                const name = "BooleanSetting.ACHIEVEMENTS_ENABLED"
+                console.log("ACH before enabled " + settingsModel.value(name) + " loggedIn " + achievements.loggedIn + " hardcore " + achievements.hardcoreActive)
+                if (arg !== "") settingsModel.setValue(name, arg === "on")
+                console.log("ACH after enabled " + settingsModel.value(name) + " loggedIn " + achievements.loggedIn + " hardcore " + achievements.hardcoreActive + " user '" + achievements.username + "'")
+                stack.push(base + "SettingsPage.qml", { menuTag: "CONFIG_ACHIEVEMENTS" })
             }
             else if (page === "print-setting") console.log("SETTING " + arg + " = " + settingsModel.value(arg))
             else if (page === "cheats-roundtrip") {

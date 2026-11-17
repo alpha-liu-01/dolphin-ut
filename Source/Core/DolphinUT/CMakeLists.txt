@@ -45,6 +45,8 @@ add_executable(dolphin-ut
   UserData.h
   PhoneSensors.cpp
   PhoneSensors.h
+  Achievements.cpp
+  Achievements.h
   VulkanDriver.h
   OverlayLayout.h
   OverlayDefaults.inc

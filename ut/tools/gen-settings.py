@@ -244,6 +244,17 @@ for tag, function in tags.items():
             # One switch per log type (NativeLibrary.GetLogTypeNames): SettingsModel::menu expands
             # it from Dolphin's LogManager. The log belongs to the app, not to a game.
             item = {"type": "logTypes", "globalOnly": True}
+        elif kind == "SwitchSetting" and len(args) >= 3 and args[1] == "achievementsEnabledSetting":
+            # Stage 6.7: the presenter's converter object around ACHIEVEMENTS_ENABLED (it also starts or
+            # stops the AchievementManager, which the port's SettingsModel does).
+            item = {"type": "switch", "setting": "BooleanSetting.ACHIEVEMENTS_ENABLED",
+                    "title": res_string(args[2]), "description": "", "inverted": False}
+        elif kind == "RunRunnable" and "LoginDialog" in trailing:
+            # Stage 6.7: Log In and Log Out become one account item (the port's AchievementsAccount in
+            # SettingsPage.qml: logged in as …, or the login form), as the presenter shows one of them.
+            item = {"type": "achievementsAccount", "title": res_string(args[1]), "globalOnly": True}
+        elif kind == "RunRunnable" and "logout()" in trailing:
+            continue
         elif kind in ("SwitchSetting", "InvertedSwitchSetting") and setting and len(args) >= 4:
             item = {"type": "switch", "setting": setting, "title": res_string(args[2]),
                     "description": res_string(args[3]), "inverted": kind == "InvertedSwitchSetting"}
@@ -310,7 +321,7 @@ for tag, function in tags.items():
 HIDDEN_SETTINGS = {"IntSetting.MAIN_EMULATION_ORIENTATION", "BooleanSetting.MAIN_EXPAND_TO_CUTOUT_AREA",
                    # Analytics are not built into the port (ENABLE_ANALYTICS=OFF).
                    "BooleanSetting.MAIN_ANALYTICS_ENABLED"}
-HIDDEN_MENUS = {"CONFIG_ACHIEVEMENTS"}
+HIDDEN_MENUS = set()
 # Menus the port draws with its own page. The GPU driver is chosen for the whole app, at start
 # (stage 4, VulkanDriver.h), as the Android app offers it only outside game settings. Hotkeys
 # (stage 6.2) are the mapping page over Dolphin's hotkey controller (Hotkeys.ini, global, as the
@@ -319,7 +330,11 @@ REDIRECTS = {"GCPAD_TYPE": "ControllersPage.qml", "WIIMOTE": "ControllersPage.qm
              "GPU_DRIVERS": "GpuDriversPage.qml", "HOTKEYS": "HotkeysPage.qml"}
 # Menus about the app rather than a game (stage 6.2): the log. The Android app shows it in game
 # settings too, but Dolphin reads the Logger file only globally.
-GLOBAL_MENUS = {"CONFIG_LOG"}
+GLOBAL_MENUS = {"CONFIG_LOG", "CONFIG_ACHIEVEMENTS"}
+# Stage 6.7: as the presenter, the achievement items after "Enable Achievements" only while it is on.
+for item in menus.get("CONFIG_ACHIEVEMENTS", {}).get("items", []):
+    if item.get("setting") != "BooleanSetting.ACHIEVEMENTS_ENABLED":
+        item["visibleIf"] = "BooleanSetting.ACHIEVEMENTS_ENABLED"
 # The top level's "Long press a setting to clear it." is shown with game settings only, as there.
 for item in menus["SETTINGS"]["items"]:
     if item["type"] == "header" and item["title"] == strings.get("setting_clear_info"):

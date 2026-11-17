@@ -84,3 +84,13 @@ Notes: `stage6.6-motion.md`.
 - **The phone input device** gains the Android app's "Device Sensors" inputs (Accel …, Gyro …). They run only while a game reads them, and turn with a landscape game (the side told from gravity, since Lomiri does not report its rotation).
 - **Wii Remote page → Motion Controls:** the Android app's three choices (device sensors with or without the gyroscope pointer, or none). It stays off by default.
 
+## 6.7 RetroAchievements
+
+#### Status (2026-11-16): built and checked over adb; on-screen tests S6.7-M1–M4 pending (a RetroAchievements account needed for the login)
+
+Notes: `stage6.7-achievements.md`.
+- **Dolphin's AchievementManager** now starts with the app and follows "Enable Achievements".
+- **Config → RetroAchievements** (no longer hidden) has Android's items: Enable Achievements, Log In / Log Out (one account item with a login dialog; only the token Dolphin gets back is kept), and Dolphin's eight switches, shown only while achievements are on.
+- **Hardcore:** the in-game menu greys out Quick Load and Load State while it is active, as Android strikes them through. Dolphin enforces the rest. It is active as soon as achievements are on with hardcore enabled, even before logging in (Dolphin's rule).
+- **Notifications:** Dolphin's own, in the picture.
+

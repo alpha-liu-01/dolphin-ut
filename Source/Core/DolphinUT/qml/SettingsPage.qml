@@ -131,7 +131,9 @@ Page {
                 delegate: Loader {
                     width: column.width
                     // Some items are for game settings only, or for the global ones only.
-                    active: !(modelData.gameOnly && !page.gameMode) && !(modelData.globalOnly && page.gameMode)
+                    // Stage 6.7: some items only while another setting is on ("visibleIf").
+                    active: !(modelData.gameOnly && !page.gameMode) && !(modelData.globalOnly && page.gameMode) &&
+                            !(modelData.visibleIf && !page.valueOf(modelData.visibleIf))
                     visible: active
                     // The loaded component reads it as its parent's "entry".
                     readonly property var entry: modelData
@@ -148,6 +150,7 @@ Page {
                         case "folder": return pathItem
                         case "action": return actionItem
                         case "datetime": return dateTimeItem
+                        case "achievementsAccount": return achievementsAccountItem
                         }
                         return null
                     }
@@ -510,6 +513,102 @@ Page {
                     seconds = Math.min(Math.max(seconds, dialog.entry.min), dialog.entry.max)
                     if (seconds !== Number(page.valueOf(dialog.entry.setting)))
                         settingsModel.setValue(dialog.entry.setting, seconds)
+                    PopupUtils.close(dialog)
+                }
+            }
+            Button {
+                text: "Cancel"
+                onClicked: PopupUtils.close(dialog)
+            }
+        }
+    }
+
+    // RetroAchievements' account (stage 6.7): the presenter's Log In / Log Out, with LoginDialog.
+    Component {
+        id: achievementsAccountItem
+        ListItem {
+            readonly property var entry: parent ? parent.entry : ({})
+            height: accountLayout.height + (divider.visible ? divider.height : 0)
+            onClicked: {
+                if (achievements.loggedIn)
+                    PopupUtils.open(logoutDialog, page)
+                else
+                    PopupUtils.open(loginDialog, page)
+            }
+            ListItemLayout {
+                id: accountLayout
+                title.text: achievements.loggedIn ? "Log Out" : "Log In"
+                subtitle.text: achievements.loggedIn ?
+                                   "Logged in as " + (achievements.displayName !== "" ? achievements.displayName : achievements.username) +
+                                   (achievements.score > 0 ? " (" + achievements.score + " points)" : "") :
+                                   "A RetroAchievements account (retroachievements.org)"
+                subtitle.wrapMode: Text.Wrap
+            }
+        }
+    }
+
+    Component {
+        id: loginDialog
+        Dialog {
+            id: dialog
+            property string error: ""
+            title: "Log In"
+            text: "RetroAchievements account. Only a login token is kept, not the password."
+            TextField {
+                id: usernameField
+                placeholderText: "Username"
+                text: achievements.username
+                inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase
+            }
+            TextField {
+                id: passwordField
+                placeholderText: "Password"
+                echoMode: TextInput.Password
+                inputMethodHints: Qt.ImhNoPredictiveText | Qt.ImhNoAutoUppercase | Qt.ImhSensitiveData
+            }
+            Label {
+                visible: achievements.loggingIn || dialog.error !== ""
+                wrapMode: Text.Wrap
+                text: achievements.loggingIn ? "Logging In…" : "Login Failed: " + dialog.error
+                color: achievements.loggingIn ? theme.palette.normal.backgroundText : theme.palette.normal.negative
+            }
+            Connections {
+                target: achievements
+                function onLoginFinished(ok, message) {
+                    if (ok)
+                        PopupUtils.close(dialog)
+                    else
+                        dialog.error = message
+                }
+            }
+            Button {
+                text: "Log In"
+                color: theme.palette.normal.positive
+                enabled: !achievements.loggingIn && usernameField.text.trim() !== "" && passwordField.text !== ""
+                onClicked: {
+                    dialog.error = ""
+                    achievements.login(usernameField.text, passwordField.text)
+                }
+            }
+            Button {
+                text: "Cancel"
+                enabled: !achievements.loggingIn
+                onClicked: PopupUtils.close(dialog)
+            }
+        }
+    }
+
+    Component {
+        id: logoutDialog
+        Dialog {
+            id: dialog
+            title: "Log Out"
+            text: "Log out of RetroAchievements?"
+            Button {
+                text: "Log Out"
+                color: theme.palette.normal.negative
+                onClicked: {
+                    achievements.logout()
                     PopupUtils.close(dialog)
                 }
             }
