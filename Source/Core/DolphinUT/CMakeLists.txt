@@ -64,6 +64,14 @@ target_sources(dolphin-ut PRIVATE
 
 set_target_properties(dolphin-ut PROPERTIES AUTOMOC ON)
 
+# Stage 7: development aids (test command-line options, environment hooks, periodic speed logging,
+# the App Log page's switches). On for development builds; the click is built with them off
+# (ut/build.sh --release, ut/click/build-click.sh).
+option(DOLPHIN_UT_DEV_TOOLS "Build dolphin-ut's development and test aids" ON)
+if(DOLPHIN_UT_DEV_TOOLS)
+  target_compile_definitions(dolphin-ut PRIVATE DOLPHIN_UT_DEV_TOOLS)
+endif()
+
 # QTP0001: put the module under qrc:/qt/qml/, which is on the QML import path, so
 # QQmlApplicationEngine::loadFromModule("DolphinUT", "Main") finds it.
 qt_policy(SET QTP0001 NEW)

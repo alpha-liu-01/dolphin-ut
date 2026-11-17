@@ -130,6 +130,8 @@ Emulator::Emulator(LomiriIntegration* lomiri, QObject* parent) : QObject(parent)
     // Threads started since (shader compilers, …) get the boost too.
     if (m_cpu_boost > 0)
       CpuBoost::Apply(m_cpu_boost);
+#ifdef DOLPHIN_UT_DEV_TOOLS
+    // Development builds only (stage 7): the speed every 5 s in the log.
     const PerformanceMetrics& perf = system.GetPerfMetrics();
     appendLog(QStringLiteral("perf: %1 fps, %2 vps, %3% speed (%4)")
                   .arg(perf.GetFPS(), 0, 'f', 1)
@@ -137,6 +139,7 @@ Emulator::Emulator(LomiriIntegration* lomiri, QObject* parent) : QObject(parent)
                   .arg(perf.GetSpeed() * 100.0, 0, 'f', 0)
                   .arg(system.IsDualCoreMode() ? QStringLiteral("dual core") :
                                                  QStringLiteral("single core")));
+#endif
   });
   m_perf_log.start();
 

@@ -437,7 +437,7 @@ Page {
             property bool ok
             property string message
             title: ok ? "Done" : "Failed"
-            text: message !== "" ? message : ok ? "" : "See the log on the Developer page."
+            text: message !== "" ? message : ok ? "" : "See the App Log (library ⋮ → App Log)."
             Button {
                 text: "OK"
                 onClicked: PopupUtils.close(dialog)

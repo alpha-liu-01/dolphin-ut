@@ -276,8 +276,8 @@ bool WiiSystem::importNand(const QString& path)
     if (!complete)
     {
       return Result{false, QStringLiteral("Failed"),
-                    QStringLiteral("The NAND backup could not be imported. See the log on the "
-                                   "Developer page.")};
+                    QStringLiteral("The NAND backup could not be imported. See the App Log "
+                                   "(library ⋮ → App Log).")};
     }
     return Result{true, QStringLiteral("Done"), QStringLiteral("The NAND backup was imported.")};
   });

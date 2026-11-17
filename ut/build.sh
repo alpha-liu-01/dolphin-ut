@@ -4,6 +4,9 @@
 #   ut/build.sh                 configure (first time) and build into build-ut/dolphin
 #   ut/build.sh --reconfigure   wipe the CMake cache first
 #   ut/build.sh --package       also make build-ut/dolphin-ut-arm64.tar.gz (binaries + Sys)
+#   ut/build.sh --release       the release build for the click instead (stage 7): build-ut/release,
+#                               dolphin-ut only, without its development aids
+#                               (-DDOLPHIN_UT_DEV_TOOLS=OFF); ut/click/build-click.sh packages it
 #   ut/build.sh --image         (re)build the container image first
 #
 # Extra CMake options can be passed in $DOLPHIN_CMAKE_ARGS.
@@ -14,15 +17,27 @@ image=dolphin-ut-cross
 build=build-ut/dolphin
 reconfigure=0
 package=0
+release=0
+target=
 
 for arg in "$@"; do
   case "$arg" in
     --reconfigure) reconfigure=1 ;;
     --package) package=1 ;;
+    --release) release=1 ;;
     --image) docker build -t "$image" "$root/ut/docker" ;;
     *) echo "unknown option: $arg" >&2; exit 2 ;;
   esac
 done
+
+# The release build: only the app, without its development aids (the frontends and tools the click
+# does not ship are left out, so this tree builds less).
+release_args=
+if [ "$release" = 1 ]; then
+  build=build-ut/release
+  target=dolphin-ut
+  release_args="-DDOLPHIN_UT_DEV_TOOLS=OFF -DENABLE_QT=OFF -DENABLE_NOGUI=OFF -DENABLE_CLI_TOOL=OFF"
+fi
 
 docker image inspect "$image" >/dev/null 2>&1 || docker build -t "$image" "$root/ut/docker"
 
@@ -43,9 +58,9 @@ docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$root:/src" -w /src "$im
       -DENCODE_FRAMEDUMPS=OFF \
       -DENABLE_UT_FRONTEND=ON \
       -DCURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt -DCURL_CA_PATH=/etc/ssl/certs \
-      ${DOLPHIN_CMAKE_ARGS:-}
+      $release_args ${DOLPHIN_CMAKE_ARGS:-}
   fi
-  ninja -C $build
+  ninja -C $build $target
 "
 
 if [ "$package" = 1 ]; then

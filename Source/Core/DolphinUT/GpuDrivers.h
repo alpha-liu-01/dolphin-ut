@@ -31,7 +31,7 @@ class GpuDrivers : public QObject
 
 public:
   // In main(), after the user folder is set and before QGuiApplication (libhybris starts with
-  // Qt's EGL). DOLPHIN_UT_GPU_DRIVER (a folder, for tests) overrides the setting. Returns a line
+  // Qt's EGL). DOLPHIN_UT_GPU_DRIVER (a folder, for tests; development builds only) overrides the setting. Returns a line
   // for the log, or "" when the system driver is used as chosen.
   static std::string ApplyAtStart();
   // Stage 6.8: whether a file is a driver package (a zip with meta.json), for files that come from

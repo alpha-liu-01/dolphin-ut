@@ -100,7 +100,7 @@ Page {
                 },
                 Action {
                     iconName: "info"
-                    text: "Developer"
+                    text: "App Log"
                     onTriggered: pageStack.push(Qt.resolvedUrl("DeveloperPage.qml"))
                 }
             ]

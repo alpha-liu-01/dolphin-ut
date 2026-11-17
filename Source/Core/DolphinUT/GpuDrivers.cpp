@@ -95,6 +95,8 @@ QVariantMap ReadMetadata(const QString& folder)
 std::string GpuDrivers::ApplyAtStart()
 {
   std::string folder;
+#ifdef DOLPHIN_UT_DEV_TOOLS
+  // Development builds only (stage 7): a test may force a driver folder.
   if (const char* from_environment = std::getenv("DOLPHIN_UT_GPU_DRIVER");
       from_environment && *from_environment)
   {
@@ -102,6 +104,7 @@ std::string GpuDrivers::ApplyAtStart()
     s_active = QString::fromStdString(folder);
   }
   else
+#endif
   {
     // Dolphin's config system starts later (UICommon::Init), so read its file directly.
     Common::IniFile ini;

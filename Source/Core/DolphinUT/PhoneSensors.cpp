@@ -89,8 +89,13 @@ double PhoneSensors::Read(Sensor sensor, int axis)
 void PhoneSensors::Check()
 {
   const qint64 idle = NowMs() - m_last_read_ms.load(std::memory_order_relaxed);
-  // Test aid: DOLPHIN_UT_SENSOR_LOG=1 logs the screen-axis values once a second while running.
+  // Test aid: DOLPHIN_UT_SENSOR_LOG=1 logs the screen-axis values once a second while running
+  // (development builds only, stage 7).
+#ifdef DOLPHIN_UT_DEV_TOOLS
   static const bool log_values = qEnvironmentVariableIsSet("DOLPHIN_UT_SENSOR_LOG");
+#else
+  constexpr bool log_values = false;
+#endif
   static int ticks = 0;
   if (log_values && m_sessions[Accelerometer] && ++ticks % 2 == 0)
   {

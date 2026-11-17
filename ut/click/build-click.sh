@@ -1,7 +1,10 @@
 #!/bin/sh
 # Builds the click package (stage 5, docs/ut-port/stage5-packaging.md) from the cross build:
 #
-#   ut/build.sh && ut/click/build-click.sh      build-ut/<name>_<version>_arm64.click
+#   ut/build.sh --release && ut/click/build-click.sh      build-ut/<name>_<version>_arm64.click
+#
+# It packages the release build (build-ut/release: no development aids, stage 7), not the
+# development build in build-ut/dolphin.
 #
 # Install on the phone (24.04 has no pkcon; this is what clickable does): ut/click/install-click.sh,
 # or adb push the .click to /home/phablet/ and run
@@ -27,12 +30,12 @@
 # in lib/hybris/ (stage 4, ut/vkdriver). Everything else is on the phone (stage 1).
 set -eu
 root=$(cd "$(dirname "$0")/../.." && pwd)
-build=build-ut/dolphin
+build=build-ut/release
 name=${CLICK_NAME:-dolphin-ut.alphaliu01}
 confined=${CLICK_CONFINED:-0}
 scmrev="$root/$build/Source/Core/Common/scmrev.h"
 [ -f "$root/$build/Binaries/dolphin-ut" ] && [ -f "$scmrev" ] || {
-  echo "no build: run ut/build.sh first" >&2
+  echo "no release build: run ut/build.sh --release first" >&2
   exit 1
 }
 maintainer=${CLICK_MAINTAINER:-"$(git -C "$root" config user.name) <$(git -C "$root" config user.email)>"}

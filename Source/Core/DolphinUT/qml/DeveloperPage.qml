@@ -4,13 +4,14 @@
 import QtQuick
 import Lomiri.Components
 
-// The 3.0 test shell's tools, kept for development: the live log, the spike switches, haptics and
-// keyboard checks. Not part of the Android app.
+// App Log (stage 7): the app's live log, for bug reports. Development builds (devTools,
+// DOLPHIN_UT_DEV_TOOLS) also have the 3.0 test shell's tools: the spike switches, haptics and
+// keyboard checks; a release build has the log only. Not part of the Android app.
 Page {
     id: page
 
     header: PageHeader {
-        title: "Developer"
+        title: "App Log"
     }
 
     Flickable {
@@ -37,7 +38,8 @@ Page {
             spacing: units.gu(1)
 
             ListItem {
-                height: hideLayout.height
+                visible: devTools
+                height: visible ? hideLayout.height : 0
                 ListItemLayout {
                     id: hideLayout
                     padding.leading: 0
@@ -50,7 +52,8 @@ Page {
                 }
             }
             ListItem {
-                height: pauseLayout.height
+                visible: devTools
+                height: visible ? pauseLayout.height : 0
                 ListItemLayout {
                     id: pauseLayout
                     padding.leading: 0
@@ -65,6 +68,7 @@ Page {
 
 
             Row {
+                visible: devTools
                 spacing: units.gu(1)
                 Button {
                     text: "Vibrate"
@@ -77,8 +81,10 @@ Page {
             }
 
             Label {
-                text: "Log"
-                textSize: Label.Large
+                width: parent.width
+                wrapMode: Text.Wrap
+                color: theme.palette.normal.backgroundSecondaryText
+                text: "What the app did since it started. For a bug report, Dolphin's own log can be written to a file too (Settings → Config → Log), and sent from User Data → Send a File to Another App (Logs/dolphin.log)."
             }
             TextArea {
                 width: parent.width

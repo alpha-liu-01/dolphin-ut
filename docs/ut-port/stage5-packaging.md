@@ -35,7 +35,7 @@ Settings:
 - **Maintainer:** taken from `git config user.name` / `user.email` when the click is built, so no address is stored in the repository. `CLICK_MAINTAINER` overrides it.
 - **Version:** Dolphin's (`2609-265` becomes `2609.265`). `CLICK_VERSION` overrides it. A changed `.apparmor` file needs a new version: reinstalling the same version keeps the old AppArmor profile (found here, below).
 
-Usage: `ut/build.sh && ut/click/build-click.sh && ut/click/install-click.sh`.
+Usage: `ut/build.sh --release && ut/click/build-click.sh && ut/click/install-click.sh` (since stage 7 the click packages the release build in `build-ut/release`, without the development aids; `stage7-release.md`).
 
 ## What confinement changed
 

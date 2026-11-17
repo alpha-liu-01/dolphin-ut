@@ -224,6 +224,10 @@ int main(int argc, char** argv)
   engine.rootContext()->setContextProperty(QStringLiteral("userData"), &user_data);
   engine.rootContext()->setContextProperty(QStringLiteral("achievements"), &achievements);
   engine.rootContext()->setContextProperty(QStringLiteral("figures"), &figures);
+  // Stage 7: development builds only (DOLPHIN_UT_DEV_TOOLS; a release build, as the click's, has
+  // none of the test aids below). QML: devTools shows the App Log page's development switches.
+#ifdef DOLPHIN_UT_DEV_TOOLS
+  engine.rootContext()->setContextProperty(QStringLiteral("devTools"), true);
   // Development: --qml FILE loads that file instead of the app's UI (the phone has no Qt 6 qml
   // runtime), with the same context objects.
   const std::string qml_file = ArgumentValue(argc, argv, nullptr, "--qml");
@@ -231,6 +235,10 @@ int main(int argc, char** argv)
     engine.loadFromModule("DolphinUT", "Main");
   else
     engine.load(QUrl::fromLocalFile(QString::fromStdString(qml_file)));
+#else
+  engine.rootContext()->setContextProperty(QStringLiteral("devTools"), false);
+  engine.loadFromModule("DolphinUT", "Main");
+#endif
   if (engine.rootObjects().isEmpty())
     return 1;
 
@@ -239,6 +247,7 @@ int main(int argc, char** argv)
   // The controllers exist now (UICommon::InitControllers in SetLauncherWindow).
   controllers.Start();
 
+#ifdef DOLPHIN_UT_DEV_TOOLS
   // Development: --grab PNG [--grab-after MS] saves a screenshot of the app's window (default after
   // 4 s), so the UI can be checked over adb.
   const std::string grab_path = ArgumentValue(argc, argv, nullptr, "--grab");
@@ -358,6 +367,7 @@ int main(int argc, char** argv)
     QTimer::singleShot(delay, &settings_model,
                        [&settings_model, action] { settings_model.runAction(action); });
   }
+#endif  // DOLPHIN_UT_DEV_TOOLS
 
   // SIGINT/SIGTERM (adb tests, the session ending): stop the game and quit cleanly.
   std::signal(SIGINT, OnQuitSignal);

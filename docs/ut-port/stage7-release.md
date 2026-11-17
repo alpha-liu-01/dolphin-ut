@@ -4,7 +4,8 @@ Added 2026-11-17 (the user): work around the first OpenStore release, some of it
 
 | Item | When | Status |
 | --- | --- | --- |
-| The in-game menu button: hide during play, movable | before the release | built and checked over adb (below); on-screen tests pending |
+| The in-game menu button: hide during play, movable | before the release | done (S7-M1–M5 passed) |
+| Development aids out of the release build | before the release | done over adb (below); one look on screen pending |
 | Translations of the port's strings | partly after the release | not started; measurement and options in `stage6.8-leftovers.md` |
 | OpenStore submission's decisions (name, maintainer, title, screenshots, a pushed commit) | the release | the user's (stage 5) |
 | RetroAchievements' on-screen tests | when a tester is found | deferred (6.7) |
@@ -71,4 +72,48 @@ Screen on, unlocked: `sh /home/phablet/dolphin-ut-probe/run-dolphin.sh ut 1800`,
 
 ### Results
 
-(to be filled in)
+2026-11-17: **all passed** (S7-M1–M5: hiding, revealing, moving and its reset, the setting, a Wii game).
+
+## Development aids out of the release build
+
+The user's question: does the release build still include redundant, or even harmful, debug features? It did. The click packaged the same `dolphin-ut` binary as the development builds (`build-ut/dolphin`), with every aid added for tests over adb since stage 3.
+
+### What was in it, and what happens to it
+
+| Aid | Since | Risk in a release | Release build |
+| --- | --- | --- | --- |
+| `--qml FILE`: loads any QML file as the whole UI, with the app's objects | 3.1 | **Harmful:** runs arbitrary code if anything ever passes arguments to the app | removed |
+| `--start PATH` with `--backend`, `--riivolution`, `--stop-after`; `--state-slot N`; `--pause-after MS` | 3.0–6.4 | redundant (test runs) | removed |
+| `--settings-after`, `--return-after`, `--test-alert`, `--answer-after`, `--test-action`, `--test-restart-after` | 6.1–6.8 | redundant; they raise fake alerts, answer dialogs, run settings actions, restart the app | removed |
+| `--grab PNG` (`--grab-after`): saves a screenshot of the app's window | 3.1 | redundant | removed |
+| `DOLPHIN_UT_GPU_DRIVER`: forces a GPU driver folder | 4 | **can override the user's driver choice** without a sign of it | removed |
+| `DOLPHIN_UT_OVERLAY_MENU`: opens a menu page at the game's start | 3.3 | redundant | removed |
+| `DOLPHIN_UT_SENSOR_LOG`: logs the motion sensors once a second | 6.6 | redundant | removed |
+| A "perf: … fps …" line every 5 s while a game runs | 3.0 | log spam (the journal, the App Log) | removed. The same timer re-applies the CPU boost to new threads; that stays |
+| "overlay: … us per frame" every 600 frames | 3.3 | log spam | removed |
+| Developer page: "Hide this window while playing", "Pause when the app is not active" | 3.0 | **Harmful:** switched off, they break fullscreen (3.2, 5) and the pause in the background (Lomiri stops a backgrounded app) | removed (development builds only) |
+| Developer page: "Vibrate", a keyboard test field | 3.0 | redundant | removed |
+| Developer page: the live log | 3.0 | useful for bug reports | **kept**, as **App Log** |
+
+Kept in both: Dolphin's own `-u/--user` (user folder) and `-C System.Section.Key=Value` (a config override for that run), as DolphinQt and dolphin-emu-nogui have them; and the debug settings of Config → Debug, which the Android app has too.
+
+### How
+
+- **The switch:** a CMake option, `DOLPHIN_UT_DEV_TOOLS` (`Source/Core/DolphinUT/CMakeLists.txt`), on by default, so the development builds and every test script stay as they were. Off, the aids above are not compiled (`#ifdef DOLPHIN_UT_DEV_TOOLS` in `main.cpp`, `GpuDrivers.cpp`, `PhoneSensors.cpp`, `TouchOverlay.cpp`, `Emulator.cpp`).
+- **QML** gets `devTools` (true or false) for the App Log page's development rows.
+- **The App Log page** (`DeveloperPage.qml`, library ⋮ → **App Log**, was "Developer"): the log, with a note on writing Dolphin's own log to a file and sending it (Config → Log; User Data → Send a File to Another App). The messages that pointed to "the log on the Developer page" now say "the App Log".
+- **The release build:** `ut/build.sh --release` builds `build-ut/release` with `-DDOLPHIN_UT_DEV_TOOLS=OFF`, and only `dolphin-ut` (DolphinQt, dolphin-emu-nogui and dolphin-tool off: the click never shipped them).
+- **The click:** `ut/click/build-click.sh` packages that build, not `build-ut/dolphin`. The release command is now `ut/build.sh --release && ut/click/build-click.sh`.
+
+### Checked (2026-11-17)
+
+| Check | Result |
+| --- | --- |
+| Development build (`build-ut/dolphin`, aids on) | builds as before; the test scripts are unchanged |
+| Release build (`ut/build.sh --release`) | 1804 steps, `dolphin-ut` only, no new warnings (stage 4's sign-compare in `GpuDrivers.cpp` and Qt's generated files, as in the development build) |
+| The aids gone from the binary | strings searched in both binaries: `--qml`, `--test-alert`, `--grab`, `DOLPHIN_UT_GPU_DRIVER`, `DOLPHIN_UT_OVERLAY_MENU`, `DOLPHIN_UT_SENSOR_LOG`, the test alerts' texts, "perf: %1 fps", "us per frame", "phone sensors: accel" (the last three as UTF-16, as `QStringLiteral` stores them): all in the development binary, **none in the release one** |
+| The click from it | `dolphin-ut.alphaliu01_2609.276_arm64.click`, 14.0 MB; installed on the phone over the earlier 2609.266 (user data kept) |
+| Starting it through Lomiri | normal start in the journal (user folder, game list, hotkeys' first start, input devices); closed cleanly. `lomiri-app-launch` itself printed "Lost our connection with the registry" after "Started", a crash of that command-line tool (seen with the screen locked), not of Dolphin |
+
+**S7-M6 (a look).** In the installed Dolphin (from the app drawer, not "Dolphin (dev)"): library ⋮ → **App Log**. Is there only the log, with its note, and no switches, Vibrate button or keyboard field?
+

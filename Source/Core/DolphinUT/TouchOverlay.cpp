@@ -75,6 +75,7 @@ void TouchOverlay::OpenTestPage()
   // Development: DOLPHIN_UT_OVERLAY_MENU=game|save|load|disc|main|toggle|latching|adjust|controller|
   // pointer|edit opens that menu page once the game draws, for checking its look from screen
   // captures over adb.
+#ifdef DOLPHIN_UT_DEV_TOOLS
   {
     const QByteArray menu = qgetenv("DOLPHIN_UT_OVERLAY_MENU");
     static constexpr std::pair<const char*, Menu> pages[] = {
@@ -88,6 +89,7 @@ void TouchOverlay::OpenTestPage()
         OpenPage(page);
     }
   }
+#endif
 }
 
 TouchOverlay::~TouchOverlay()
@@ -1057,6 +1059,8 @@ void TouchOverlay::Draw()
   else if (m_menu != Menu::None && m_menu != Menu::Editing && !game_menu)
     DrawMenu();
 
+#ifdef DOLPHIN_UT_DEV_TOOLS
+  // Development builds only (stage 7): the overlay's drawing time in the log.
   m_draw_time += std::chrono::steady_clock::now() - start;
   if (++m_draw_count == 600)
   {
@@ -1067,6 +1071,9 @@ void TouchOverlay::Draw()
     m_draw_time = {};
     m_draw_count = 0;
   }
+#else
+  (void)start;
+#endif
 }
 
 // Stage 6.8: the menus scroll by dragging, as lists do on a phone. ImGui scrolls only with a wheel

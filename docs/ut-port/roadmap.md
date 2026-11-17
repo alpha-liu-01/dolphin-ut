@@ -366,7 +366,8 @@ The original list:
 
 Added 2026-11-17 (the user). Work around the first OpenStore release, some of it after it:
 - **Translations** of the port's strings (from 6.8). Measured in `stage6.8-leftovers.md`: Dolphin's gettext catalogs (30 languages) cover 189 of the generated settings' 384 texts and none of the port's own page texts, and the Android app's translations are not in this repository. The options written up there are the starting point.
-- **Before the release:** the in-game menu button, which sat at the top centre and could neither be moved nor hidden. Built (2026-11-17, approved by the user): auto-hide with a tap to reveal, hidden meaning not pressable, movable in Edit Layout, and an Auto-hide setting in Overlay Controls. Checked over adb; on-screen tests pending. Notes: `stage7-release.md`.
+- **Before the release:** the in-game menu button, which sat at the top centre and could neither be moved nor hidden. Built (2026-11-17, approved by the user): auto-hide with a tap to reveal, hidden meaning not pressable, movable in Edit Layout, and an Auto-hide setting in Overlay Controls. Done (S7-M1–M5 passed). Notes: `stage7-release.md`.
+- **Before the release:** development aids out of the release build (2026-11-17): the test options, environment hooks, periodic logging and the Developer page's switches are compiled only into development builds (`DOLPHIN_UT_DEV_TOOLS`). The click is built from `ut/build.sh --release`, and the Developer page is now **App Log**. Notes: `stage7-release.md`.
 - Open from earlier stages: the OpenStore submission's decisions (stage 5); RetroAchievements' on-screen tests by a community tester (6.7); whether the installed click leaves itself out of "Send to Another App" (6.5).
 
 ## Risks
