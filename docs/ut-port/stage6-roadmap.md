@@ -66,7 +66,7 @@ Notes: `stage6.4-game-tools.md`. The library's long press gains the Android game
 
 ## 6.5 Export and user data
 
-#### Status (2026-11-16): built and checked over adb; on-screen tests S6.5-M1–M5 pending
+#### Status (2026-11-16): done (S6.5-M1–M5 passed)
 
 Notes: `stage6.5-user-data.md`. Config → User Data gains Android's actions:
 - Export User Data: a zip in Documents/Dolphin/Backups, visible over USB.
@@ -74,4 +74,13 @@ Notes: `stage6.5-user-data.md`. Config → User Data gains Android's actions:
 - Reset Dolphin Settings: the port's defaults come back at once.
 
 It also gains single files out (to the File Manager or another app through content-hub) and in (a save state or memory card copied into a folder of the user data), since the user folder is not visible over USB.
+
+## 6.6 Wii Remote motion from the phone's sensors
+
+#### Status (2026-11-16): done (S6.6-M1–M5 passed; both landscape orientations right). Open, for the user: recentering the gyroscope pointer on a phone (its centre is "phone flat", as Dolphin's on Android)
+
+Notes: `stage6.6-motion.md`.
+- **Probe:** the sensors are reachable through sensorfwd (Sailfish's daemon over the Android HAL), by its D-Bus and socket protocol, since Qt Sensors exists only for Qt 5. The accelerometer gives up to ~200 Hz. The gyroscope stays near 20 Hz on this phone (an adaptation limit; usable, as Dolphin integrates it).
+- **The phone input device** gains the Android app's "Device Sensors" inputs (Accel …, Gyro …). They run only while a game reads them, and turn with a landscape game (the side told from gravity, since Lomiri does not report its rotation).
+- **Wii Remote page → Motion Controls:** the Android app's three choices (device sensors with or without the gyroscope pointer, or none). It stays off by default.
 

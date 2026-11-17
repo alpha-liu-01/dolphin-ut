@@ -10,6 +10,8 @@
 #include <QMetaObject>
 #include <QVariantMap>
 
+#include <fmt/format.h>
+
 #include "Common/Config/Config.h"
 #include "Common/FileSearch.h"
 #include "Common/FileUtil.h"
@@ -26,6 +28,7 @@
 #include "Core/System.h"
 #include "DolphinUT/Emulator.h"
 #include "DolphinUT/HotkeyScheduler.h"
+#include "DolphinUT/PhoneSensors.h"
 #include "InputCommon/ControllerEmu/Control/Control.h"
 #include "InputCommon/ControllerEmu/ControlGroup/Attachments.h"
 #include "InputCommon/ControllerEmu/ControlGroup/ControlGroup.h"
@@ -55,7 +58,51 @@ public:
     void SetState(ControlState state) override { s_phone_rumble = state; }
   };
 
-  PhoneDevice() { AddOutput(new Motor); }
+  // Stage 6.6: the phone's accelerometer and gyroscope (PhoneSensors), each axis as a positive and
+  // a negative input with the Android app's names (DolphinSensorEventListener), in m/s² and rad/s
+  // in screen coordinates, as Android's. Not detectable (they always move), as Android's.
+  class SensorAxis final : public Input
+  {
+  public:
+    SensorAxis(const char* name, PhoneSensors::Sensor sensor, int axis, bool negative)
+        : m_name(name), m_sensor(sensor), m_axis(axis), m_negative(negative)
+    {
+    }
+    std::string GetName() const override { return m_name; }
+    bool IsDetectable() const override { return false; }
+    ControlState GetState() const override
+    {
+      PhoneSensors* const sensors = PhoneSensors::Instance();
+      if (!sensors)
+        return 0;
+      const double value = sensors->Read(m_sensor, m_axis);
+      return m_negative ? std::max(0.0, -value) : std::max(0.0, value);
+    }
+
+  private:
+    const char* m_name;
+    PhoneSensors::Sensor m_sensor;
+    int m_axis;
+    bool m_negative;
+  };
+
+  PhoneDevice()
+  {
+    AddOutput(new Motor);
+    using S = PhoneSensors;
+    AddInput(new SensorAxis("Accel Right", S::Accelerometer, 0, false));
+    AddInput(new SensorAxis("Accel Left", S::Accelerometer, 0, true));
+    AddInput(new SensorAxis("Accel Forward", S::Accelerometer, 1, false));
+    AddInput(new SensorAxis("Accel Backward", S::Accelerometer, 1, true));
+    AddInput(new SensorAxis("Accel Up", S::Accelerometer, 2, false));
+    AddInput(new SensorAxis("Accel Down", S::Accelerometer, 2, true));
+    AddInput(new SensorAxis("Gyro Pitch Up", S::Gyroscope, 0, false));
+    AddInput(new SensorAxis("Gyro Pitch Down", S::Gyroscope, 0, true));
+    AddInput(new SensorAxis("Gyro Roll Right", S::Gyroscope, 1, false));
+    AddInput(new SensorAxis("Gyro Roll Left", S::Gyroscope, 1, true));
+    AddInput(new SensorAxis("Gyro Yaw Left", S::Gyroscope, 2, false));
+    AddInput(new SensorAxis("Gyro Yaw Right", S::Gyroscope, 2, true));
+  }
   std::string GetName() const override { return "Phone"; }
   std::string GetSource() const override { return "UbuntuTouch"; }
 };
@@ -376,6 +423,65 @@ void Controllers::setWiimoteExtension(int index, int extension)
     WiimoteAttachments(index)->SetSelectedAttachment(static_cast<u32>(extension));
   }
   Wiimote::GetConfig()->SaveConfig();
+  emit portsChanged();
+}
+
+// Stage 6.6: the Android app's motion controls choice (motionControlsEntries): the Wii Remote's
+// motion input from the phone's sensors, with Dolphin's pointer from the gyroscope ("Point", the
+// IMU cursor) or without it, or not from the phone. The mappings are Dolphin's Android defaults
+// (Wiimote::LoadDefaults, #ifdef ANDROID) with the phone device.
+namespace
+{
+constexpr const char* PHONE_ACCEL[] = {"Accel Up",    "Accel Down",    "Accel Left",
+                                       "Accel Right", "Accel Forward", "Accel Backward"};
+constexpr const char* PHONE_GYRO[] = {"Gyro Pitch Up",  "Gyro Pitch Down", "Gyro Roll Left",
+                                      "Gyro Roll Right", "Gyro Yaw Left",  "Gyro Yaw Right"};
+
+std::string PhoneExpression(const char* input)
+{
+  return fmt::format("`{}:{}`", PHONE_DEVICE, input);
+}
+}  // namespace
+
+int Controllers::wiimoteMotion(int index) const
+{
+  auto* accel = Wiimote::GetWiimoteGroup(index, WiimoteEmu::WiimoteGroup::IMUAccelerometer);
+  if (accel->controls.empty() ||
+      accel->controls[0]->control_ref->GetExpression() != PhoneExpression(PHONE_ACCEL[0]))
+  {
+    return 2;
+  }
+  return Wiimote::GetWiimoteGroup(index, WiimoteEmu::WiimoteGroup::IMUPoint)->enabled.GetValue() ? 0 :
+                                                                                                    1;
+}
+
+void Controllers::setWiimoteMotion(int index, int mode)
+{
+  const bool from_phone = mode == 0 || mode == 1;
+  {
+    const auto lock = EmulatedController::GetStateLock();
+    auto* accel = Wiimote::GetWiimoteGroup(index, WiimoteEmu::WiimoteGroup::IMUAccelerometer);
+    auto* gyro = Wiimote::GetWiimoteGroup(index, WiimoteEmu::WiimoteGroup::IMUGyroscope);
+    // "Don't use": only the phone's own mappings are cleared (a gamepad's motion stays).
+    const bool was_phone = wiimoteMotion(index) != 2;
+    if (from_phone || was_phone)
+    {
+      for (std::size_t i = 0; i < accel->controls.size() && i < std::size(PHONE_ACCEL); ++i)
+        accel->controls[i]->control_ref->SetExpression(from_phone ? PhoneExpression(PHONE_ACCEL[i]) : "");
+      for (std::size_t i = 0; i < gyro->controls.size() && i < std::size(PHONE_GYRO); ++i)
+        gyro->controls[i]->control_ref->SetExpression(from_phone ? PhoneExpression(PHONE_GYRO[i]) : "");
+    }
+    // The gyroscope pointer takes pointing from the touch screen (why Dolphin turns it off on
+    // Android): only with "With Pointer Emulation".
+    Wiimote::GetWiimoteGroup(index, WiimoteEmu::WiimoteGroup::IMUPoint)->enabled.SetValue(mode == 0);
+    Wiimote::GetConfig()->GetController(index)->UpdateReferences(g_controller_interface);
+  }
+  Wiimote::GetConfig()->SaveConfig();
+  Emulator::LogFromAnyThread(QStringLiteral("Wii Remote %1 motion: %2")
+                                 .arg(index + 1)
+                                 .arg(mode == 0 ? "phone sensors with pointer" :
+                                      mode == 1 ? "phone sensors without pointer" :
+                                                  "not from the phone"));
   emit portsChanged();
 }
 

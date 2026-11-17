@@ -7,7 +7,7 @@
 // gpu-roundtrip (--test-arg ZIP; ZIP.nometa.zip is the failure case), hotkeys,
 // remaining-roundtrip, hotkeys-map, log-sync, settings-tap:MENU (--test-arg ROW) (stage 6.2);
 // wii, wii-roundtrip (stage 6.3); cheats-roundtrip, riivolution, convert, convert-run (stage 6.4);
-// userdata-export, userdata-check, userdata-import, userdata-reset, print-setting, share (--test-arg FILE), userdata (stage 6.5);
+// userdata-export, userdata-check, userdata-import, userdata-reset, print-setting, share (--test-arg FILE), userdata (stage 6.5); motion (--test-arg MODE) (stage 6.6);
 // anything else
 // shows the library.
 import QtQuick
@@ -216,6 +216,14 @@ Window {
             }
             else if (page === "share") stack.push(base + "SharePage.qml", { path: arg })
             else if (page === "userdata") stack.push(base + "UserDataPage.qml")
+            else if (page === "motion") {
+                // Stage 6.6: Wii Remote 1's motion choice (--test-arg MODE: 0 with pointer, 1 without,
+                // 2 none), read back; then the Wii Remote page.
+                console.log("MOTION before " + controllers.wiimoteMotion(0))
+                if (arg !== "") controllers.setWiimoteMotion(0, Number(arg))
+                console.log("MOTION after " + controllers.wiimoteMotion(0))
+                stack.push(base + "WiimotePage.qml", { wiimote: 0 })
+            }
             else if (page === "print-setting") console.log("SETTING " + arg + " = " + settingsModel.value(arg))
             else if (page === "cheats-roundtrip") {
                 // Stage 6.4: a game's codes (--test-arg GAMEID, --test-arg2 GAMETDBID): counts, then

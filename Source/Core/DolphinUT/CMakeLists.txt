@@ -43,6 +43,8 @@ add_executable(dolphin-ut
   DiscConverter.h
   UserData.cpp
   UserData.h
+  PhoneSensors.cpp
+  PhoneSensors.h
   VulkanDriver.h
   OverlayLayout.h
   OverlayDefaults.inc

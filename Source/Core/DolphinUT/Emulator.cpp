@@ -40,6 +40,7 @@
 #include "DiscIO/Enums.h"
 #include "DolphinUT/GameWindow.h"
 #include "DolphinUT/HotkeyScheduler.h"
+#include "DolphinUT/PhoneSensors.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include "DolphinUT/TouchOverlay.h"
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
@@ -783,6 +784,9 @@ void Emulator::OnGameWindowSizeChanged(int width, int height, float scale)
 {
   appendLog(QStringLiteral("game window size %1x%2 (scale %3)").arg(width).arg(height).arg(scale));
   g_controller_interface.SetRenderSurfaceSize(width, height, scale);
+  // Stage 6.6: the phone's motion axes turn with a landscape game.
+  if (PhoneSensors* const sensors = PhoneSensors::Instance())
+    sensors->SetLandscape(width > height);
   if (g_presenter)
   {
     g_presenter->ResizeSurface(width, height);

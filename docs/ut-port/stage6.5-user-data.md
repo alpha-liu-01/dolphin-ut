@@ -7,7 +7,7 @@ Goal (`stage6-roadmap.md`): backups and moving to another phone. That means the 
 
 It also means a way to get single files out of the user folder (save states, memory cards) and into it. The user folder is not visible over USB (3.7), whereas Android's is reachable through its document provider.
 
-Status (2026-11-16): **built and checked over adb (export, import, reset, the safety checks); on-screen tests pending** (below).
+Status (2026-11-16): **done.** Checked over adb (export, import, reset, the safety checks) and on screen (S6.5-M1–M5).
 
 ## How it works
 
@@ -112,4 +112,14 @@ Afterwards the scratch folder can go: `rm -r /home/phablet/dolphin-ut-s65m` (and
 
 ## Results
 
-(to be filled in)
+All five on-screen tests passed (2026-11-16, scratch user folder `dolphin-ut-s65m`, removed afterwards by the user).
+
+| Test | Result |
+| --- | --- |
+| M1 Export | Pass: the files counted, "Your user data has been exported." with the path; the zip in the File Manager under Documents/Dolphin/Backups |
+| M2 Import | Pass: Android's warning; after the import the app closed itself; started again, the setting changed after the export (the user toggled Enable Cheats) was back as at the export |
+| M3 Reset | Pass: the setting back to its default, Dual Core still on (the port's default) |
+| M4 Send a file | Pass: Config/Dolphin.ini to the File Manager, saved and found there; the backup zip from M1's dialog the same way. Dolphin itself was in the app list (expected when run from the terminal, without an app ID) |
+| M5 Copy a file in | Pass: copied into StateSaves; again → the replace question |
+
+Open: whether the installed click leaves itself out of the "Send to Another App" list (content-hub should; the dev run cannot show it). To check with the next click build; picking Dolphin there would only offer the file to Import Games.

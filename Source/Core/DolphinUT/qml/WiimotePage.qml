@@ -4,8 +4,9 @@
 import QtQuick
 import Lomiri.Components
 
-// One Wii Remote: source, extension, and the mapping pages the Android app splits it into
-// (addWiimoteSubSettings: general, motion simulation, motion input, extension, options).
+// One Wii Remote: source, extension, motion controls from the phone (stage 6.6), and the mapping
+// pages the Android app splits it into (addWiimoteSubSettings: general, motion simulation, motion
+// input, extension, options).
 Page {
     id: page
 
@@ -78,6 +79,27 @@ Page {
                     controllers.setWiimoteExtension(page.wiimote, index)
                     page.extension = controllers.wiimoteExtension(page.wiimote)
                 }
+            }
+
+            // Stage 6.6: the Android app's motion controls choice (motionControlsEntries). Its pages
+            // below show the resulting mapping (Motion Input).
+            OptionSelector {
+                width: parent.width
+                containerHeight: itemHeight * (model ? model.length : 0)
+                visible: page.source === 1
+                text: "Motion Controls"
+                model: ["Use Device Sensors (With Pointer Emulation)",
+                        "Use Device Sensors (Without Pointer Emulation)",
+                        "Don't Use Device Sensors"]
+                Component.onCompleted: selectedIndex = controllers.wiimoteMotion(page.wiimote)
+                onDelegateClicked: index => controllers.setWiimoteMotion(page.wiimote, index)
+            }
+            Label {
+                width: parent.width
+                wrapMode: Text.Wrap
+                visible: page.source === 1
+                color: theme.palette.normal.backgroundSecondaryText
+                text: "Device sensors: tilting, shaking and turning the phone move the Wii Remote. With pointer emulation, the phone's turning also aims the pointer, instead of your finger."
             }
 
             Column {

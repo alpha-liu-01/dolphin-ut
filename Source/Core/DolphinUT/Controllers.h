@@ -60,6 +60,10 @@ public:
   Q_INVOKABLE void setWiimoteSource(int index, int source);
   Q_INVOKABLE QStringList wiimoteExtensions() const;
   Q_INVOKABLE int wiimoteExtension(int index) const;
+  // Stage 6.6, the Android app's motion controls: 0 the phone's sensors with the gyroscope pointer,
+  // 1 the phone's sensors without it, 2 not the phone's.
+  Q_INVOKABLE int wiimoteMotion(int index) const;
+  Q_INVOKABLE void setWiimoteMotion(int index, int mode);
   Q_INVOKABLE void setWiimoteExtension(int index, int extension);
 
   // A mapping editor (owned by QML). kind: "gcpad", "wiimote" or "hotkeys" (stage 6.2: the hotkeys

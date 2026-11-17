@@ -37,6 +37,7 @@
 #include "DolphinUT/DiscConverter.h"
 #include "DolphinUT/Riivolution.h"
 #include "DolphinUT/UserData.h"
+#include "DolphinUT/PhoneSensors.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
 
@@ -184,6 +185,8 @@ int main(int argc, char** argv)
   Riivolution riivolution;
   DiscConverter disc_converter;
   UserData user_data;
+  // Stage 6.6: the phone's accelerometer and gyroscope for the phone input device (sensorfwd).
+  PhoneSensors phone_sensors;
   QObject::connect(&controllers, &Controllers::message, &emulator, &Emulator::appendLog);
   controllers.SetVibrator([&lomiri](int duration_ms) { lomiri.vibrate(duration_ms); });
   qmlRegisterType<GameListFilter>("DolphinUT.Native", 1, 0, "GameListFilter");
