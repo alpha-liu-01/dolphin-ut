@@ -47,6 +47,8 @@ add_executable(dolphin-ut
   PhoneSensors.h
   Achievements.cpp
   Achievements.h
+  Figures.cpp
+  Figures.h
   VulkanDriver.h
   OverlayLayout.h
   OverlayDefaults.inc
@@ -111,6 +113,7 @@ qt_add_qml_module(dolphin-ut
     qml/RiivolutionPage.qml
     qml/ConvertPage.qml
     qml/SharePage.qml
+    qml/FiguresPage.qml
 )
 
 target_include_directories(dolphin-ut PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS})

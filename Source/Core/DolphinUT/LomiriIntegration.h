@@ -14,6 +14,8 @@ class QWindow;
 class LomiriIntegration : public QObject
 {
   Q_OBJECT
+  // Stage 6.8: whether restart() can start the app again (it was started by Lomiri, with an app ID).
+  Q_PROPERTY(bool canRestart READ CanRestart CONSTANT)
 
 public:
   explicit LomiriIntegration(QObject* parent = nullptr);
@@ -28,6 +30,13 @@ public:
 
   // Asynchronous; failures are reported through message().
   Q_INVOKABLE void vibrate(int duration_ms);
+
+  // Stage 6.8: close the app and start it again (a new GPU driver, imported user data). A helper
+  // outside the app's own systemd unit (systemd-run --user) waits for this process to end, then
+  // asks Lomiri to start the app (lomiri-app-launch APP_ID); Lomiri only starts a single-instance
+  // app that is not running. save false ends at once without saving (after Import User Data).
+  bool CanRestart() const;
+  Q_INVOKABLE bool restart(bool save);
 
 signals:
   void message(const QString& text);

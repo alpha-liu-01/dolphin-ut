@@ -348,7 +348,7 @@ Notes: `stage5-packaging.md`.
 
 ### 6. Feature completeness (after stages 5 and 4)
 
-#### Status (2026-11-16): in progress; phase plan in `stage6-roadmap.md`. 6.1 done (settings during a game, Dolphin's questions); 6.2 done (the remaining settings); 6.3 done (Wii file actions; a core crash for GameCube discs from the Wii Menu is noted for the user); 6.4 done (cheats, Riivolution, disc conversion); 6.5 done (export and user data); 6.6 done (Wii Remote motion from the phone's sensors); 6.7 (RetroAchievements) built and checked over adb, on-screen tests pending (they need the user's RetroAchievements account)
+#### Status (2026-11-16): in progress; phase plan in `stage6-roadmap.md`. 6.1 done (settings during a game, Dolphin's questions); 6.2 done (the remaining settings); 6.3 done (Wii file actions; a core crash for GameCube discs from the Wii Menu is noted for the user); 6.4 done (cheats, Riivolution, disc conversion); 6.5 done (export and user data); 6.6 done (Wii Remote motion from the phone's sensors); 6.7 (RetroAchievements) built and checked over adb, on-screen tests deferred to a community tester; 6.8 (leftovers): driver zips from other apps, restart, Skylanders/Infinity done; the in-game menu scrolls now (re-test pending); translations measured, scope for the user
 
 Phases: 6.1 settings during a game and Dolphin's questions; 6.2 the remaining settings (Hotkeys, post-processing, logs, RTC); 6.3 Wii file actions; 6.4 cheats, Riivolution, disc conversion; 6.5 export and user data; 6.6 Wii Remote motion from the phone's sensors; 6.7 RetroAchievements; 6.8 smaller leftovers. Not planned: NetPlay, GBA link, a TV layout (none are in the Android app).
 

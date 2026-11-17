@@ -43,6 +43,11 @@ Window {
             window.gameSettingsDepth = pageStack.depth
             pageStack.push(Qt.resolvedUrl("SettingsPage.qml"), { menuTag: "SETTINGS", returnsToGame: true })
         }
+        // Stage 6.8: the Skylanders Portal or Infinity Base page over the game, as the settings.
+        function onPageOverGameRequested(page) {
+            window.gameSettingsDepth = pageStack.depth
+            pageStack.push(Qt.resolvedUrl("FiguresPage.qml"), { kind: page, returnsToGame: true })
+        }
         function onSettingsClosed() {
             while (window.gameSettingsDepth > 0 && pageStack.depth > window.gameSettingsDepth)
                 pageStack.pop()
@@ -131,13 +136,27 @@ Window {
 
             property var result
 
-            title: result.imported.length === 0 ? "Nothing imported" :
+            readonly property var drivers: result.drivers || []
+            title: result.imported.length === 0 && drivers.length === 0 ? "Nothing imported" :
+                   result.imported.length === 0 ? (drivers.length === 1 ? "GPU driver installed" : drivers.length + " GPU drivers installed") :
                    result.imported.length === 1 ? "1 game imported" : result.imported.length + " games imported"
             text: {
                 let lines = result.imported.slice()
+                // Stage 6.8: driver packages from other apps are installed (stage 4's GPU Driver page).
+                for (let i = 0; i < drivers.length; ++i)
+                    lines.push("GPU driver " + drivers[i] + ": choose it on Settings → Graphics Settings → GPU Driver")
                 for (let i = 0; i < result.skipped.length; ++i)
                     lines.push(result.skipped[i].name + ": " + result.skipped[i].reason)
                 return lines.join("\n")
+            }
+            Button {
+                text: "Open GPU Driver"
+                visible: dialog.drivers.length > 0
+                color: theme.palette.normal.positive
+                onClicked: {
+                    PopupUtils.close(dialog)
+                    pageStack.push(Qt.resolvedUrl("GpuDriversPage.qml"))
+                }
             }
             Button {
                 text: "OK"

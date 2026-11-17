@@ -8,7 +8,7 @@ Goal (`stage6-roadmap.md`): RetroAchievements as in the Android app:
 
 Dolphin builds them in (`USE_RETRO_ACHIEVEMENTS` is on in this build), but the port never started Dolphin's `AchievementManager`, and its settings menu was hidden.
 
-Status (2026-11-16): **built and checked over adb (the menu, turning on and off, the login dialog, hardcore active); on-screen tests pending** (below). A real login needs the user's RetroAchievements account, so it is left for the manual tests: nothing was sent to retroachievements.org from here.
+Status (2026-11-16): **built and checked over adb (the menu, turning on and off, the login dialog, hardcore active); on-screen tests deferred to a community tester with a RetroAchievements account** (below). A real login needs the user's RetroAchievements account, so it is left for the manual tests: nothing was sent to retroachievements.org from here.
 
 ## How it works
 
@@ -108,4 +108,4 @@ These need a **RetroAchievements account** (free at retroachievements.org); with
 
 ## Results
 
-(to be filled in)
+2026-11-16: **deferred.** The user has never used RetroAchievements and has no account, so S6.7-M1–M4 are left for a community member who has one. The adb checks above stand. Until then, the login, the notifications in the picture and the hardcore greying in a real game are untested on screen.

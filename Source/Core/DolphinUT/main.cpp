@@ -39,6 +39,7 @@
 #include "DolphinUT/UserData.h"
 #include "DolphinUT/PhoneSensors.h"
 #include "DolphinUT/Achievements.h"
+#include "DolphinUT/Figures.h"
 #include "Core/AchievementManager.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include <OptionParser.h>
@@ -191,6 +192,12 @@ int main(int argc, char** argv)
   PhoneSensors phone_sensors;
   // Stage 6.7: RetroAchievements (starts Dolphin's AchievementManager if enabled).
   Achievements achievements;
+  // Stage 6.8: the Skylanders Portal and Infinity Base pages; emptied when a game ends.
+  Figures figures;
+  QObject::connect(&emulator, &Emulator::stateChanged, &figures, [&emulator, &figures] {
+    if (emulator.state() == QLatin1String("idle"))
+      figures.Reset();
+  });
   QObject::connect(&settings_model, &SettingsModel::valueChanged, &achievements,
                    [&achievements](const QString& name, const QVariant& value) {
                      if (name == QLatin1String("BooleanSetting.ACHIEVEMENTS_ENABLED"))
@@ -209,12 +216,14 @@ int main(int argc, char** argv)
   engine.rootContext()->setContextProperty(QStringLiteral("lomiri"), &lomiri);
   engine.rootContext()->setContextProperty(QStringLiteral("storage"), &storage);
   engine.rootContext()->setContextProperty(QStringLiteral("gpuDrivers"), &gpu_drivers);
+  storage.SetDriverInstaller([&gpu_drivers](const QString& path) { return gpu_drivers.install(path); });
   engine.rootContext()->setContextProperty(QStringLiteral("wiiSystem"), &wii_system);
   engine.rootContext()->setContextProperty(QStringLiteral("cheats"), &cheats);
   engine.rootContext()->setContextProperty(QStringLiteral("riivolution"), &riivolution);
   engine.rootContext()->setContextProperty(QStringLiteral("discConverter"), &disc_converter);
   engine.rootContext()->setContextProperty(QStringLiteral("userData"), &user_data);
   engine.rootContext()->setContextProperty(QStringLiteral("achievements"), &achievements);
+  engine.rootContext()->setContextProperty(QStringLiteral("figures"), &figures);
   // Development: --qml FILE loads that file instead of the app's UI (the phone has no Qt 6 qml
   // runtime), with the same context objects.
   const std::string qml_file = ArgumentValue(argc, argv, nullptr, "--qml");
@@ -334,6 +343,9 @@ int main(int argc, char** argv)
       emulator.answerQuestion(emulator.LatestQuestionId(), button);
     });
   }
+  // Stage 6.8 test aid: --test-restart-after MS restarts the app as the GPU Driver page's button.
+  if (const std::string after = ArgumentValue(argc, argv, nullptr, "--test-restart-after"); !after.empty())
+    QTimer::singleShot(std::atoi(after.c_str()), &lomiri, [&lomiri] { lomiri.restart(true); });
   // Stage 6.2 test aid: --test-action ACTION@MS runs a settings menu action (SettingsModel::
   // runAction, e.g. jit_write_block_log) during a game; the result goes to the log. Repeatable.
   for (int i = 1; i + 1 < argc; ++i)

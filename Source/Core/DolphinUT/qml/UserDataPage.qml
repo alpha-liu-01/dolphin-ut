@@ -332,11 +332,16 @@ Page {
         Dialog {
             id: dialog
             title: "Import User Data"
-            text: "The user data has been imported. Dolphin closes now; start it again to use it."
+            text: lomiri.canRestart ? "The user data has been imported. Dolphin restarts now to use it." :
+                                      "The user data has been imported. Dolphin closes now; start it again to use it."
             Button {
-                text: "Close Dolphin"
+                // Stage 6.8: restarted when Lomiri started it; without saving either way.
+                text: lomiri.canRestart ? "Restart Dolphin" : "Close Dolphin"
                 color: theme.palette.normal.positive
-                onClicked: userData.quitNow()
+                onClicked: {
+                    if (!lomiri.canRestart || !lomiri.restart(false))
+                        userData.quitNow()
+                }
             }
         }
     }

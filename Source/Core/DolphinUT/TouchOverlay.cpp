@@ -992,6 +992,70 @@ void TouchOverlay::Draw()
   }
 }
 
+// Stage 6.8: the menus scroll by dragging, as lists do on a phone. ImGui scrolls only with a wheel
+// or its scrollbar (too thin for a finger, and hidden here). Called inside a window after its items:
+// a finger that moves vertically past a small threshold scrolls the window, and takes the press away
+// from the item under it (ClearActiveID), so lifting the finger does not click it. A thin bar on the
+// right shows that there is more, and where.
+// While a finger scrolls a menu, the items under it keep their normal colours: ImGui would light up
+// each one the moving finger passes ("hovered") as if it were about to be pressed. Pushed after the
+// window begins, popped after its items (before TouchScroll); returns the number of colours pushed.
+int TouchOverlay::PushTouchScrollColors() const
+{
+  if (!m_touch_scrolling)
+    return 0;
+  const ImGuiStyle& style = ImGui::GetStyle();
+  const std::pair<ImGuiCol, ImGuiCol> calm[] = {
+      {ImGuiCol_ButtonHovered, ImGuiCol_Button},   {ImGuiCol_ButtonActive, ImGuiCol_Button},
+      {ImGuiCol_HeaderHovered, ImGuiCol_Header},   {ImGuiCol_HeaderActive, ImGuiCol_Header},
+      {ImGuiCol_FrameBgHovered, ImGuiCol_FrameBg}, {ImGuiCol_FrameBgActive, ImGuiCol_FrameBg},
+      {ImGuiCol_SliderGrabActive, ImGuiCol_SliderGrab}};
+  for (const auto& [changed, normal] : calm)
+    ImGui::PushStyleColor(changed, style.Colors[normal]);
+  return static_cast<int>(std::size(calm));
+}
+
+void TouchOverlay::TouchScroll()
+{
+  ImGuiWindow* const window = ImGui::GetCurrentWindow();
+  const ImGuiIO& io = ImGui::GetIO();
+  if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
+    m_touch_scrolling = false;
+  if (window->ScrollMax.y <= 0.0f)
+    return;
+
+  const float threshold = ImGui::GetFontSize() * 0.4f;
+  if (!m_touch_scrolling && ImGui::IsMouseDown(ImGuiMouseButton_Left) &&
+      ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+  {
+    const ImVec2 drag = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, threshold);
+    if (std::abs(drag.y) > std::abs(drag.x) && drag.y != 0.0f)
+    {
+      m_touch_scrolling = true;
+      ImGui::ClearActiveID();
+      // The distance moved before the threshold counts too.
+      ImGui::SetScrollY(window, std::clamp(window->Scroll.y - drag.y, 0.0f, window->ScrollMax.y));
+    }
+  }
+  else if (m_touch_scrolling)
+  {
+    ImGui::SetScrollY(window,
+                      std::clamp(window->Scroll.y - io.MouseDelta.y, 0.0f, window->ScrollMax.y));
+  }
+
+  // The indicator: the visible part of the content, as a bar along the right edge.
+  const ImRect inner = window->InnerRect;
+  const float content = inner.GetHeight() + window->ScrollMax.y;
+  const float bar = std::max(inner.GetHeight() * inner.GetHeight() / content, ImGui::GetFontSize());
+  const float top = inner.Min.y + (inner.GetHeight() - bar) * (window->Scroll.y / window->ScrollMax.y);
+  const float width = std::max(ImGui::GetFontSize() * 0.15f, 3.0f);
+  window->DrawList->PushClipRect(window->Rect().Min, window->Rect().Max, false);
+  window->DrawList->AddRectFilled(ImVec2(window->Rect().Max.x - width * 2.0f, top),
+                                  ImVec2(window->Rect().Max.x - width, top + bar),
+                                  ImGui::GetColorU32(ImGuiCol_ScrollbarGrab), width);
+  window->DrawList->PopClipRect();
+}
+
 void TouchOverlay::DrawMenu()
 {
   // The Android app's "Overlay Controls" menu and dialogs (EmulationActivity), with its labels, as
@@ -1003,8 +1067,9 @@ void TouchOverlay::DrawMenu()
   ImGui::PushFont(nullptr, font_size);
   const float line = ImGui::GetFontSize();
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(line * 0.8f, line * 0.7f));
-  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(line * 0.5f, line * 0.35f));
-  ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(line * 0.5f, line * 0.35f));
+  // Stage 6.8: taller items, for fingers (the menu scrolls now, TouchScroll).
+  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(line * 0.6f, line * 0.6f));
+  ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(line * 0.5f, line * 0.45f));
   ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(line * 0.4f, line * 0.3f));
   ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, line * 1.1f);
   ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, line * 0.8f);
@@ -1033,11 +1098,13 @@ void TouchOverlay::DrawMenu()
   constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
                                      ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings |
                                      ImGuiWindowFlags_AlwaysAutoResize |
-                                     // Pages are laid out to fit (columns in landscape); ImGui's
-                                     // scrollbar showed even then and cannot be dragged by touch.
+                                     // ImGui's scrollbar is too thin for a finger: the window
+                                     // scrolls by dragging instead, with its own indicator
+                                     // (TouchScroll).
                                      ImGuiWindowFlags_NoScrollbar;
   if (ImGui::Begin(title.c_str(), nullptr, flags))
   {
+    const int scroll_colors = PushTouchScrollColors();
     const ImVec2 full(-FLT_MIN, 0);
     const auto back = [&] {
       ImGui::Spacing();
@@ -1231,6 +1298,8 @@ void TouchOverlay::DrawMenu()
     default:
       break;
     }
+    ImGui::PopStyleColor(scroll_colors);
+    TouchScroll();
   }
   ImGui::End();
   ImGui::PopStyleVar(9);
@@ -1315,12 +1384,13 @@ void TouchOverlay::DrawGameMenu()
   const float short_side = std::min(width_px, height_px);
   const bool landscape = width_px > height_px;
   const float ui_scale = std::max(ImGui::GetStyle().FontScaleMain, 1.0f);
-  // A little smaller than the overlay menu: eleven entries must fit a landscape height.
-  ImGui::PushFont(nullptr, std::max(short_side * 0.038f / ui_scale, 12.0f));
+  // Stage 6.8: the overlay menu's text size and taller entries; the panel scrolls by dragging
+  // (TouchScroll) now that its entries no longer fit a landscape height.
+  ImGui::PushFont(nullptr, std::max(short_side * 0.045f / ui_scale, 12.0f));
   const float line = ImGui::GetFontSize();
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(line * 0.8f, line * 0.6f));
-  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(line * 0.6f, line * 0.32f));
-  ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(line * 0.4f, line * 0.3f));
+  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(line * 0.6f, line * 0.6f));
+  ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(line * 0.4f, line * 0.45f));
   ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
   ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, line * 0.25f);
   ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
@@ -1339,6 +1409,7 @@ void TouchOverlay::DrawGameMenu()
       ImGuiWindowFlags_NoScrollbar;
   if (ImGui::Begin("###dolphin-ut-game-menu", nullptr, flags))
   {
+    const int scroll_colors = PushTouchScrollColors();
     const ImVec2 full(-FLT_MIN, 0);
     // The title, and "Close" beside it (there is no system Back to close the menu with).
     const char* close_label = "Close";
@@ -1391,6 +1462,17 @@ void TouchOverlay::DrawGameMenu()
       }
       if (m_actions.open_settings && ImGui::Button("Settings", full))
         action(m_actions.open_settings, true);
+      // Stage 6.8: as the Android app's menu, when the emulated portal or base is on (Config → Wii).
+      if (m_wii && m_actions.open_skylanders && Config::Get(Config::MAIN_EMULATE_SKYLANDER_PORTAL) &&
+          ImGui::Button("Skylanders Portal", full))
+      {
+        action(m_actions.open_skylanders, true);
+      }
+      if (m_wii && m_actions.open_infinity && Config::Get(Config::MAIN_EMULATE_INFINITY_BASE) &&
+          ImGui::Button("Infinity Base", full))
+      {
+        action(m_actions.open_infinity, true);
+      }
       if (ImGui::Button("Overlay Controls", full))
         m_menu = Menu::Main;
       if (m_wii && ImGui::Button("Refresh Wii Remotes", full))
@@ -1454,6 +1536,8 @@ void TouchOverlay::DrawGameMenu()
     default:
       break;
     }
+    ImGui::PopStyleColor(scroll_colors);
+    TouchScroll();
   }
   ImGui::End();
   ImGui::PopStyleVar(6);

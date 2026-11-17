@@ -65,6 +65,9 @@ public:
   // The in-game menu's Settings (stage 6.1): the library window over the paused game, with the
   // settings. returnToGame closes them (also when their page goes) and resumes the game.
   Q_INVOKABLE void openSettingsOverGame();
+  // Stage 6.8: another page over the paused game, as the settings: "skylanders" or "infinity"
+  // (FiguresPage.qml). returnToGame closes it as it closes the settings.
+  Q_INVOKABLE void openPageOverGame(const QString& page);
   Q_INVOKABLE void returnToGame();
   // For tests over adb: the newest open question (0: none).
   int LatestQuestionId() const { return m_answers.empty() ? 0 : m_answers.rbegin()->first; }
@@ -95,6 +98,7 @@ signals:
   void stateChanged();
   // The in-game menu's Settings: the library window, shown over the paused game, opens them.
   void settingsRequested();
+  void pageOverGameRequested(const QString& page);
   // The settings over the game are closed: their pages go.
   void settingsClosed();
   void overGameChanged();

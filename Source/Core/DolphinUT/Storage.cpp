@@ -21,6 +21,7 @@
 #include "Common/FileUtil.h"
 #include "Core/Config/MainSettings.h"
 #include "DolphinUT/Emulator.h"
+#include "DolphinUT/GpuDrivers.h"
 
 namespace
 {
@@ -223,6 +224,7 @@ bool Storage::importFiles(const QVariantList& urls)
 QVariantMap Storage::ImportFiles(const QStringList& paths)
 {
   QStringList imported;
+  QStringList drivers;
   QVariantList skipped;
   const auto skip = [&skipped](const QString& name, const QString& reason) {
     skipped.append(QVariantMap{{QStringLiteral("name"), name}, {QStringLiteral("reason"), reason}});
@@ -238,6 +240,25 @@ QVariantMap Storage::ImportFiles(const QStringList& paths)
     if (!source.isFile())
     {
       skip(name.isEmpty() ? path : name, QStringLiteral("not a file"));
+      continue;
+    }
+    // Stage 6.8: a GPU driver package (stage 4) is installed, as the GPU Driver page's Install
+    // Driver does, on the UI thread where the driver list lives.
+    if (m_driver_installer && GpuDrivers::IsDriverPackage(path))
+    {
+      QVariantMap result;
+      QMetaObject::invokeMethod(
+          this, [&] { result = m_driver_installer(path); }, Qt::BlockingQueuedConnection);
+      if (result.value(QStringLiteral("ok")).toBool())
+      {
+        drivers.append(result.value(QStringLiteral("name")).toString());
+        Emulator::LogFromAnyThread(QStringLiteral("import: %1 installed as GPU driver %2")
+                                       .arg(path, result.value(QStringLiteral("name")).toString()));
+      }
+      else
+      {
+        skip(name, result.value(QStringLiteral("error")).toString());
+      }
       continue;
     }
     if (!IsGameFile(path))
@@ -268,7 +289,9 @@ QVariantMap Storage::ImportFiles(const QStringList& paths)
     Emulator::LogFromAnyThread(
         QStringLiteral("import: %1 %2 to %3").arg(path, QLatin1String(how), target));
   }
-  return {{QStringLiteral("imported"), imported}, {QStringLiteral("skipped"), skipped}};
+  return {{QStringLiteral("imported"), imported},
+          {QStringLiteral("drivers"), drivers},
+          {QStringLiteral("skipped"), skipped}};
 }
 
 bool Storage::exists(const QString& path) const

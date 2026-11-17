@@ -78,7 +78,8 @@ Page {
                     summary.text: gpuDrivers.activeError !== "" ?
                                       "The chosen driver could not be used: " + gpuDrivers.activeError :
                                   page.restartNeeded ?
-                                      "Close Dolphin (swipe it away in the app switcher) and open it again to use " +
+                                      (lomiri.canRestart ? "Restart Dolphin to use " :
+                                                           "Close Dolphin (swipe it away in the app switcher) and open it again to use ") +
                                       page.driverName(gpuDrivers.selected) + "." :
                                       "Used by the Vulkan video backend."
                     summary.wrapMode: Text.Wrap
@@ -86,6 +87,17 @@ Page {
                     summary.color: gpuDrivers.activeError !== "" ? theme.palette.normal.negative :
                                                                    theme.palette.normal.backgroundSecondaryText
                 }
+            }
+
+            // Stage 6.8: restart in place (LomiriIntegration::restart), not during a game.
+            Button {
+                x: units.gu(2)
+                width: parent.width - units.gu(4)
+                visible: page.restartNeeded && lomiri.canRestart
+                enabled: emulator.state === "idle"
+                text: "Restart Dolphin"
+                color: theme.palette.normal.positive
+                onClicked: lomiri.restart(true)
             }
 
             ListItem {

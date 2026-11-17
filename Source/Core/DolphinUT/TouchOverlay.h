@@ -47,6 +47,9 @@ public:
     std::function<void()> reset;
     // Opens the settings over the paused game (stage 6.1).
     std::function<void()> open_settings;
+    // Stage 6.8: the Skylanders Portal and the Infinity Base pages (Wii games, when enabled).
+    std::function<void()> open_skylanders;
+    std::function<void()> open_infinity;
   };
 
   // wii: the game is a Wii game. screen_short_side: the screen's shorter side in physical pixels;
@@ -225,6 +228,10 @@ private:
   std::vector<std::string> m_slot_labels;  // filled when a save/load page opens
   std::vector<std::string> m_discs;        // filled when Change Disc opens
   float m_game_panel_width = 0.0f;         // the in-game menu's panel, as last drawn
+  // Stage 6.8: a finger dragging a menu scrolls it (TouchScroll), for the current press.
+  bool m_touch_scrolling = false;
+  void TouchScroll();
+  int PushTouchScrollColors() const;
   int m_menu_touch = -1;
   int m_opacity_preview = -1;  // the opacity slider while it is dragged
   int m_scale_preview = -1;

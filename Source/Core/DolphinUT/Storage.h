@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <functional>
 #include <string>
 #include <thread>
 
@@ -64,17 +65,26 @@ public:
   // app's cache (~/.cache/<package>/HubIncoming/) or copied it there from another file system, so a
   // rename is enough; then a hard link, then a copy (confinement may forbid the first two). On a
   // worker thread, as a copy of a disc image takes a while; importFinished reports
-  // {imported: [names], skipped: [{name, reason}]}.
+  // {imported: [names], drivers: [names], skipped: [{name, reason}]} (stage 6.8: GPU driver
+  // packages are installed, see SetDriverInstaller).
   Q_INVOKABLE bool importFiles(const QVariantList& urls);
   Q_INVOKABLE bool isGameFile(const QString& path) const { return IsGameFile(path); }
   Q_INVOKABLE bool exists(const QString& path) const;
+
+  // Stage 6.8: driver packages among the files from other apps go to this installer (GpuDrivers::
+  // install, run on the UI thread) instead of the games folder.
+  void SetDriverInstaller(std::function<QVariantMap(const QString&)> installer)
+  {
+    m_driver_installer = std::move(installer);
+  }
 
 signals:
   void importingChanged();
   void importFinished(const QVariantMap& result);
 
 private:
-  static QVariantMap ImportFiles(const QStringList& paths);
+  std::function<QVariantMap(const QString&)> m_driver_installer;
+  QVariantMap ImportFiles(const QStringList& paths);
 
   bool m_importing = false;
   // Joined before the next import and when the app quits, so a quit waits for a copy to end.

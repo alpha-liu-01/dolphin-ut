@@ -7,7 +7,7 @@
 // gpu-roundtrip (--test-arg ZIP; ZIP.nometa.zip is the failure case), hotkeys,
 // remaining-roundtrip, hotkeys-map, log-sync, settings-tap:MENU (--test-arg ROW) (stage 6.2);
 // wii, wii-roundtrip (stage 6.3); cheats-roundtrip, riivolution, convert, convert-run (stage 6.4);
-// userdata-export, userdata-check, userdata-import, userdata-reset, print-setting, share (--test-arg FILE), userdata (stage 6.5); motion (--test-arg MODE) (stage 6.6); achievements (--test-arg on|off) (stage 6.7);
+// userdata-export, userdata-check, userdata-import, userdata-reset, print-setting, share (--test-arg FILE), userdata (stage 6.5); motion (--test-arg MODE) (stage 6.6); achievements (--test-arg on|off) (stage 6.7); import-files (--test-arg PATHS), figures (--test-arg skylanders|infinity) (stage 6.8);
 // anything else
 // shows the library.
 import QtQuick
@@ -231,6 +231,28 @@ Window {
                 if (arg !== "") settingsModel.setValue(name, arg === "on")
                 console.log("ACH after enabled " + settingsModel.value(name) + " loggedIn " + achievements.loggedIn + " hardcore " + achievements.hardcoreActive + " user '" + achievements.username + "'")
                 stack.push(base + "SettingsPage.qml", { menuTag: "CONFIG_ACHIEVEMENTS" })
+            }
+            else if (page === "import-files") {
+                // Stage 6.8: files as content-hub hands them over (--test-arg PATH[,PATH…]).
+                storage.importFinished.connect(r => console.log("IMPORT " + JSON.stringify(r) + " drivers now " + JSON.stringify(gpuDrivers.drivers.map(d => d.id))))
+                console.log("IMPORT start " + storage.importFiles(arg.split(",").map(p => "file://" + p)))
+            }
+            else if (page === "figures") {
+                // Stage 6.8: --test-arg skylanders|infinity: create the first known figure in slot 1 (or
+                // Player One), clear it, load it back from its file, print the slots; then the page.
+                const sky = arg === "skylanders"
+                const list = sky ? figures.skylanderList() : figures.infinityList()
+                console.log("FIG " + list.length + " known, first " + JSON.stringify(list[0]))
+                const slot = sky ? 0 : 3
+                console.log("FIG create '" + (sky ? figures.createSkylander(slot, list[0].id, list[0].variant) : figures.createInfinity(slot, list[0].number)) + "'")
+                console.log("FIG slots " + JSON.stringify((sky ? figures.skylanderSlots : figures.infinitySlots).slice(0, 4)))
+                if (sky) figures.clearSkylander(slot); else figures.clearInfinity(slot)
+                console.log("FIG cleared " + JSON.stringify((sky ? figures.skylanderSlots : figures.infinitySlots)[slot]))
+                const file = (sky ? figures.skylanderFolder : figures.infinityFolder) + "/" + list[0].name + (sky ? ".sky" : ".bin")
+                console.log("FIG load " + file + " '" + (sky ? figures.loadSkylander(1, file) : figures.loadInfinity(slot, file)) + "'")
+                console.log("FIG load bad '" + (sky ? figures.loadSkylander(2, "/etc/hostname") : figures.loadInfinity(4, "/etc/hostname")) + "'")
+                console.log("FIG slots " + JSON.stringify((sky ? figures.skylanderSlots : figures.infinitySlots).slice(0, 4)))
+                stack.push(base + "FiguresPage.qml", { kind: arg })
             }
             else if (page === "print-setting") console.log("SETTING " + arg + " = " + settingsModel.value(arg))
             else if (page === "cheats-roundtrip") {

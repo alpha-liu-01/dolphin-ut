@@ -350,6 +350,8 @@ void Emulator::Boot(const QString& path, const QString& backend, bool riivolutio
     Core::System::GetInstance().GetProcessorInterface().ResetButton_Tap();
   };
   actions.open_settings = [this] { openSettingsOverGame(); };
+  actions.open_skylanders = [this] { openPageOverGame(QStringLiteral("skylanders")); };
+  actions.open_infinity = [this] { openPageOverGame(QStringLiteral("infinity")); };
   // Controls are sized by the screen's shorter side, as in the Android app.
   const QSize screen = m_game_window->screen()->size() * m_game_window->devicePixelRatio();
   m_overlay = std::make_unique<TouchOverlay>(!gamecube, std::min(screen.width(), screen.height()),
@@ -558,6 +560,15 @@ void Emulator::openSettingsOverGame()
   m_settings_over_game = true;
   BeginOverGame(QStringLiteral("settings"));
   emit settingsRequested();
+}
+
+void Emulator::openPageOverGame(const QString& page)
+{
+  if (m_settings_over_game || !m_game_window || !m_launcher)
+    return;
+  m_settings_over_game = true;
+  BeginOverGame(page);
+  emit pageOverGameRequested(page);
 }
 
 void Emulator::returnToGame()

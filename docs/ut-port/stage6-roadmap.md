@@ -86,11 +86,21 @@ Notes: `stage6.6-motion.md`.
 
 ## 6.7 RetroAchievements
 
-#### Status (2026-11-16): built and checked over adb; on-screen tests S6.7-M1–M4 pending (a RetroAchievements account needed for the login)
+#### Status (2026-11-16): built and checked over adb; on-screen tests S6.7-M1–M4 deferred to a community tester with a RetroAchievements account
 
 Notes: `stage6.7-achievements.md`.
 - **Dolphin's AchievementManager** now starts with the app and follows "Enable Achievements".
 - **Config → RetroAchievements** (no longer hidden) has Android's items: Enable Achievements, Log In / Log Out (one account item with a login dialog; only the token Dolphin gets back is kept), and Dolphin's eight switches, shown only while achievements are on.
 - **Hardcore:** the in-game menu greys out Quick Load and Load State while it is active, as Android strikes them through. Dolphin enforces the rest. It is active as soon as achievements are on with hardcore enabled, even before logging in (Dolphin's rule).
 - **Notifications:** Dolphin's own, in the picture.
+
+## 6.8 Smaller leftovers
+
+#### Status (2026-11-17): three items done (S6.8-M1–M4 passed); the in-game menu now scrolls by dragging, with taller entries (S6.8-M5 passed; no highlight while scrolling, re-test S6.8-M6 pending); translations measured, scope for the user
+
+Notes: `stage6.8-leftovers.md`.
+- **Driver zips from other apps:** Share or Import Games installs a driver package (stage 4) instead of skipping it, with a button to the GPU Driver page.
+- **Restart:** "Restart Dolphin" on the GPU Driver page and after Import User Data. A helper outside the app's unit waits for it to end and asks Lomiri to start it again.
+- **Skylanders Portal and Infinity Base:** in the in-game menu when enabled, as on Android: slots with Load, Create (Dolphin's figure lists) and Clear, on a page over the paused game.
+- **Translations:** Dolphin's catalogs cover about half of the settings' texts (189 of 384) and none of the port's own. Three options are written up; the choice is the user's.
 

@@ -170,6 +170,21 @@ QString GpuDrivers::GetActiveError() const
   return s_active_error;
 }
 
+bool GpuDrivers::IsDriverPackage(const QString& path)
+{
+  if (!path.endsWith(QStringLiteral(".zip"), Qt::CaseInsensitive))
+    return false;
+  void* zip = mz_zip_reader_create();
+  if (!zip)
+    return false;
+  Common::ScopeGuard zip_guard{[&] { mz_zip_reader_delete(&zip); }};
+  if (mz_zip_reader_open_file(zip, path.toStdString().c_str()) != MZ_OK)
+    return false;
+  const bool found = mz_zip_reader_locate_entry(zip, "meta.json", 0) == MZ_OK;
+  mz_zip_reader_close(zip);
+  return found;
+}
+
 QVariantMap GpuDrivers::install(const QString& path)
 {
   const auto failed = [](const QString& error) {
