@@ -26,6 +26,12 @@
      "globalOnly": true
     },
     {
+     "type": "page",
+     "title": "Hotkeys",
+     "page": "HotkeysPage.qml",
+     "globalOnly": true
+    },
+    {
      "type": "header",
      "title": "Long press a setting to clear it.",
      "gameOnly": true
@@ -73,7 +79,8 @@
     {
      "type": "submenu",
      "title": "Log",
-     "menu": "CONFIG_LOG"
+     "menu": "CONFIG_LOG",
+     "globalOnly": true
     },
     {
      "type": "submenu",
@@ -853,6 +860,16 @@
      "inverted": false
     },
     {
+     "type": "datetime",
+     "setting": "StringSetting.MAIN_CUSTOM_RTC_VALUE",
+     "title": "Set Custom RTC",
+     "description": "",
+     "min": 946684800,
+     "max": 2082672000,
+     "dateTitle": "Select RTC Date",
+     "timeTitle": "Select RTC Time"
+    },
+    {
      "type": "header",
      "title": "Misc Settings"
     },
@@ -1048,6 +1065,19 @@
      "type": "submenu",
      "title": "Color Correction",
      "menu": "COLOR_CORRECTION"
+    },
+    {
+     "type": "choice",
+     "setting": "StringSetting.GFX_ENHANCE_POST_SHADER",
+     "title": "Post-Processing Effect",
+     "description": "",
+     "entries": [
+      "Off"
+     ],
+     "values": [
+      ""
+     ],
+     "dynamic": "postProcessingShaders"
     },
     {
      "type": "switch",
@@ -1627,8 +1657,57 @@
      "inverted": false
     },
     {
+     "type": "choice",
+     "setting": "IntSetting.LOGGER_VERBOSITY",
+     "title": "Verbosity",
+     "description": "",
+     "entries": [
+      "Notice",
+      "Error",
+      "Warning",
+      "Info",
+      "Debug"
+     ],
+     "values": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ],
+     "dynamic": "logVerbosity"
+    },
+    {
+     "type": "action",
+     "action": "log_enable_all",
+     "title": "Enable all Log Types",
+     "description": "",
+     "confirmation": "Are you sure you want to enable all log types?",
+     "globalOnly": true
+    },
+    {
+     "type": "action",
+     "action": "log_disable_all",
+     "title": "Disable all Log Types",
+     "description": "",
+     "confirmation": "Are you sure you want to disable all log types?",
+     "globalOnly": true
+    },
+    {
+     "type": "action",
+     "action": "log_clear",
+     "title": "Clear Log file",
+     "description": "",
+     "confirmation": "Are you sure you want to clear the log file?",
+     "globalOnly": true
+    },
+    {
      "type": "header",
      "title": "Log Types"
+    },
+    {
+     "type": "logTypes",
+     "globalOnly": true
     }
    ],
    "title": "Log"
@@ -1677,6 +1756,22 @@
      "title": "Enable Jit Block Profiling",
      "description": "",
      "inverted": false
+    },
+    {
+     "type": "action",
+     "action": "jit_wipe_profiling",
+     "title": "Wipe Jit Block Profiling Data",
+     "description": "",
+     "confirmation": "Re-initialize JIT block profiling data?",
+     "globalOnly": true
+    },
+    {
+     "type": "action",
+     "action": "jit_write_block_log",
+     "title": "Write Jit Block Log Dump",
+     "description": "",
+     "confirmation": "",
+     "globalOnly": true
     },
     {
      "type": "header",
@@ -3015,6 +3110,16 @@
    "expression": null,
    "core": true
   },
+  "IntSetting.LOGGER_VERBOSITY": {
+   "type": "int",
+   "file": "Logger",
+   "section": "Options",
+   "key": "Verbosity",
+   "default": 1,
+   "dynamic": false,
+   "expression": null,
+   "core": false
+  },
   "IntSetting.MAIN_AUDIO_BUFFER_SIZE": {
    "type": "int",
    "file": "Dolphin",
@@ -3153,6 +3258,27 @@
    "default": null,
    "dynamic": true,
    "expression": "0x58",
+   "lockedWhileRunning": true,
+   "core": true
+  },
+  "StringSetting.GFX_ENHANCE_POST_SHADER": {
+   "type": "string",
+   "file": "GFX",
+   "section": "Enhancements",
+   "key": "PostProcessingShader",
+   "default": "",
+   "dynamic": false,
+   "expression": null,
+   "core": true
+  },
+  "StringSetting.MAIN_CUSTOM_RTC_VALUE": {
+   "type": "string",
+   "file": "Dolphin",
+   "section": "Core",
+   "key": "CustomRTCValue",
+   "default": "0x386d4380",
+   "dynamic": false,
+   "expression": null,
    "lockedWhileRunning": true,
    "core": true
   },
@@ -3373,59 +3499,9 @@
    "title": "Log Out"
   },
   {
-   "menu": "CONFIG_ADVANCED",
-   "kind": "DateTimeChoiceSetting",
-   "title": "Set Custom RTC"
-  },
-  {
-   "menu": "HOTKEYS",
-   "kind": "InputMappingControlSetting",
-   "title": ""
-  },
-  {
    "menu": "WIIMOTE",
    "kind": "SwitchSetting",
    "title": "Real Balance Board"
-  },
-  {
-   "menu": "ENHANCEMENTS",
-   "kind": "StringSingleChoiceSetting",
-   "title": "Post-Processing Effect"
-  },
-  {
-   "menu": "CONFIG_LOG",
-   "kind": "SingleChoiceSetting",
-   "title": "Verbosity"
-  },
-  {
-   "menu": "CONFIG_LOG",
-   "kind": "RunRunnable",
-   "title": "Enable all Log Types"
-  },
-  {
-   "menu": "CONFIG_LOG",
-   "kind": "RunRunnable",
-   "title": "Disable all Log Types"
-  },
-  {
-   "menu": "CONFIG_LOG",
-   "kind": "RunRunnable",
-   "title": "Clear Log file"
-  },
-  {
-   "menu": "CONFIG_LOG",
-   "kind": "LogSwitchSetting",
-   "title": ""
-  },
-  {
-   "menu": "DEBUG",
-   "kind": "RunRunnable",
-   "title": "Wipe Jit Block Profiling Data"
-  },
-  {
-   "menu": "DEBUG",
-   "kind": "RunRunnable",
-   "title": "Write Jit Block Log Dump"
   }
  ]
 }

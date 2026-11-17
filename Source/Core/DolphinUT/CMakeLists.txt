@@ -18,6 +18,8 @@ add_executable(dolphin-ut
   GameList.h
   GameWindow.cpp
   GameWindow.h
+  HotkeyScheduler.cpp
+  HotkeyScheduler.h
   LomiriIntegration.cpp
   LomiriIntegration.h
   OverlayLayout.cpp
@@ -89,6 +91,7 @@ qt_add_qml_module(dolphin-ut
     qml/ImportPage.qml
     qml/UserDataPage.qml
     qml/GpuDriversPage.qml
+    qml/HotkeysPage.qml
 )
 
 target_include_directories(dolphin-ut PRIVATE ${Qt6Gui_PRIVATE_INCLUDE_DIRS})

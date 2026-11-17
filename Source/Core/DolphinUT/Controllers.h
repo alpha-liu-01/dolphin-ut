@@ -7,6 +7,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <QObject>
@@ -19,6 +20,7 @@
 class InputConfig;
 namespace ControllerEmu
 {
+class Control;
 class ControlGroup;
 class ControlGroupContainer;
 class EmulatedController;
@@ -60,7 +62,8 @@ public:
   Q_INVOKABLE int wiimoteExtension(int index) const;
   Q_INVOKABLE void setWiimoteExtension(int index, int extension);
 
-  // A mapping editor (owned by QML). kind: "gcpad" or "wiimote"; extension >= 0 edits that Wii
+  // A mapping editor (owned by QML). kind: "gcpad", "wiimote" or "hotkeys" (stage 6.2: the hotkeys
+  // HotkeyScheduler handles, as the Android app's hotkey settings); extension >= 0 edits that Wii
   // Remote extension's controls; group_types (ControllerEmu::GroupType numbers) filters the groups,
   // as the Android app splits the Wii Remote's settings into pages.
   Q_INVOKABLE QObject* mapping(const QString& kind, int index, int extension = -1,
@@ -96,6 +99,11 @@ public:
                     std::vector<int> group_types);
   ~MappingController() override;
 
+  // Only these controls, as {group index in the container, control index in the group}, in this
+  // order; a group is listed again whenever the next control is in another group (the hotkeys, as
+  // the Android app's addHotkeySettings). Such a list has no group settings.
+  void ShowOnly(const std::vector<std::pair<int, int>>& controls);
+
   QString GetTitle() const { return m_title; }
   QString GetDevice() const;
   void SetDevice(const QString& device);
@@ -130,12 +138,17 @@ signals:
 private:
   void Save();
   void UpdateDetection();
+  // The control shown at {group, control}, or nullptr.
+  ControllerEmu::Control* GetControl(int group, int control) const;
+  bool IsHotkeys() const;
 
   InputConfig* m_config;
   ControllerEmu::EmulatedController* m_controller;  // device, profiles, saving
   ControllerEmu::ControlGroupContainer* m_container;  // the groups (the controller or an extension)
   QString m_title;
-  std::vector<ControllerEmu::ControlGroup*> m_groups;
+  // The groups shown, each with the controls shown (indices in the group).
+  std::vector<std::pair<ControllerEmu::ControlGroup*, std::vector<int>>> m_groups;
+  bool m_filtered = false;
 
   std::unique_ptr<ciface::Core::InputDetector> m_detector;
   int m_detect_group = -1;

@@ -3,28 +3,40 @@
 
 #include "DolphinUT/SettingsModel.h"
 
+#include <filesystem>
 #include <memory>
+#include <system_error>
 #include <type_traits>
 
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QMetaObject>
+
+#include <fmt/format.h>
 
 #include "Common/CommonTypes.h"
 #include "Common/FatFsUtil.h"
 #include "Common/FileUtil.h"
+#include "Common/IOFile.h"
+#include "Common/Logging/Log.h"
+#include "Common/Logging/LogManager.h"
 #include "Core/Config/AchievementSettings.h"
 #include "Core/Config/GraphicsSettings.h"
 #include "Core/Config/MainSettings.h"
 #include "Core/Config/SYSCONFSettings.h"
 #include "Core/Config/UISettings.h"
 #include "Core/ConfigLoaders/GameConfigLoader.h"
+#include "Core/ConfigManager.h"
 #include "Core/Core.h"
+#include "Core/PowerPC/JitInterface.h"
 #include "Core/System.h"
 #include "DolphinUT/CpuBoost.h"
 #include "DolphinUT/Emulator.h"
 #include "DolphinUT/Storage.h"
 #include "UICommon/UICommon.h"
+#include "VideoCommon/PostProcessing.h"
+#include "VideoCommon/VideoConfig.h"
 
 namespace
 {
@@ -233,6 +245,118 @@ void AddPathSettings(std::map<std::string, Binding>& bindings)
         [&info] { return InGameLayer(info); }, [&info](bool game) { Delete(info, game); }};
   }
 }
+// The log (stage 6.2). Dolphin's LogManager reads the Logger file once, at start, and writes its own
+// state back at exit (LogManager::Shutdown), so a change also goes to the LogManager, as DolphinQt's
+// LogConfigWidget does (the Android app re-creates the LogManager instead). The verbosity needs
+// nothing more: the LogManager follows it through a config callback. The log is the app's: the
+// items are global only, so these always write the base layer.
+using Common::Log::LogManager;
+
+Config::Info<bool> LogTypeInfo(const std::string& short_name)
+{
+  return {{Config::System::Logger, "Logs", short_name}, false};
+}
+
+void SetLogType(Common::Log::LogType type, const std::string& short_name, bool enabled)
+{
+  Config::SetBaseOrCurrent(LogTypeInfo(short_name), enabled);
+  if (auto* const log_manager = LogManager::GetInstance())
+    log_manager->SetEnable(type, enabled);
+}
+
+void AddLogSettings(std::map<std::string, Binding>& bindings)
+{
+  Binding& to_file = bindings["BooleanSetting.LOGGER_WRITE_TO_FILE"];
+  to_file.set = [set = to_file.set](bool, const QVariant& value) {
+    set(false, value);
+    if (auto* const log_manager = LogManager::GetInstance())
+      log_manager->EnableListener(Common::Log::LogListener::FILE_LISTENER, value.toBool());
+  };
+
+  auto* const log_manager = LogManager::GetInstance();
+  if (!log_manager)
+    return;
+  const auto types = log_manager->GetLogTypes();
+  for (std::size_t i = 0; i < types.size(); ++i)
+  {
+    const auto type = static_cast<Common::Log::LogType>(i);
+    const std::string short_name = types[i].m_short_name;
+    bindings["LogType." + short_name] = {
+        [short_name] { return QVariant(Config::Get(LogTypeInfo(short_name))); },
+        [type, short_name](bool, const QVariant& value) {
+          SetLogType(type, short_name, value.toBool());
+        },
+        [] { return false; }, [](bool) {}};
+  }
+}
+
+// Actions on the UI thread, as the Android app runs them (quick, or they pause the emulation, which
+// a worker thread racing the UI's reads of the settings should not do): {ok, message}.
+std::pair<bool, QString> RunQuickAction(const QString& action)
+{
+  if (action == QStringLiteral("log_enable_all") || action == QStringLiteral("log_disable_all"))
+  {
+    // SettingsFragmentPresenter.setAllLogTypes.
+    const bool enabled = action == QStringLiteral("log_enable_all");
+    if (auto* const log_manager = LogManager::GetInstance())
+    {
+      const auto types = log_manager->GetLogTypes();
+      for (std::size_t i = 0; i < types.size(); ++i)
+        SetLogType(static_cast<Common::Log::LogType>(i), types[i].m_short_name, enabled);
+    }
+    Config::Save();
+    return {true, {}};
+  }
+  if (action == QStringLiteral("log_clear"))
+  {
+    // SettingsAdapter.clearLog: emptied, not deleted, in case something watches it. The log is
+    // written in append mode, so it carries on at the new end.
+    const std::string path = File::GetUserPath(F_MAINLOG_IDX);
+    if (!File::Exists(path))
+      return {true, {}};
+    std::error_code error;
+    std::filesystem::resize_file(path, 0, error);
+    if (error)
+    {
+      return {false, QStringLiteral("Failed to clear the log file: %1")
+                         .arg(QString::fromStdString(error.message()))};
+    }
+    return {true, {}};
+  }
+  if (action == QStringLiteral("jit_wipe_profiling") ||
+      action == QStringLiteral("jit_write_block_log"))
+  {
+    // NativeLibrary.WipeJitBlockProfilingData / WriteJitBlockLogDump (Source/Android/jni).
+    auto& system = Core::System::GetInstance();
+    auto& jit_interface = system.GetJitInterface();
+    const Core::CPUThreadGuard cpu_guard(system);
+    if (jit_interface.GetCore() == nullptr)
+      return {false, QStringLiteral("JIT is not active")};
+    if (action == QStringLiteral("jit_wipe_profiling"))
+    {
+      jit_interface.WipeBlockProfilingData(cpu_guard);
+      return {true, {}};
+    }
+    const std::string folder = File::GetUserPath(D_DUMPDEBUG_JITBLOCKS_IDX);
+    File::CreateFullPath(folder);
+    const std::string filename =
+        fmt::format("{}{}.txt", folder, SConfig::GetInstance().GetGameID());
+    File::IOFile file(filename, "w");
+    if (!file)
+    {
+      return {false, QStringLiteral("Failed to open \"%1\" for writing.")
+                         .arg(QString::fromStdString(filename))};
+    }
+    jit_interface.JitBlockLogDump(cpu_guard, file.GetHandle());
+    return {true, QStringLiteral("Wrote to \"%1\".").arg(QString::fromStdString(filename))};
+  }
+  return {false, {}};
+}
+
+bool IsQuickAction(const QString& action)
+{
+  return action.startsWith(QStringLiteral("log_")) || action.startsWith(QStringLiteral("jit_"));
+}
 }  // namespace
 
 SettingsModel::SettingsModel(QObject* parent) : QObject(parent)
@@ -255,6 +379,7 @@ SettingsModel::SettingsModel(QObject* parent) : QObject(parent)
   };
   AddVirtualSettings(m_bindings);
   AddPathSettings(m_bindings);
+  AddLogSettings(m_bindings);
 }
 
 SettingsModel::~SettingsModel()
@@ -265,6 +390,26 @@ SettingsModel::~SettingsModel()
 
 bool SettingsModel::runAction(const QString& action)
 {
+  if (IsQuickAction(action))
+  {
+    if (m_busy)
+      return false;
+    Emulator::LogFromAnyThread(QStringLiteral("action %1").arg(action));
+    const auto [ok, message] = RunQuickAction(action);
+    Emulator::LogFromAnyThread(QStringLiteral("action %1: %2%3")
+                                   .arg(action, ok ? "done" : "failed",
+                                        message.isEmpty() ? QString() : QStringLiteral(" (%1)").arg(message)));
+    // Queued: the page marks itself as waiting once this returns.
+    QMetaObject::invokeMethod(
+        this,
+        [this, action, ok, message] {
+          emit actionFinished(action, ok, message);
+          Changed();
+        },
+        Qt::QueuedConnection);
+    return true;
+  }
+
   std::function<bool()> work;
   if (action == QStringLiteral("sd_pack"))
     work = [] { return Common::SyncSDFolderToSDImage([] { return false; }, false); };
@@ -283,7 +428,7 @@ bool SettingsModel::runAction(const QString& action)
       Emulator::LogFromAnyThread(QStringLiteral("action %1: %2").arg(action, ok ? "done" : "failed"));
       m_busy = false;
       emit busyChanged();
-      emit actionFinished(action, ok);
+      emit actionFinished(action, ok, QString());
       Changed();
     });
   });
@@ -292,7 +437,73 @@ bool SettingsModel::runAction(const QString& action)
 
 QVariantMap SettingsModel::menu(const QString& tag) const
 {
-  return m_menus.value(tag).toObject().toVariantMap();
+  QVariantMap menu = m_menus.value(tag).toObject().toVariantMap();
+  QVariantList items;
+  for (const QVariant& item : menu.value(QStringLiteral("items")).toList())
+  {
+    const QVariantMap map = item.toMap();
+    if (map.value(QStringLiteral("type")).toString() != QStringLiteral("logTypes"))
+    {
+      items.append(item);
+      continue;
+    }
+    // NativeLibrary.GetLogTypeNames: the full name as the title, the short name as the key.
+    if (auto* const log_manager = LogManager::GetInstance())
+    {
+      for (const auto& type : log_manager->GetLogTypes())
+      {
+        items.append(QVariantMap{
+            {QStringLiteral("type"), QStringLiteral("switch")},
+            {QStringLiteral("setting"),
+             QStringLiteral("LogType.%1").arg(QString::fromStdString(type.m_short_name))},
+            {QStringLiteral("title"), QString::fromStdString(type.m_full_name)},
+            {QStringLiteral("description"), QString()},
+            {QStringLiteral("inverted"), false},
+            {QStringLiteral("globalOnly"), true},
+        });
+      }
+    }
+  }
+  menu[QStringLiteral("items")] = items;
+  return menu;
+}
+
+QVariantMap SettingsModel::choices(const QString& kind, const QVariantList& entries,
+                                   const QVariantList& values) const
+{
+  QVariantList out_entries, out_values;
+  if (kind == QStringLiteral("postProcessingShaders"))
+  {
+    // SettingsFragmentPresenter.addEnhanceSettings: the anaglyph shaders in anaglyph stereo mode.
+    out_entries = entries;
+    out_values = values;
+    const auto shaders = Config::Get(Config::GFX_STEREO_MODE) == StereoMode::Anaglyph ?
+                             VideoCommon::PostProcessing::GetAnaglyphShaderList() :
+                             VideoCommon::PostProcessing::GetShaderList();
+    for (const std::string& shader : shaders)
+    {
+      out_entries.append(QString::fromStdString(shader));
+      out_values.append(QString::fromStdString(shader));
+    }
+  }
+  else if (kind == QStringLiteral("logVerbosity"))
+  {
+    const int max = static_cast<int>(Common::Log::MAX_EFFECTIVE_LOGLEVEL);
+    for (qsizetype i = 0; i < entries.size() && i < values.size(); ++i)
+    {
+      if (values[i].toInt() <= max)
+      {
+        out_entries.append(entries[i]);
+        out_values.append(values[i]);
+      }
+    }
+  }
+  else
+  {
+    out_entries = entries;
+    out_values = values;
+  }
+  return {{QStringLiteral("entries"), out_entries}, {QStringLiteral("values"), out_values}};
 }
 
 bool SettingsModel::lockedWhileRunning(const QString& name) const

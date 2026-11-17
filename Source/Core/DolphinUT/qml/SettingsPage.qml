@@ -4,6 +4,7 @@
 import QtQuick
 import Lomiri.Components
 import Lomiri.Components.Popups
+import Lomiri.Components.Pickers
 
 // One menu of the settings (stage 3.6): the Android app's menus and items, generated from its
 // sources (settings.json), drawn with Lomiri components. With a game open (settingsModel.gameId),
@@ -63,13 +64,33 @@ Page {
         settingsModel.revision
         return settingsModel.overridden(name)
     }
+    // A choice's entries and values; the lists the Android app builds at run time come from the
+    // model (stage 6.2: the post-processing shaders, the log levels).
+    function choicesOf(entry) {
+        if (!entry.dynamic)
+            return entry
+        settingsModel.revision  // the shader list follows the stereo mode
+        return settingsModel.choices(entry.dynamic, entry.entries, entry.values)
+    }
     function choiceLabel(entry) {
         const value = valueOf(entry.setting)
-        for (let i = 0; i < entry.values.length; ++i) {
-            if (String(entry.values[i]) === String(value))
-                return entry.entries[i]
+        const list = choicesOf(entry)
+        for (let i = 0; i < list.values.length; ++i) {
+            if (String(list.values[i]) === String(value))
+                return list.entries[i]
         }
         return String(value)
+    }
+    // The custom RTC (stage 6.2): seconds since 1970, shown and picked as UTC wall-clock time, as
+    // the Android app's DateTimeSettingViewHolder. The pickers work in local time, so they get a
+    // local Date with the UTC fields.
+    function utcFields(seconds) {
+        const d = new Date(Number(seconds) * 1000)
+        return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(),
+                        d.getUTCMinutes())
+    }
+    function dateTimeLabel(entry) {
+        return utcFields(valueOf(entry.setting)).toLocaleString(Qt.locale(), Locale.ShortFormat)
     }
     function sliderText(entry) {
         let value = Number(valueOf(entry.setting))
@@ -126,6 +147,7 @@ Page {
                         case "file": return pathItem
                         case "folder": return pathItem
                         case "action": return actionItem
+                        case "datetime": return dateTimeItem
                         }
                         return null
                     }
@@ -410,8 +432,9 @@ Page {
         Dialog {
             id: dialog
             property bool ok
+            property string message
             title: ok ? "Done" : "Failed"
-            text: ok ? "" : "See the log on the Developer page."
+            text: message !== "" ? message : ok ? "" : "See the log on the Developer page."
             Button {
                 text: "OK"
                 onClicked: PopupUtils.close(dialog)
@@ -421,11 +444,79 @@ Page {
 
     Connections {
         target: settingsModel
-        function onActionFinished(action, ok) {
+        function onActionFinished(action, ok, message) {
             if (!page.waitingForAction)
                 return
             page.waitingForAction = false
-            PopupUtils.open(actionResultDialog, page, { ok: ok })
+            PopupUtils.open(actionResultDialog, page, { ok: ok, message: message })
+        }
+    }
+
+    // The custom RTC: the date and the time, as UTC (the Android app's two pickers in one dialog).
+    Component {
+        id: dateTimeItem
+        SettingItem {
+            id: dateTimeRow
+            height: dateTimeLayout.height + (divider.visible ? divider.height : 0)
+            onClicked: PopupUtils.open(dateTimeDialog, page, { entry: entry })
+            ListItemLayout {
+                id: dateTimeLayout
+                title.text: entry.title + (dateTimeRow.overridden ? "  •" : "")
+                subtitle.text: page.dateTimeLabel(entry) + (entry.description ? "\n" + entry.description : "")
+                subtitle.maximumLineCount: 4
+                subtitle.wrapMode: Text.Wrap
+            }
+        }
+    }
+
+    Component {
+        id: dateTimeDialog
+        Dialog {
+            id: dialog
+            property var entry
+            readonly property var initial: page.utcFields(page.valueOf(entry.setting))
+            title: entry.title
+            Label {
+                text: dialog.entry.dateTitle
+            }
+            DatePicker {
+                id: datePicker
+                width: parent.width
+                mode: "Years|Months|Days"
+                minimum: page.utcFields(dialog.entry.min)
+                maximum: page.utcFields(dialog.entry.max)
+                // Noon: the date alone, clear of daylight saving changes.
+                date: new Date(dialog.initial.getFullYear(), dialog.initial.getMonth(),
+                               dialog.initial.getDate(), 12, 0)
+            }
+            Label {
+                text: dialog.entry.timeTitle
+            }
+            DatePicker {
+                id: timePicker
+                width: parent.width
+                mode: "Hours|Minutes"
+                // The time alone, on a day without daylight saving changes.
+                date: new Date(2000, 0, 1, dialog.initial.getHours(), dialog.initial.getMinutes())
+            }
+            Button {
+                text: "OK"
+                color: theme.palette.normal.positive
+                onClicked: {
+                    const d = datePicker.date
+                    const t = timePicker.date
+                    let seconds = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(),
+                                           t.getHours(), t.getMinutes()) / 1000
+                    seconds = Math.min(Math.max(seconds, dialog.entry.min), dialog.entry.max)
+                    if (seconds !== Number(page.valueOf(dialog.entry.setting)))
+                        settingsModel.setValue(dialog.entry.setting, seconds)
+                    PopupUtils.close(dialog)
+                }
+            }
+            Button {
+                text: "Cancel"
+                onClicked: PopupUtils.close(dialog)
+            }
         }
     }
 
@@ -435,15 +526,16 @@ Page {
         Dialog {
             id: dialog
             property var entry
+            readonly property var list: page.choicesOf(entry)
             title: entry.title
             Repeater {
-                model: dialog.entry.entries
+                model: dialog.list.entries
                 delegate: Button {
-                    readonly property bool current: String(dialog.entry.values[index]) === String(page.valueOf(dialog.entry.setting))
+                    readonly property bool current: String(dialog.list.values[index]) === String(page.valueOf(dialog.entry.setting))
                     text: (current ? "✓  " : "") + modelData
                     color: current ? theme.palette.normal.positive : theme.palette.normal.base
                     onClicked: {
-                        settingsModel.setValue(dialog.entry.setting, dialog.entry.values[index])
+                        settingsModel.setValue(dialog.entry.setting, dialog.list.values[index])
                         PopupUtils.close(dialog)
                     }
                 }

@@ -169,7 +169,29 @@ RUNNABLE_ACTIONS = {
     "UserDataActivity.launch": "UserDataPage.qml",
     "syncSdFolderToSdImage": "sd_pack",
     "syncSdImageToSdFolder": "sd_unpack",
+    # Stage 6.2: the log menu's actions and the debug menu's JIT profiling actions.
+    "setAllLogTypes(true)": "log_enable_all",
+    "setAllLogTypes(false)": "log_disable_all",
+    "clearLog": "log_clear",
+    "WipeJitBlockProfilingData": "jit_wipe_profiling",
+    "WriteJitBlockLogDump": "jit_write_block_log",
 }
+# Choice lists the Android app builds at run time (stage 6.2). The port's SettingsModel::choices
+# builds them the same way from the list given here:
+# - postProcessingShaders: "Off", then Dolphin's post-processing shaders (the anaglyph ones in
+#   anaglyph stereo mode), as the presenter's shaderList;
+# - logVerbosity: the levels up to the build's highest (Common::Log::MAX_EFFECTIVE_LOGLEVEL), as
+#   getLogVerbosityEntries picks the list ending in Info or in Debug.
+DYNAMIC_ARRAYS = {
+    "getLogVerbosityEntries()": ("logVerbosityEntriesMaxLevelDebug", "logVerbosity"),
+    "getLogVerbosityValues()": ("logVerbosityValuesMaxLevelDebug", "logVerbosity"),
+}
+DYNAMIC_SETTINGS = {
+    "StringSetting.GFX_ENHANCE_POST_SHADER": "postProcessingShaders",
+}
+# The Wii's RTC range in the Android app's date picker (SettingsAdapter.onDateTimeClick), in
+# seconds: 2000-01-01 to 2035-12-31, UTC.
+RTC_RANGE = (946684800, 2082672000)
 
 presenter = (settings_dir / "ui/SettingsFragmentPresenter.kt").read_text()
 tags = dict(re.findall(r"MenuTag\.(\w+) -> (add\w+Settings)\(sl\)", presenter))
@@ -203,7 +225,26 @@ for tag, function in tags.items():
         setting = next((a for a in args if re.fullmatch(r"(Boolean|Int|Float|String)Setting\.\w+", a)),
                        None)
         item = None
-        if kind in ("SwitchSetting", "InvertedSwitchSetting") and setting and len(args) >= 4:
+        if kind == "SingleChoiceSetting" and setting and len(args) > 5 and args[4] in DYNAMIC_ARRAYS:
+            entries_array, dynamic = DYNAMIC_ARRAYS[args[4]]
+            values_array, _ = DYNAMIC_ARRAYS.get(args[5], (None, None))
+            item = {"type": "choice", "setting": setting, "title": res_string(args[2]),
+                    "description": res_string(args[3]), "entries": arrays[entries_array],
+                    "values": [literal(v) for v in arrays[values_array]], "dynamic": dynamic}
+        elif kind == "StringSingleChoiceSetting" and setting in DYNAMIC_SETTINGS:
+            item = {"type": "choice", "setting": setting, "title": res_string(args[2]),
+                    "description": res_string(args[3]), "entries": [strings["off"]],
+                    "values": [""], "dynamic": DYNAMIC_SETTINGS[setting]}
+        elif kind == "DateTimeChoiceSetting" and setting and len(args) >= 4:
+            # Seconds since 1970 as UTC wall-clock time (the Android app's DateTimeSettingViewHolder).
+            item = {"type": "datetime", "setting": setting, "title": res_string(args[2]),
+                    "description": res_string(args[3]), "min": RTC_RANGE[0], "max": RTC_RANGE[1],
+                    "dateTitle": strings["select_rtc_date"], "timeTitle": strings["select_rtc_time"]}
+        elif kind == "LogSwitchSetting":
+            # One switch per log type (NativeLibrary.GetLogTypeNames): SettingsModel::menu expands
+            # it from Dolphin's LogManager. The log belongs to the app, not to a game.
+            item = {"type": "logTypes", "globalOnly": True}
+        elif kind in ("SwitchSetting", "InvertedSwitchSetting") and setting and len(args) >= 4:
             item = {"type": "switch", "setting": setting, "title": res_string(args[2]),
                     "description": res_string(args[3]), "inverted": kind == "InvertedSwitchSetting"}
         elif kind in ("SingleChoiceSetting", "SingleChoiceSettingDynamicDescriptions") and setting:
@@ -269,11 +310,16 @@ for tag, function in tags.items():
 HIDDEN_SETTINGS = {"IntSetting.MAIN_EMULATION_ORIENTATION", "BooleanSetting.MAIN_EXPAND_TO_CUTOUT_AREA",
                    # Analytics are not built into the port (ENABLE_ANALYTICS=OFF).
                    "BooleanSetting.MAIN_ANALYTICS_ENABLED"}
-HIDDEN_MENUS = {"HOTKEYS", "CONFIG_ACHIEVEMENTS"}
+HIDDEN_MENUS = {"CONFIG_ACHIEVEMENTS"}
 # Menus the port draws with its own page. The GPU driver is chosen for the whole app, at start
-# (stage 4, VulkanDriver.h), as the Android app offers it only outside game settings.
+# (stage 4, VulkanDriver.h), as the Android app offers it only outside game settings. Hotkeys
+# (stage 6.2) are the mapping page over Dolphin's hotkey controller (Hotkeys.ini, global, as the
+# Android app shows them only outside game settings).
 REDIRECTS = {"GCPAD_TYPE": "ControllersPage.qml", "WIIMOTE": "ControllersPage.qml",
-             "GPU_DRIVERS": "GpuDriversPage.qml"}
+             "GPU_DRIVERS": "GpuDriversPage.qml", "HOTKEYS": "HotkeysPage.qml"}
+# Menus about the app rather than a game (stage 6.2): the log. The Android app shows it in game
+# settings too, but Dolphin reads the Logger file only globally.
+GLOBAL_MENUS = {"CONFIG_LOG"}
 # The top level's "Long press a setting to clear it." is shown with game settings only, as there.
 for item in menus["SETTINGS"]["items"]:
     if item["type"] == "header" and item["title"] == strings.get("setting_clear_info"):
@@ -283,6 +329,8 @@ for menu in menus.values():
     for item in menu["items"]:
         if item.get("setting") in HIDDEN_SETTINGS or item.get("menu") in HIDDEN_MENUS:
             continue
+        if item["type"] == "submenu" and item["menu"] in GLOBAL_MENUS:
+            item["globalOnly"] = True
         if item["type"] == "submenu" and item["menu"] in REDIRECTS:
             # Global only: the Controllers page edits the global setup (per-game controller
             # profiles are not done yet), and the GPU driver applies to the whole app.
@@ -292,6 +340,8 @@ for menu in menus.values():
     menu["items"] = kept
 for tag in HIDDEN_MENUS | set(REDIRECTS):
     menus.pop(tag, None)
+# The hotkey page lists the hotkeys itself (Controllers::mapping), as the presenter's addHotkeySettings.
+skipped = [s for s in skipped if s["menu"] != "HOTKEYS"]
 
 
 def insert_after(menu, predicate, new_item):

@@ -35,6 +35,7 @@
 #include "Core/System.h"
 #include "DiscIO/Enums.h"
 #include "DolphinUT/GameWindow.h"
+#include "DolphinUT/HotkeyScheduler.h"
 #include "DolphinUT/LomiriIntegration.h"
 #include "DolphinUT/TouchOverlay.h"
 #include "InputCommon/ControllerInterface/ControllerInterface.h"
@@ -222,6 +223,7 @@ void Emulator::Shutdown()
     }
   }
   FinishStop();
+  HotkeyScheduler::Stop();
   Core::Shutdown(system);
   if (m_controllers_initialized)
     UICommon::ShutdownControllers();
@@ -401,6 +403,7 @@ void Emulator::FinishStop()
     m_resume_after_over_game = false;
     emit overGameChanged();
   }
+  UpdateHotkeysEnabled();
   if (m_launcher && !m_launcher->isVisible())
   {
     m_library_normal_requests = 0;
@@ -417,6 +420,17 @@ void Emulator::OnCoreStateChanged(Core::State state)
   m_state = StateName(state);
   emit stateChanged();
   appendLog(QStringLiteral("core: %1").arg(m_state));
+
+  // Hotkeys while the game runs, as the Android app's Run starts and stops them around it.
+  if (previous == Core::State::Starting &&
+      (state == Core::State::Running || state == Core::State::Paused))
+  {
+    HotkeyScheduler::Start();
+  }
+  else if (state == Core::State::Stopping || state == Core::State::Uninitialized)
+  {
+    HotkeyScheduler::Stop();
+  }
 
   // A wl_surface cannot report its size: send it again once the presenter exists
   // (the same fix as DolphinQt's RenderWidget, docs/ut-port/stage2-wayland.md).
@@ -495,6 +509,7 @@ void Emulator::OnCoreStateChanged(Core::State state)
 void Emulator::OnApplicationStateChanged(Qt::ApplicationState state)
 {
   appendLog(QStringLiteral("application state: %1").arg(AppStateName(state)));
+  UpdateHotkeysEnabled();
   if (!m_pause_when_inactive)
     return;
 
@@ -548,8 +563,15 @@ void Emulator::BeginOverGame(const QString& reason, bool pause)
     m_launcher->raise();
     m_launcher->requestActivate();
     emit overGameChanged();
+    UpdateHotkeysEnabled();
   }
   appendLog(QStringLiteral("library over the game: %1 (%2 open)").arg(reason).arg(m_over_game));
+}
+
+void Emulator::UpdateHotkeysEnabled()
+{
+  HotkeyScheduler::SetEnabled(m_over_game == 0 &&
+                              qGuiApp->applicationState() == Qt::ApplicationActive);
 }
 
 void Emulator::EndOverGame(const QString& reason)
@@ -560,6 +582,7 @@ void Emulator::EndOverGame(const QString& reason)
   if (--m_over_game > 0)
     return;
   emit overGameChanged();
+  UpdateHotkeysEnabled();
   if (!m_game_window)
     return;
   if (m_launcher && m_hide_launcher)

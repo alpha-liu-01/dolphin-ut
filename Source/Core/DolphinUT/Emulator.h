@@ -98,6 +98,9 @@ private:
   void OnApplicationStateChanged(Qt::ApplicationState state);
   void OnGameWindowSizeChanged(int width, int height, float scale);
   void FinishStop();
+  // Hotkeys (stage 6.2) only while the game is in front: not over the game or with the app in the
+  // background, as the Android app's Hotkeys.setEnabled in onResume and onPause.
+  void UpdateHotkeysEnabled();
   // Show the library window over the game, pausing it (counted: settings and questions can
   // overlap); the last End hides the window again and resumes the game if it was running.
   // pause: false for Dolphin's questions, whose asking thread (CPU or GPU) is blocked: pausing the

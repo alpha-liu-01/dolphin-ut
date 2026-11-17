@@ -33,3 +33,15 @@ Notes: `stage6.1-ingame-settings.md`.
 - **Dolphin's alerts and questions** get a dialog (Yes/No or OK, plus "Ignore for this session" for warnings), over the game if one runs. The asking thread waits, with DolphinQt's CPU/GPU-thread safeguard; the game is not paused for a question, so a blocked GPU thread cannot deadlock the pause.
 - **Checked over adb:** questions and warnings from a worker thread; settings over a running game and back at 100% speed; a warning during a game; locked items on screenshots; a boot error raised on the UI thread.
 - **S6.1-M3 failed:** a question during a game could stay behind it. Lomiri has no xdg-activation, so a window shown without a recent tap need not come forward. Questions during a game are now drawn in the game picture (ImGui). From the CPU thread, redraws are pushed while it waits. From the thread that draws the game, the 3.6 on-screen message is used and the game continues.
+
+## 6.2 The remaining settings
+
+#### Status (2026-11-16): done (all on-screen tests passed)
+
+Notes: `stage6.2-remaining-settings.md`. The generator's "skipped" list is down from 19 to 9, all deliberate (Android-only items, achievements for 6.7, the real Balance Board).
+- **Hotkeys:** the mapping page over Dolphin's hotkey controller, with the hotkeys the Android app handles. The Android app's `HotkeyScheduler`, minus its JNI, runs them during a game. None are mapped on a first start (as on Android), so the hotkey thread is idle until one is.
+- **Post-Processing Effect** (Dolphin's shader list), **Set Custom RTC** (date and time pickers, UTC), the **log** menu (verbosity, 58 log types, enable/disable all, clear), and the two **JIT profiling** actions.
+- **Fixed on the way:**
+  - "Write Logs to File" (3.6) never took effect: Dolphin's `LogManager` wrote its old state back at exit. Log settings now reach the `LogManager`.
+  - Input detection on the mapping pages did not work with the game paused under Settings (6.1).
+

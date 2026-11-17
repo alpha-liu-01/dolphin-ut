@@ -22,8 +22,10 @@
 #include "Core/HW/SI/SI_Device.h"
 #include "Core/HW/Wiimote.h"
 #include "Core/HW/WiimoteEmu/WiimoteEmu.h"
+#include "Core/HotkeyManager.h"
 #include "Core/System.h"
 #include "DolphinUT/Emulator.h"
+#include "DolphinUT/HotkeyScheduler.h"
 #include "InputCommon/ControllerEmu/Control/Control.h"
 #include "InputCommon/ControllerEmu/ControlGroup/Attachments.h"
 #include "InputCommon/ControllerEmu/ControlGroup/ControlGroup.h"
@@ -223,6 +225,27 @@ void Controllers::SetVibrator(std::function<void(int)> vibrate)
 
 void Controllers::Start()
 {
+  // Hotkeys (stage 6.2): none mapped at first, as in the Android app (HotkeyManager::LoadDefaults
+  // maps nothing there), not desktop Dolphin's keyboard keys. A phone seldom has a keyboard, and
+  // the hotkey thread polls during games only while a hotkey is mapped (1.4 % of a core here).
+  // Reset to Default on the hotkey page gives Dolphin's keyboard keys.
+  InputConfig* const hotkeys = HotkeyManagerEmu::GetConfig();
+  if (!File::Exists(File::GetUserPath(D_CONFIG_IDX) + "Hotkeys.ini") &&
+      !hotkeys->ControllersNeedToBeCreated())
+  {
+    EmulatedController* const controller = hotkeys->GetController(0);
+    {
+      const auto lock = EmulatedController::GetStateLock();
+      const std::string device = controller->GetDefaultDevice().ToString();
+      Common::IniFile::Section empty;
+      controller->LoadConfig(&empty);
+      controller->SetDefaultDevice(device);
+      controller->UpdateReferences(g_controller_interface);
+    }
+    hotkeys->SaveConfig();
+    Emulator::LogFromAnyThread(QStringLiteral("hotkeys: none mapped (first start)"));
+  }
+
   m_devices_hook = g_controller_interface.RegisterDevicesChangedCallback([this] {
     QMetaObject::invokeMethod(this, [this] { OnDevicesChanged(); }, Qt::QueuedConnection);
   });
@@ -359,6 +382,21 @@ void Controllers::setWiimoteExtension(int index, int extension)
 QObject* Controllers::mapping(const QString& kind, int index, int extension,
                               const QVariantList& group_types)
 {
+  if (kind == QLatin1String("hotkeys"))
+  {
+    InputConfig* config = HotkeyManagerEmu::GetConfig();
+    auto* hotkeys = static_cast<HotkeyManager*>(config->GetController(0));
+    auto* mapping = new MappingController(config, hotkeys, hotkeys, QStringLiteral("Hotkeys"), {});
+    std::vector<std::pair<int, int>> shown;
+    for (const int hotkey : HotkeyScheduler::GetSupportedHotkeys())
+    {
+      const int group = hotkeys->FindGroupByID(hotkey);
+      shown.emplace_back(group, hotkeys->GetIndexForGroup(group, hotkey));
+    }
+    mapping->ShowOnly(shown);
+    return mapping;
+  }
+
   const bool wiimote = kind == QLatin1String("wiimote");
   InputConfig* config = wiimote ? Wiimote::GetConfig() : Pad::GetConfig();
   EmulatedController* controller = config->GetController(index);
@@ -394,7 +432,10 @@ MappingController::MappingController(InputConfig* config, EmulatedController* co
     if (group_types.empty() ||
         std::ranges::find(group_types, static_cast<int>(group->type)) != group_types.end())
     {
-      m_groups.push_back(group.get());
+      std::vector<int> controls(group->controls.size());
+      for (std::size_t i = 0; i < controls.size(); ++i)
+        controls[i] = static_cast<int>(i);
+      m_groups.emplace_back(group.get(), std::move(controls));
     }
   }
   m_detect_timer.setInterval(20);
@@ -402,6 +443,39 @@ MappingController::MappingController(InputConfig* config, EmulatedController* co
 }
 
 MappingController::~MappingController() = default;
+
+void MappingController::ShowOnly(const std::vector<std::pair<int, int>>& controls)
+{
+  m_groups.clear();
+  m_filtered = true;
+  for (const auto& [group_index, control_index] : controls)
+  {
+    if (group_index < 0 || group_index >= static_cast<int>(m_container->groups.size()))
+      continue;
+    ControlGroup* group = m_container->groups[group_index].get();
+    if (control_index < 0 || control_index >= static_cast<int>(group->controls.size()))
+      continue;
+    if (m_groups.empty() || m_groups.back().first != group)
+      m_groups.emplace_back(group, std::vector<int>{});
+    m_groups.back().second.push_back(control_index);
+  }
+  emit changed();
+}
+
+ControllerEmu::Control* MappingController::GetControl(int group, int control) const
+{
+  if (group < 0 || group >= static_cast<int>(m_groups.size()))
+    return nullptr;
+  const auto& [control_group, shown] = m_groups[group];
+  if (control < 0 || control >= static_cast<int>(shown.size()))
+    return nullptr;
+  return control_group->controls[shown[control]].get();
+}
+
+bool MappingController::IsHotkeys() const
+{
+  return m_config == HotkeyManagerEmu::GetConfig();
+}
 
 QString MappingController::GetDevice() const
 {
@@ -422,11 +496,12 @@ void MappingController::SetDevice(const QString& device)
 QVariantList MappingController::GetGroups() const
 {
   QVariantList groups;
-  for (const ControlGroup* group : m_groups)
+  for (const auto& [group, shown] : m_groups)
   {
     QVariantList controls;
-    for (const auto& control : group->controls)
+    for (const int index : shown)
     {
+      const auto& control = group->controls[index];
       controls.append(QVariantMap{
           {QStringLiteral("name"), QString::fromStdString(control->ui_name)},
           {QStringLiteral("expression"),
@@ -437,6 +512,8 @@ QVariantList MappingController::GetGroups() const
     QVariantList settings;
     for (const auto& setting : group->numeric_settings)
     {
+      if (m_filtered)
+        break;
       QVariantMap entry{
           {QStringLiteral("name"), QString::fromUtf8(setting->GetUIName())},
           {QStringLiteral("suffix"), QString::fromUtf8(setting->GetUISuffix())},
@@ -486,18 +563,19 @@ QVariantList MappingController::GetGroups() const
 void MappingController::Save()
 {
   m_config->SaveConfig();
+  // The scheduler polls only while a hotkey is mapped.
+  if (IsHotkeys())
+    HotkeyScheduler::RefreshActiveHotkeys();
 }
 
 void MappingController::setExpression(int group, int control, const QString& expression)
 {
-  if (group < 0 || group >= static_cast<int>(m_groups.size()))
-    return;
-  auto& controls = m_groups[group]->controls;
-  if (control < 0 || control >= static_cast<int>(controls.size()))
+  ControllerEmu::Control* const target = GetControl(group, control);
+  if (!target)
     return;
   {
     const auto lock = EmulatedController::GetStateLock();
-    controls[control]->control_ref->SetExpression(expression.toStdString());
+    target->control_ref->SetExpression(expression.toStdString());
     m_controller->UpdateReferences(g_controller_interface);
   }
   Save();
@@ -508,7 +586,7 @@ void MappingController::setSetting(int group, int setting, const QVariant& value
 {
   if (group < 0 || group >= static_cast<int>(m_groups.size()))
     return;
-  auto& settings = m_groups[group]->numeric_settings;
+  auto& settings = m_groups[group].first->numeric_settings;
   if (setting < 0 || setting >= static_cast<int>(settings.size()))
     return;
   {
@@ -537,7 +615,7 @@ void MappingController::setGroupEnabled(int group, bool enabled)
     return;
   {
     const auto lock = EmulatedController::GetStateLock();
-    m_groups[group]->enabled.SetValue(enabled);
+    m_groups[group].first->enabled.SetValue(enabled);
   }
   Save();
   emit changed();
@@ -547,7 +625,15 @@ void MappingController::resetToDefault()
 {
   const std::string device = m_controller->GetDefaultDevice().ToString();
   const bool wiimote = m_config == Wiimote::GetConfig();
-  if (device.starts_with("SDL/"))
+  if (IsHotkeys())
+  {
+    // Dolphin's hotkey defaults are keyboard keys (desktop Dolphin's), so they keep the device
+    // Dolphin picks for them, the keyboard (Wayland/0/Keyboard Mouse on the phone).
+    const auto lock = EmulatedController::GetStateLock();
+    m_controller->LoadDefaults(g_controller_interface);
+    m_controller->UpdateReferences(g_controller_interface);
+  }
+  else if (device.starts_with("SDL/"))
   {
     GamepadDefaults::Apply(m_controller, wiimote, device);
   }
@@ -649,11 +735,8 @@ bool MappingController::deleteProfile(const QString& name)
 void MappingController::detect(int group, int control, bool all_devices)
 {
   cancelDetect();
-  if (group < 0 || group >= static_cast<int>(m_groups.size()) || control < 0 ||
-      control >= static_cast<int>(m_groups[group]->controls.size()))
-  {
+  if (!GetControl(group, control))
     return;
-  }
   m_detect_group = group;
   m_detect_control = control;
   const std::vector<std::string> devices =
@@ -678,8 +761,9 @@ void MappingController::UpdateDetection()
 {
   if (!m_detector)
     return;
-  // Without a game, nothing polls the devices: do it here (as DolphinQt's mapping window).
-  if (Core::IsUninitialized(Core::System::GetInstance()))
+  // Without a running game, nothing polls the devices: do it here (as DolphinQt's mapping window).
+  // Also with the game paused (stage 6.1: Settings from the in-game menu pause it).
+  if (Core::GetState(Core::System::GetInstance()) != Core::State::Running)
     g_controller_interface.UpdateInput();
 
   // The Android app's InputDetector timings: wait 3 s for an input, at most 5 s in all.

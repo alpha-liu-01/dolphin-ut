@@ -46,8 +46,15 @@ public:
   QString GetGameId() const { return m_game_id; }
 
   // {title, items}: the menu's items as generated (types: header, submenu, page, switch, choice,
-  // slider, text).
+  // slider, text, file, folder, action, datetime). The log menu's "logTypes" item becomes a switch
+  // per Dolphin log type (stage 6.2), as the Android app's LogSwitchSetting items.
   Q_INVOKABLE QVariantMap menu(const QString& tag) const;
+  // A choice whose list the Android app builds at run time (stage 6.2; the item's "dynamic"):
+  // {entries, values}, from the item's own entries and values.
+  // - "postProcessingShaders": "Off", then Dolphin's shaders (the anaglyph ones in anaglyph mode);
+  // - "logVerbosity": the levels this build can log (up to MAX_EFFECTIVE_LOGLEVEL).
+  Q_INVOKABLE QVariantMap choices(const QString& kind, const QVariantList& entries,
+                                  const QVariantList& values) const;
   Q_INVOKABLE QVariant value(const QString& name) const;
   // Whether the setting cannot change while a game runs (stage 6.1): the Android app's
   // NOT_RUNTIME_EDITABLE lists and the SYSCONF settings (settings.json, "lockedWhileRunning").
@@ -65,8 +72,10 @@ public:
   // The Android app's "Clear Game Settings": deletes the user's GameSettings/<ID>.ini.
   Q_INVOKABLE bool clearGameSettings(const QString& game_id);
 
-  // The menus' actions (stage 3.7): "sd_pack", "sd_unpack" (the Wii SD card image and its sync
-  // folder). On a worker thread; actionFinished reports the result.
+  // The menus' actions: "sd_pack", "sd_unpack" (stage 3.7: the Wii SD card image and its sync
+  // folder); "log_enable_all", "log_disable_all", "log_clear", "jit_wipe_profiling",
+  // "jit_write_block_log" (stage 6.2: the log and debug menus). On a worker thread;
+  // actionFinished reports the result, with a message to show (or "").
   Q_INVOKABLE bool runAction(const QString& action);
   bool IsBusy() const { return m_busy; }
 
@@ -74,7 +83,7 @@ signals:
   void changed();
   void gameChanged();
   void busyChanged();
-  void actionFinished(const QString& action, bool ok);
+  void actionFinished(const QString& action, bool ok, const QString& message);
 
 private:
   void Changed();

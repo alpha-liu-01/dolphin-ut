@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <chrono>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -297,6 +298,18 @@ int main(int argc, char** argv)
     QTimer::singleShot(delay, &emulator, [&emulator, button] {
       emulator.answerQuestion(emulator.LatestQuestionId(), button);
     });
+  }
+  // Stage 6.2 test aid: --test-action ACTION@MS runs a settings menu action (SettingsModel::
+  // runAction, e.g. jit_write_block_log) during a game; the result goes to the log. Repeatable.
+  for (int i = 1; i + 1 < argc; ++i)
+  {
+    if (std::string_view(argv[i]) != "--test-action")
+      continue;
+    const std::string spec = argv[i + 1];
+    const QString action = QString::fromStdString(spec.substr(0, spec.find('@')));
+    const int delay = std::atoi(spec.substr(spec.find('@') + 1).c_str());
+    QTimer::singleShot(delay, &settings_model,
+                       [&settings_model, action] { settings_model.runAction(action); });
   }
 
   // SIGINT/SIGTERM (adb tests, the session ending): stop the game and quit cleanly.

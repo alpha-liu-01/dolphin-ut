@@ -15,6 +15,8 @@ Page {
 
     property var mapping
     property bool allDevices: false
+    // What "Reset to Default" gives (the hotkey page's differs).
+    property string resetText: "Replace this controller's mapping with the default one? (The gamepad layout for SDL gamepads.)"
 
     header: PageHeader {
         title: page.mapping ? page.mapping.title : ""
@@ -31,7 +33,7 @@ Page {
                     text: "Reset to Default"
                     onTriggered: PopupUtils.open(confirmDialog, page, {
                         title: "Reset to Default",
-                        text: "Replace this controller's mapping with the default one? (The gamepad layout for SDL gamepads.)",
+                        text: page.resetText,
                         action: () => page.mapping.resetToDefault()
                     })
                 },
