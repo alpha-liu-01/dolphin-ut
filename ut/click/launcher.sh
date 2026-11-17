@@ -10,6 +10,21 @@ lib="$app/lib/aarch64-linux-gnu"
 export QT_QPA_PLATFORM=wayland
 export QT_PLUGIN_PATH="$lib/qt6/plugins${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
 export LD_LIBRARY_PATH="$lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# The click for 24.04-1.x bundles Qt 6 with its QML modules (Lomiri Components and Content for
+# Qt 6), and libhybris' Vulkan with its Wayland plugin, as that system has neither (stage 7,
+# ut/click/build-click.sh CLICK_UT). The click for 24.04-2.x has these folders only from the phone.
+if [ -d "$lib/qt6/qml" ]; then
+  export QML_IMPORT_PATH="$lib/qt6/qml"
+  export QML2_IMPORT_PATH="$lib/qt6/qml"
+fi
+if [ -d "$lib/libhybris" ]; then
+  # The Vulkan library's Wayland plugin; and the phone's driver, which 1.x's libhybris does not find
+  # by itself: the stand-in libvndksupport (lib/hybris, stage 4) loads it from the vendor's hw
+  # folder. 1.x's libhybris searches /system/lib64:/odm/lib64:/vendor/lib64 by default.
+  export HYBRIS_VULKANPLATFORM_DIR="$lib/libhybris"
+  export HYBRIS_LD_LIBRARY_PATH="$app/lib/hybris:${HYBRIS_LD_LIBRARY_PATH:-/system/lib64:/odm/lib64:/vendor/lib64}"
+  export DOLPHIN_UT_VK_SYSTEM_DIR=/vendor/lib64/hw
+fi
 export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 # Ubuntu Touch's volume keys change the multimedia role's volume (stage 2).
 export PULSE_PROP="media.role=multimedia"

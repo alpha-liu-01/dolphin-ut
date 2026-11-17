@@ -4,7 +4,7 @@
     "description": "GameCube and Wii emulator. Unofficial Ubuntu Touch port of Dolphin (https://dolphin-emu.org), not supported by the Dolphin team. Source: @SOURCE@",
     "version": "@VERSION@",
     "architecture": "arm64",
-    "framework": "ubuntu-touch-24.04-2.x",
+    "framework": "@FRAMEWORK@",
     "maintainer": "@MAINTAINER@",
     "hooks": {
         "dolphin-ut": {

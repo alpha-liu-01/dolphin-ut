@@ -9,10 +9,15 @@ The port's design notes, test results and decisions are in [docs/ut-port](docs/u
 
 ## Target
 
-- **Ubuntu Touch 24.04-2.x, arm64** (the click's framework is `ubuntu-touch-24.04-2.x`).
+- **Ubuntu Touch 24.04-2.x, arm64:** the main click (framework `ubuntu-touch-24.04-2.x`). The app
+  uses the phone's Qt 6.
+- **Ubuntu Touch 24.04-1.x, arm64:** a second click (framework `ubuntu-touch-24.04-1.x`). 1.x has
+  no Qt 6 at all, so this click carries Qt 6.10.2, the Qt 6 Lomiri Components and Content, and
+  libhybris' Vulkan library, all from UBports' 2.x repository. It is about 34 MB instead of 14 MB.
 - **Graphics:** the phone's Android GPU driver through libhybris: Vulkan (the default) or OpenGL ES,
   rendering on Lomiri's Wayland.
-- **Tested on one phone:** the Redmi Note 12 5G (`sunstone`, Adreno 619). Other devices have other GPU
+- **Tested phones:** the Redmi Note 12 5G (`sunstone`, Adreno 619) on 24.04-2.x; the Nothing
+  Phone (1) (`Spacewar`, Adreno 642L) on 24.04-1.x, checked over adb. Other devices have other GPU
   drivers and libhybris builds and are untested. Reports are welcome.
 
 ## Prerequisites
@@ -20,7 +25,7 @@ The port's design notes, test results and decisions are in [docs/ut-port](docs/u
 - An **x86_64 Linux** computer with **Docker** (your user in the `docker` group), **git**, and
   about 10 GB of free disk space (the source with its submodules about 7 GB, the container image
   2.3 GB, the build trees a few hundred MB).
-- For installing and testing: a phone running Ubuntu Touch 24.04-2.x with **developer mode** on
+- For installing and testing: a phone running Ubuntu Touch 24.04-2.x or 24.04-1.x with **developer mode** on
   (System Settings → About → Developer Mode) and **adb** on the computer.
 
 Everything is compiled in a cross-build container, so nothing else needs to be installed on the
@@ -41,7 +46,9 @@ git submodule update --init --recursive
 - the phone's own arm64 libraries, through multiarch, from Ubuntu noble and from UBports'
   `24.04-2.x` repository. That repository is pinned above noble, as on the phone, so Qt is the
   phone's Qt 6.10.2 and not noble's 6.4;
-- `click`, and the Qt 6 Wayland shell plugin that the phone lacks and the click bundles.
+- `click`, and the Qt 6 Wayland shell plugin that the phone lacks and the click bundles;
+- in `/opt/ut-runtime-1x`, the Qt 6 runtime for the 24.04-1.x click, unpacked from the packages listed
+  in `ut/docker/runtime-24.04-1.x.list`.
 
 `ut/build.sh` builds the image the first time it runs. To rebuild it, for example after UBports
 updates Qt, add `--image`:
@@ -80,15 +87,25 @@ Both builds take `--reconfigure` (wipe the CMake cache first). Extra CMake optio
 ## 4. Package the click
 
 ```sh
-ut/build.sh --release && ut/click/build-click.sh
+ut/build.sh --release && ut/click/build-click.sh      # for 24.04-2.x
+CLICK_UT=24.04-1.x ut/click/build-click.sh             # for 24.04-1.x, from the same build
 ```
 
-**Output:** `build-ut/<name>_<version>_arm64.click`. It holds:
+**Output:** `build-ut/<name>_<version>.2x_arm64.click` (24.04-2.x) and
+`build-ut/ut-24.04-1.x/<name>_<version>.1x_arm64.click` (24.04-1.x), both from the same release
+build. OpenStore needs a different version for each click, and offers a phone the highest one it
+can install. 2.x phones accept 1.x clicks too, and `.1x` sorts below `.2x`, so they get the 2.x
+click. (Not a `~` suffix: Lomiri cannot handle a `~` in the app ID.) The click holds:
 - `dolphin-ut` (stripped) and Dolphin's `Sys/`;
 - the launcher, the desktop file, and the AppArmor and content-hub hooks (`ut/click/`);
 - the Qt 6 Wayland shell plugin;
 - `lib/hybris/libvndksupport.so`, a small stand-in library that lets the app load custom Vulkan
-  drivers such as Turnip. `ut/vkdriver/build-shim.sh` builds it without any files from a phone.
+  drivers such as Turnip. `ut/vkdriver/build-shim.sh` builds it without any files from a phone;
+- for 24.04-1.x only: the Qt 6 runtime (libraries, `qt6/plugins`, `qt6/qml`), libhybris' Vulkan
+  library with its Wayland plugin (`lib/aarch64-linux-gnu/libhybris/`), and the bundled packages'
+  licences (`licenses/`). The launcher points Qt and libhybris at them, and has the stand-in library
+  load the phone's own Vulkan driver from `/vendor/lib64/hw`, which 1.x's libhybris does not find
+  by itself.
 
 **Settings,** through the environment:
 
@@ -96,7 +113,8 @@ ut/build.sh --release && ut/click/build-click.sh
 | --- | --- | --- |
 | `CLICK_NAME` | `dolphin-ut.alphaliu01` | The package name. It also names the app's folders on the phone (`~/.local/share/<name>`), so a new name starts with empty user data |
 | `CLICK_MAINTAINER` | git's `user.name <user.email>` | The maintainer field. It is read at build time and not stored in the repository |
-| `CLICK_VERSION` | Dolphin's version (`2609-276` → `2609.276`) | The click version. Reinstalling the same version keeps the old AppArmor profile, so a changed `.apparmor` file needs a new version |
+| `CLICK_VERSION` | Dolphin's version (`2609-276` → `2609.276`) | The click version, before the release suffix: `.2x` for 24.04-2.x, `.1x` for 24.04-1.x (`2609.276.2x`, `2609.276.1x`). Reinstalling the same version keeps the old AppArmor profile, so a changed `.apparmor` file needs a new version |
+| `CLICK_UT` | `24.04-2.x` | The Ubuntu Touch release: `24.04-2.x` or `24.04-1.x` (framework, AppArmor policy version, bundled Qt 6, output folder) |
 | `CLICK_CONFINED=1` | off | Build under the confined template instead of `unconfined`. Gamepads do not work confined (`/dev/input` is denied), so the release is unconfined |
 
 **Source link (GPL):** the click's description names the source repository and commit it was built
@@ -108,11 +126,13 @@ source can be found.
 With the phone connected over adb:
 
 ```sh
-ut/click/install-click.sh                     # the newest click in build-ut/
+ut/click/install-click.sh                     # the newest click for the phone's release
 ut/click/install-click.sh path/to/file.click  # or a given one
+ANDROID_SERIAL=<serial> ut/click/install-click.sh   # with several phones connected (adb devices)
 ```
 
-This copies the click to the phone and installs it through the click service. It is what clickable
+Without a file, the script reads which framework the phone has and takes the newest click built for
+it (`build-ut/` for 24.04-2.x, `build-ut/ut-24.04-1.x/` for 24.04-1.x). This copies the click to the phone and installs it through the click service. It is what clickable
 does, since 24.04 has no `pkcon`. You can also copy the `.click` file to the phone and open it with
 the File Manager, which hands it to OpenStore.
 
@@ -178,7 +198,13 @@ GAME=/path/to/game.iso sh /home/phablet/dolphin-ut-probe/run-dolphin.sh ut-start
 
   The comments at the top of each script and in `main.cpp` describe them.
 - **Screen captures over adb** (screen unlocked): source `ut-env.sh`, then
-  `mirscreencast -m /run/user/32011/mir_socket -n 1 -f out.raw` gives one 1080×2400 RGBA frame.
+  `mirscreencast -m /run/user/32011/mir_socket -n 1 -f out.raw` gives one 1080×2400 RGBA frame
+  (on 24.04-1.x: `mir_socket_trusted`).
+- **On a 24.04-1.x phone:** Lomiri 1.x does not answer Wayland clients started from an adb shell,
+  so `run-dolphin.sh` cannot open a window there, and the phone has no Qt 6 for the development
+  build. Install the 1.x click first: `launch-dolphin.sh` (the "Dolphin (dev)" entry) then runs the
+  development build with the click's Qt 6. Start it with `lomiri-app-launch dolphin-ut`, with test
+  arguments in `/home/phablet/dolphin-ut-launch.args` (see the script).
 
 ## Generated files
 
@@ -211,6 +237,10 @@ support), which Dolphin's own Linux build uses too.
 
 ## Troubleshooting
 
+- **The install fails ("failed to install"; OpenStore: "miscellaneous internal error"):** the click
+  was built for the other Ubuntu Touch release. `click verify --allow-unauthenticated FILE.click` on
+  the phone names the missing framework. Build the click for the phone's release (`CLICK_UT`, above);
+  `install-click.sh` without a file picks it.
 - **`docker: permission denied`:** add your user to the `docker` group and log in again.
 - **The container cannot find Qt 6.10 packages:** UBports updated its repository. Rebuild the image
   (`ut/build.sh --image`). The build needs the same Qt as the phone, so update the phone too if its

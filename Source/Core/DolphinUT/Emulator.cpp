@@ -640,6 +640,13 @@ bool Emulator::AskFromAnyThread(const char* caption, const char* text, bool yes_
   const QString message = QString::fromUtf8(text);
   if (QThread::currentThread() == instance->thread())
     return instance->Ask(caption_text, message, yes_no, style, AskingThread::UI);
+  // During a stop, the UI thread waits in Core::Stop for the emulation threads, so it cannot answer
+  // one of them: continue, as "Ignore and continue" would (stage 7).
+  if (Core::GetState(Core::System::GetInstance()) == Core::State::Stopping)
+  {
+    LogFromAnyThread(QStringLiteral("alert during a stop: not asked, continuing"));
+    return true;
+  }
 
   // As DolphinQt's handler: while the UI thread asks for the CPU or GPU thread, it declares itself
   // that thread, so a call that would wait for it (Core::CPUThreadGuard, ...) does not deadlock.
@@ -852,7 +859,10 @@ bool Emulator::NoteAlert(const char* text)
   if (message == "Failed to initialize video backend!")
     s_video_backend_failed = true;
   // The Vulkan backend's "Failed to submit command buffer: VK_ERROR_DEVICE_LOST" and the like:
-  // every later submit fails too. Stop the game at the first one.
+  // every later submit fails too. Stop the game at the first one; it starts again on OpenGL ES,
+  // which says so on screen (OnStateChanged). Not asked either: the thread reporting it is the GPU
+  // thread, which the stop can be waiting for (the CPU thread waits for it in an EFB access), while
+  // the UI thread that would ask is in Core::Stop. Asking deadlocked (stage 7, Wind Waker on 1.x).
   if (message.find("VK_ERROR_DEVICE_LOST") != std::string_view::npos)
   {
     if (s_device_lost.exchange(true))
@@ -860,7 +870,9 @@ bool Emulator::NoteAlert(const char* text)
       ++s_device_lost_repeats;
       return true;
     }
+    LogFromAnyThread(QStringLiteral("alert: %1 — stopping the game").arg(QString::fromUtf8(text)));
     RequestStopFromAnyThread();
+    return true;
   }
   return false;
 }

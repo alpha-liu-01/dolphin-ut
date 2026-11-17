@@ -27,7 +27,7 @@ rules for this fork) and every stage's goal and status.
 | [stage6.6-motion.md](stage6.6-motion.md) | Wii Remote motion from the phone's sensors (sensorfwd) |
 | [stage6.7-achievements.md](stage6.7-achievements.md) | RetroAchievements |
 | [stage6.8-leftovers.md](stage6.8-leftovers.md) | Driver zips from other apps, restarting, Skylanders and Infinity Base, the scrolling menu |
-| [stage7-release.md](stage7-release.md) | Release follow-ups: the menu button, the release build without development aids, what is left |
+| [stage7-release.md](stage7-release.md) | Release follow-ups: the menu button, the release build without development aids, the click for 24.04-1.x, what is left |
 
 Each stage document gives its goal, how it was built, what was checked over adb, the manual
 on-screen tests and their results, and the decisions taken along the way.

@@ -4,10 +4,12 @@
 # Prints the signal, its code and fault address, the crashing thread's registers and a backtrace
 # along the frame-pointer chain, each address placed in a library with MAPS (run-dolphin.sh's
 # copy of /proc/PID/maps, kept with the core).
+#   core-info.py CORE MAPS [TID|all]: another thread instead (a hang: stage 7), or every thread.
 import struct, sys
 
 core = sys.argv[1]
 maps = sys.argv[2] if len(sys.argv) > 2 else None
+which = sys.argv[3] if len(sys.argv) > 3 else None
 f = open(core, 'rb')
 hdr = f.read(64)
 phoff, = struct.unpack_from('<Q', hdr, 32)
@@ -81,20 +83,29 @@ if siginfo:
     names = {7: {1: 'BUS_ADRALN', 2: 'BUS_ADRERR', 3: 'BUS_OBJERR'}, 11: {1: 'SEGV_MAPERR', 2: 'SEGV_ACCERR'}}
     print(f'signal {signo}, code {names.get(signo, {}).get(code, code)}, address {addr:#x} {where(addr)}')
 
+def show(pid, sig, regs):
+    print(f'thread {pid} (of {len(threads)}), signal {sig}')
+    print(f'  pc {regs[32]:#x} {where(regs[32])}')
+    print(f'  lr {regs[30]:#x} {where(regs[30])}')
+    print(f'  sp {regs[31]:#x}')
+    for r in range(0, 30, 2):
+        print(f'  x{r:<2} {regs[r]:#018x} {where(regs[r])[:60]:60}  x{r+1:<2} {regs[r+1]:#018x} {where(regs[r+1])[:60]}')
+    print('backtrace (frame pointers):')
+    fp, n = regs[29], 0
+    while fp and n < 24:
+        frame = read(fp, 16)
+        if not frame:
+            break
+        fp, ret = struct.unpack('<QQ', frame)
+        print(f'  #{n} {ret:#x} {where(ret)}')
+        n += 1
+
 # The first thread in the core is the one that took the signal.
-pid, sig, regs = threads[0]
-print(f'thread {pid} (of {len(threads)}), signal {sig}')
-print(f'  pc {regs[32]:#x} {where(regs[32])}')
-print(f'  lr {regs[30]:#x} {where(regs[30])}')
-print(f'  sp {regs[31]:#x}')
-for r in range(0, 30, 2):
-    print(f'  x{r:<2} {regs[r]:#018x} {where(regs[r])[:60]:60}  x{r+1:<2} {regs[r+1]:#018x} {where(regs[r+1])[:60]}')
-print('backtrace (frame pointers):')
-fp, n = regs[29], 0
-while fp and n < 24:
-    frame = read(fp, 16)
-    if not frame:
-        break
-    fp, ret = struct.unpack('<QQ', frame)
-    print(f'  #{n} {ret:#x} {where(ret)}')
-    n += 1
+if which == 'all':
+    for t in threads:
+        show(*t)
+        print()
+elif which:
+    show(*[t for t in threads if t[0] == int(which)][0])
+else:
+    show(*threads[0])

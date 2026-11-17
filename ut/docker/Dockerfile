@@ -1,4 +1,5 @@
-# Cross-build environment for Dolphin on Ubuntu Touch 24.04-2.x (arm64).
+# Cross-build environment for Dolphin on Ubuntu Touch 24.04-2.x (arm64), which also holds the Qt 6
+# runtime that the click for 24.04-1.x bundles (/opt/ut-runtime-1x, at the end).
 #
 # Host: amd64 Ubuntu 24.04. Target: arm64, from the same archives the phone uses:
 # Ubuntu noble (ports.ubuntu.com) plus repo.ubports.com 24.04-2.x pinned at 2000,
@@ -60,6 +61,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends click \
  && for d in *.deb; do dpkg-deb -x "$d" /opt/ut-bundle; done \
  && ls /opt/ut-bundle/usr/lib/aarch64-linux-gnu/qt6/plugins/wayland-shell-integration/libxdg-shell.so \
        /opt/ut-bundle/usr/lib/aarch64-linux-gnu/libQt6WlShellIntegration.so.6 \
+ && rm -rf /tmp/debs /var/lib/apt/lists/*
+
+# The click for Ubuntu Touch 24.04-1.x, which has no Qt 6 (stage 7, ut/click/build-click.sh with
+# CLICK_UT=24.04-1.x): the Qt 6 runtime of runtime-24.04-1.x.list in /opt/ut-runtime-1x, and the
+# libhybris package in /opt/ut-hybris-1x, of which the click takes only the Vulkan platform plugin.
+COPY runtime-24.04-1.x.list /opt/runtime-24.04-1.x.list
+RUN apt-get update \
+ && mkdir -p /tmp/debs /opt/ut-runtime-1x /opt/ut-hybris-1x && cd /tmp/debs \
+ && apt-get download $(sed 's/#.*//' /opt/runtime-24.04-1.x.list | tr -s ' \n' '\n' | sed '/^$/d; s/$/:arm64/') \
+ && for d in *.deb; do dpkg-deb -x "$d" /opt/ut-runtime-1x; done \
+ && rm -f *.deb && apt-get download libhybris:arm64 && dpkg-deb -x libhybris_*.deb /opt/ut-hybris-1x \
+ && ls /opt/ut-runtime-1x/usr/lib/aarch64-linux-gnu/qt6/plugins/platforms/libqwayland.so \
+       /opt/ut-runtime-1x/usr/lib/aarch64-linux-gnu/qt6/qml/Lomiri/Components/qmldir \
+       /opt/ut-runtime-1x/usr/lib/aarch64-linux-gnu/libvulkan.so.1 \
+       /opt/ut-hybris-1x/usr/lib/aarch64-linux-gnu/libhybris/vulkanplatform_wayland.so \
  && rm -rf /tmp/debs /var/lib/apt/lists/*
 
 COPY aarch64-linux-gnu.cmake /opt/aarch64-linux-gnu.cmake

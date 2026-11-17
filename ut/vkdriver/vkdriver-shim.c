@@ -15,6 +15,11 @@
 // It behaves like Android's, except that with DOLPHIN_UT_VK_DRIVER_DIR set, "vulkan.*" comes from
 // <dir>/vulkan.adreno.so, loaded in a namespace of its own (the idea of libadrenotools).
 //
+// With DOLPHIN_UT_VK_SYSTEM_DIR set (the click for Ubuntu Touch 24.04-1.x sets /vendor/lib64/hw,
+// stage 7), "vulkan.*" otherwise comes from <dir>/<the same name>, in the same kind of namespace:
+// the phone's own driver, which 1.x's libhybris does not find through "sphal" (its namespaces
+// lack the hw folder that 2.x's have).
+//
 // Built without the NDK (ut/vkdriver/build-shim.sh): -nostdlib against the phone's bionic libc,
 // libdl and libdl_android, so only the few functions below may be used.
 
@@ -82,19 +87,20 @@ static void* VendorNamespace(const char** name)
   return found;
 }
 
-// <dir>/vulkan.adreno.so from a namespace that may load from <dir>. "Shared" makes it a copy of the
+// <dir>/<file> from a namespace that may load from <dir>. "Shared" makes it a copy of the
 // default namespace (its loaded libraries and search paths), where the driver's dependencies
 // (libc, liblog, libcutils, libhardware, libnativewindow, libsync, libz) are found. No
 // android_link_namespaces: libhybris does not implement it, and the call traps in ld-android.so.
-static void* LoadCustomVulkanDriver(const char* dir, const char* name, int flags)
+// One namespace per folder (custom driver or system driver), created on first use.
+static void* LoadVulkanDriverFrom(void** driver_namespace, const char* dir, const char* file,
+                                  const char* name, int flags)
 {
-  static void* driver_namespace;
   char line[1024];
-  if (!driver_namespace)
+  if (!*driver_namespace)
   {
-    driver_namespace = android_create_namespace("dolphin-ut vulkan driver", dir, dir,
-                                                ANDROID_NAMESPACE_TYPE_SHARED, 0, 0);
-    if (!driver_namespace)
+    *driver_namespace = android_create_namespace("dolphin-ut vulkan driver", dir, dir,
+                                                 ANDROID_NAMESPACE_TYPE_SHARED, 0, 0);
+    if (!*driver_namespace)
     {
       snprintf(line, sizeof(line), "[vkdriver-shim] creating a namespace failed: %s\n", dlerror());
       Log(line);
@@ -102,8 +108,8 @@ static void* LoadCustomVulkanDriver(const char* dir, const char* name, int flags
     }
   }
   char path[512];
-  snprintf(path, sizeof(path), "%s/vulkan.adreno.so", dir);
-  void* handle = OpenIn(driver_namespace, path, flags);
+  snprintf(path, sizeof(path), "%s/%s", dir, file);
+  void* handle = OpenIn(*driver_namespace, path, flags);
   snprintf(line, sizeof(line), "[vkdriver-shim] %s for %s: %s\n", path, name,
            handle ? "loaded" : dlerror());
   Log(line);
@@ -119,13 +125,23 @@ int android_is_in_vendor_process(void)
 
 void* android_load_sphal_library(const char* name, int flags)
 {
+  static void* custom_namespace;
+  static void* system_namespace;
+  const int vulkan = strncmp(name, "vulkan.", 7) == 0;
   const char* dir = getenv("DOLPHIN_UT_VK_DRIVER_DIR");
-  if (dir && dir[0] && strncmp(name, "vulkan.", 7) == 0)
+  if (vulkan && dir && dir[0])
   {
-    void* handle = LoadCustomVulkanDriver(dir, name, flags);
+    void* handle = LoadVulkanDriverFrom(&custom_namespace, dir, "vulkan.adreno.so", name, flags);
     if (handle)
       return handle;
     Log("[vkdriver-shim] falling back to the system driver\n");
+  }
+  const char* system_dir = getenv("DOLPHIN_UT_VK_SYSTEM_DIR");
+  if (vulkan && system_dir && system_dir[0])
+  {
+    void* handle = LoadVulkanDriverFrom(&system_namespace, system_dir, name, name, flags);
+    if (handle)
+      return handle;
   }
   const char* namespace_name;
   void* vendor_namespace = VendorNamespace(&namespace_name);

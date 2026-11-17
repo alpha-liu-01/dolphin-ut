@@ -1,0 +1,33 @@
+# The Qt 6 runtime that the click for Ubuntu Touch 24.04-1.x bundles (ut/click/build-click.sh,
+# CLICK_UT=24.04-1.x; docs/ut-port/stage7-release.md). 24.04-1.x has no Qt 6 at all, so these
+# come from the same UBports 24.04-2.x repository the app is built against.
+#
+# The list is the closure of the app's Qt 6 needs (Qt Quick, the Wayland platform, Lomiri
+# Components and Content, the maliit keyboard) minus what 24.04-1.x already installs. The libraries
+# these need beyond it (ICU, OpenSSL, libwayland, libhybris' EGL, boost, ...) are all on 1.x, except
+# libOpenGL (libopengl0, from noble). The Dockerfile unpacks them into /opt/ut-runtime-1x.
+
+# Qt 6.10.2
+libqt6core6t64 libqt6dbus6 libqt6gui6 libqt6network6 libqt6opengl6 libqt6qml6 libqt6qmlmeta6
+libqt6qmlmodels6 libqt6qmlworkerscript6 libqt6quick6 libqt6svg6 libqt6shadertools6
+libqt6waylandclient6 libqt6wlshellintegration6 qt6-wayland qt6-svg-plugins
+qml6-module-qtcore qml6-module-qtqml qml6-module-qtqml-models qml6-module-qtqml-workerscript
+qml6-module-qtquick qml6-module-qtquick-layouts qml6-module-qtquick-window
+qml6-module-qt-labs-folderlistmodel qml6-module-qt5compat-graphicaleffects
+
+# Lomiri Components and Content (Qt 6)
+liblomiritoolkit-qt6-1 liblomirigestures-qt6-1 liblomirimetrics-qt6-1 liblomirisysteminfo-qt6-1
+lomiri-ui-toolkit-theme-qt6 qml6-module-lomiri-components qml6-module-lomiri-components-labs
+qml6-module-lomiri-performancemetrics qml6-module-ktactilefeedback libktactilefeedback1
+liblomiri-content-hub-qt6-1 qml6-module-lomiri-content liblomiri-download-manager-client-qt6-0
+liblomiri-download-manager-common-qt6-0 libldm-common-qt6-0
+
+# The on-screen keyboard (QT_IM_MODULE=maliit)
+maliit-inputcontext-qt6
+
+# Not on 24.04-1.x: libb2 (Qt Core), libOpenGL (Qt Gui)
+libb2-1 libopengl0
+
+# Vulkan through libhybris (1.x has the Khronos loader without a driver): libhybris' Vulkan library
+# and, from the libhybris package, only its Wayland platform plugin (unpacked separately).
+libvulkan1-hybris

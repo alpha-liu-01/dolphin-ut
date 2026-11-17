@@ -48,14 +48,17 @@ This fork's port, an app modeled on the Android app with touch controls, setting
 motion controls from the phone's sensors.
 
 * OS
-    * Ubuntu Touch 24.04-2.x (the `ubuntu-touch-24.04-2.x` framework), arm64.
+    * Ubuntu Touch 24.04-2.x or 24.04-1.x, arm64. Each has its own click: the one for 24.04-1.x
+      carries Qt 6, which that release does not have.
 * Processor
     * A 64-bit ARMv8 processor.
 * Graphics
     * The phone's Android GPU driver through libhybris: Vulkan (the default) or OpenGL ES 3.x. A custom
       Vulkan driver (such as Mesa Turnip on Adreno) can be installed from the app.
 * Tested devices
-    * Redmi Note 12 5G (`sunstone`, Snapdragon 4 Gen 1, Adreno 619). Other devices are untested.
+    * Redmi Note 12 5G (`sunstone`, Snapdragon 4 Gen 1, Adreno 619), on 24.04-2.x.
+    * Nothing Phone (1) (`Spacewar`, Snapdragon 778G+, Adreno 642L), on 24.04-1.x.
+    * Other devices are untested.
 
 ## Building
 
@@ -91,9 +94,10 @@ The Ubuntu Touch app is cross-compiled for arm64 in a Docker container that has 
 libraries (Qt 6 from UBports' 24.04-2.x repository), and packaged as a click:
 
 ```sh
-ut/build.sh --release          # build-ut/release/Binaries/dolphin-ut
-ut/click/build-click.sh        # build-ut/<name>_<version>_arm64.click
-ut/click/install-click.sh      # installs it on a phone connected over adb (developer mode)
+ut/build.sh --release                       # build-ut/release/Binaries/dolphin-ut
+ut/click/build-click.sh                     # build-ut/<name>_<version>_arm64.click (24.04-2.x)
+CLICK_UT=24.04-1.x ut/click/build-click.sh  # build-ut/ut-24.04-1.x/… (24.04-1.x, bundles Qt 6)
+ut/click/install-click.sh                   # installs the right one on a phone connected over adb
 ```
 
 See [UbuntuTouchSetup.md](UbuntuTouchSetup.md) for the prerequisites, the development build and
