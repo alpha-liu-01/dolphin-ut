@@ -72,6 +72,12 @@ std::optional<ciface::Touch::ControlID> AnalogForTrigger(ciface::Touch::ControlI
 
 // Settings, as the Android app's (section [Android] and [AndroidOverlayButtons] of Dolphin.ini).
 bool ShowOverlay();             // ShowInputOverlay, default on
+// Stage 7: the in-game menu's button hides itself during play ([UbuntuTouch] MenuButtonAutoHide,
+// default on); a tap outside the controls brings it back for a few seconds.
+bool MenuButtonAutoHide();
+// The menu button's key in TouchOverlay.ini's positions (one position for every layout, per
+// orientation), moved in Edit Layout as the controls are.
+constexpr const char* MENU_BUTTON = "UT_MENU_BUTTON";
 int ControlScale();             // ControlScale, 0–150, default 50 (= 100 %)
 int ControlOpacity();           // ControlOpacity, 0–100, default 65
 bool JoystickRelativeCenter();  // JoystickRelCenter, default on
@@ -99,6 +105,7 @@ std::vector<std::pair<int, std::string>> ControllerChoices(bool wii);
 
 // Setters: the base layer, saved to Dolphin.ini at once (as the Android app's settings).
 void SetShowOverlay(bool show);
+void SetMenuButtonAutoHide(bool auto_hide);
 void SetControlScale(int scale);
 void SetControlOpacity(int opacity);
 void ResetScaleAndOpacity();

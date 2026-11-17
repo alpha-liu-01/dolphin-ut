@@ -57,6 +57,8 @@ using Kind = ControlDef::Kind;
 
 const Config::Info<bool> SHOW_INPUT_OVERLAY{{Config::System::Main, "Android", "ShowInputOverlay"},
                                             true};
+const Config::Info<bool> MENU_BUTTON_AUTO_HIDE{
+    {Config::System::Main, "UbuntuTouch", "MenuButtonAutoHide"}, true};
 const Config::Info<int> CONTROL_SCALE{{Config::System::Main, "Android", "ControlScale"}, 50};
 const Config::Info<int> CONTROL_OPACITY{{Config::System::Main, "Android", "ControlOpacity"}, 65};
 const Config::Info<bool> JOYSTICK_REL_CENTER{{Config::System::Main, "Android", "JoystickRelCenter"},
@@ -309,6 +311,10 @@ bool ShowOverlay()
 {
   return Config::Get(SHOW_INPUT_OVERLAY);
 }
+bool MenuButtonAutoHide()
+{
+  return Config::Get(MENU_BUTTON_AUTO_HIDE);
+}
 int ControlScale()
 {
   return Config::Get(CONTROL_SCALE);
@@ -443,6 +449,10 @@ void SetShowOverlay(bool show)
 {
   SetAndSave(SHOW_INPUT_OVERLAY, show);
 }
+void SetMenuButtonAutoHide(bool auto_hide)
+{
+  SetAndSave(MENU_BUTTON_AUTO_HIDE, auto_hide);
+}
 void SetControlScale(int scale)
 {
   SetAndSave(CONTROL_SCALE, std::clamp(scale, 0, 150));
@@ -526,6 +536,10 @@ void ResetPositions(Type type, bool portrait)
     section->Delete(key + "-X");
     section->Delete(key + "-Y");
   }
+  // Stage 7: the menu button goes back to its place too.
+  const std::string menu_key = PositionKey(type, MENU_BUTTON, portrait);
+  section->Delete(menu_key + "-X");
+  section->Delete(menu_key + "-Y");
   ini.Save(LayoutFile());
 }
 }  // namespace OverlayLayout

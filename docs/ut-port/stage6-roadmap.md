@@ -96,11 +96,11 @@ Notes: `stage6.7-achievements.md`.
 
 ## 6.8 Smaller leftovers
 
-#### Status (2026-11-17): three items done (S6.8-M1–M4 passed); the in-game menu now scrolls by dragging, with taller entries (S6.8-M5 passed; no highlight while scrolling, re-test S6.8-M6 pending); translations measured, scope for the user
+#### Status (2026-11-17): done (S6.8-M1–M6 passed: driver zips, restart, Skylanders/Infinity, the scrolling in-game menu); translations moved to stage 7 (the user)
 
 Notes: `stage6.8-leftovers.md`.
 - **Driver zips from other apps:** Share or Import Games installs a driver package (stage 4) instead of skipping it, with a button to the GPU Driver page.
 - **Restart:** "Restart Dolphin" on the GPU Driver page and after Import User Data. A helper outside the app's unit waits for it to end and asks Lomiri to start it again.
 - **Skylanders Portal and Infinity Base:** in the in-game menu when enabled, as on Android: slots with Load, Create (Dolphin's figure lists) and Clear, on a page over the paused game.
-- **Translations:** Dolphin's catalogs cover about half of the settings' texts (189 of 384) and none of the port's own. Three options are written up; the choice is the user's.
+- **Translations:** measured (Dolphin's catalogs cover 189 of the settings' 384 texts, none of the port's own), then moved to stage 7 by the user.
 

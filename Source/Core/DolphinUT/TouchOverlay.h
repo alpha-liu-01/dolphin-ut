@@ -116,7 +116,13 @@ private:
     QRectF rect;
     int track = -1;
     bool pressed = false;
+    // Stage 7, auto-hide: shown until this time (steady clock, ms); a tap outside the controls, a
+    // press of the button, an open menu or a paused game push it on.
+    qint64 shown_until_ms = 0;
   };
+  // Whether the menu button can be seen (and pressed) now, and how much (the fade at the end).
+  float MenuButtonVisibility() const;
+  void RevealMenuButton();
 
   struct Pointer
   {
@@ -230,6 +236,8 @@ private:
   float m_game_panel_width = 0.0f;         // the in-game menu's panel, as last drawn
   // Stage 6.8: a finger dragging a menu scrolls it (TouchScroll), for the current press.
   bool m_touch_scrolling = false;
+  // Stage 7: m_drag_control's value while Edit Layout drags the menu button.
+  static constexpr int MENU_BUTTON_DRAG = -2;
   void TouchScroll();
   int PushTouchScrollColors() const;
   int m_menu_touch = -1;

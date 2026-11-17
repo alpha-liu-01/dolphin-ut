@@ -5,7 +5,7 @@ Goal (`stage6-roadmap.md`), the smaller items left from earlier stages:
 - the Skylanders Portal and the Infinity Base;
 - translations of the port's strings.
 
-Status (2026-11-17): **the first three done** (S6.8-M1–M4 passed); the in-game menu made scrollable with taller entries (S6.8-M5 passed), and buttons no longer light up while it scrolls (re-test S6.8-M6 pending). **Translations: measured, not started**; the scope is the user's decision (below).
+Status (2026-11-17): **done.** S6.8-M1–M4 passed; the in-game menu made scrollable with taller entries (S6.8-M5 passed), and buttons no longer light up while it scrolls (S6.8-M6 passed). **Translations moved to stage 7** (the user, below).
 
 ## Driver zips from other apps
 
@@ -140,4 +140,12 @@ Screen on, unlocked. **M1 and M2 need the app started from the app drawer** ("Do
   - Checked over adb: a game run with the menu open, no ImGui errors, a normal stop.
 
 **S6.8-M6 (re-test).** In the in-game menu and in Overlay Controls, drag the list slowly up and down over the buttons: do they stay unlit while it scrolls? Does a plain tap still light the button and act?
+
+### S6.8-M6 re-test result (2026-11-17)
+
+Pass: the buttons no longer light up while a menu scrolls.
+
+### Translations: moved to stage 7 (2026-11-17, the user)
+
+The user's decision: translations are left out of stage 6 and go to **stage 7** (an extension of stage 5, the release), and some of that work comes after the first release. The measurement and the three options above are its starting point.
 

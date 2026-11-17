@@ -348,7 +348,7 @@ Notes: `stage5-packaging.md`.
 
 ### 6. Feature completeness (after stages 5 and 4)
 
-#### Status (2026-11-16): in progress; phase plan in `stage6-roadmap.md`. 6.1 done (settings during a game, Dolphin's questions); 6.2 done (the remaining settings); 6.3 done (Wii file actions; a core crash for GameCube discs from the Wii Menu is noted for the user); 6.4 done (cheats, Riivolution, disc conversion); 6.5 done (export and user data); 6.6 done (Wii Remote motion from the phone's sensors); 6.7 (RetroAchievements) built and checked over adb, on-screen tests deferred to a community tester; 6.8 (leftovers): driver zips from other apps, restart, Skylanders/Infinity done; the in-game menu scrolls now (re-test pending); translations measured, scope for the user
+#### Status (2026-11-16): in progress; phase plan in `stage6-roadmap.md`. 6.1 done (settings during a game, Dolphin's questions); 6.2 done (the remaining settings); 6.3 done (Wii file actions; a core crash for GameCube discs from the Wii Menu is noted for the user); 6.4 done (cheats, Riivolution, disc conversion); 6.5 done (export and user data); 6.6 done (Wii Remote motion from the phone's sensors); 6.7 (RetroAchievements) built and checked over adb, on-screen tests deferred to a community tester; 6.8 done (leftovers: driver zips from other apps, restart, Skylanders/Infinity, a scrolling in-game menu); translations moved to stage 7
 
 Phases: 6.1 settings during a game and Dolphin's questions; 6.2 the remaining settings (Hotkeys, post-processing, logs, RTC); 6.3 Wii file actions; 6.4 cheats, Riivolution, disc conversion; 6.5 export and user data; 6.6 Wii Remote motion from the phone's sensors; 6.7 RetroAchievements; 6.8 smaller leftovers. Not planned: NetPlay, GBA link, a TV layout (none are in the Android app).
 
@@ -361,6 +361,13 @@ The original list:
 - Wii Remote support: Bluetooth passthrough is unlikely on a Halium BlueZ stack. Emulated Wii Remotes with the touch overlay and motion from the phone's sensors (sensorfw) is the practical route.
 - A newer Vulkan: see stage 4 step 6 (custom drivers).
 - Feeding Ubuntu Touch findings back to #14962 (or its successor): as reports by the user on the PR, not as agent pull requests.
+
+### 7. Release follow-ups (an extension of stage 5)
+
+Added 2026-11-17 (the user). Work around the first OpenStore release, some of it after it:
+- **Translations** of the port's strings (from 6.8). Measured in `stage6.8-leftovers.md`: Dolphin's gettext catalogs (30 languages) cover 189 of the generated settings' 384 texts and none of the port's own page texts, and the Android app's translations are not in this repository. The options written up there are the starting point.
+- **Before the release:** the in-game menu button, which sat at the top centre and could neither be moved nor hidden. Built (2026-11-17, approved by the user): auto-hide with a tap to reveal, hidden meaning not pressable, movable in Edit Layout, and an Auto-hide setting in Overlay Controls. Checked over adb; on-screen tests pending. Notes: `stage7-release.md`.
+- Open from earlier stages: the OpenStore submission's decisions (stage 5); RetroAchievements' on-screen tests by a community tester (6.7); whether the installed click leaves itself out of "Send to Another App" (6.5).
 
 ## Risks
 

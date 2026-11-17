@@ -116,6 +116,8 @@ int TouchOverlay::GetControllerIndex() const
 
 void TouchOverlay::Build()
 {
+  // Stage 7: shown for its few seconds when a game starts (or the layout changes), so it is found.
+  RevealMenuButton();
   m_type = OverlayLayout::ShowOverlay() ? OverlayLayout::ConfiguredType(m_wii) : Type::None;
   m_controller_index = OverlayLayout::ControllerIndex(m_wii);
   m_size_scale = (OverlayLayout::ControlScale() + 50) / 100.0f;
@@ -400,10 +402,13 @@ void TouchOverlay::Layout()
     control.virtual_rect = control.rect;
   }
 
-  // The in-game menu's button: small and round at the top centre, free in every Android layout.
+  // The in-game menu's button: small and round, at the top centre (free in every Android layout)
+  // unless moved in Edit Layout (stage 7).
   const double short_side = std::min(width, height);
   const double radius = 0.04 * short_side;
   m_menu_button.rect = QRectF(width / 2 - radius, 0.04 * short_side, radius * 2, radius * 2);
+  if (const auto saved = OverlayLayout::SavedPosition(m_type, OverlayLayout::MENU_BUTTON, portrait))
+    m_menu_button.rect.moveTopLeft(QPointF(saved->first * width, saved->second * height));
 
   // Edit mode's "Done", in the middle, as the Android app's done_control_config.
   const QSizeF done(0.24 * short_side, 0.1 * short_side);
@@ -491,11 +496,14 @@ void TouchOverlay::HandleTouch(const QList<QEventPoint>& points, QSizeF window_s
       case QEventPoint::State::Pressed:
       {
         bool pressed = false;
-        if (m_menu_button.rect.contains(position) && m_menu_button.track < 0)
+        // Stage 7: a hidden menu button is not pressed; the tap only brings it back (below).
+        if (m_menu_button.rect.contains(position) && m_menu_button.track < 0 &&
+            MenuButtonVisibility() > 0.0f)
         {
           m_menu_button.track = id;
           m_menu_button.pressed = true;
           pressed = true;
+          RevealMenuButton();
         }
         const bool action_hit = pressed;
         // As the Android app: every control under the finger is pressed.
@@ -507,7 +515,10 @@ void TouchOverlay::HandleTouch(const QList<QEventPoint>& points, QSizeF window_s
             pressed = true;
           }
         }
-        // No control under the finger: it moves the Wii Remote's pointer.
+        // No control under the finger: it brings the menu button back for a few seconds (stage 7),
+        // and moves the Wii Remote's pointer.
+        if (!pressed)
+          RevealMenuButton();
         if (!pressed && m_has_pointer && m_pointer.track < 0)
           PressPointer(position, id);
         break;
@@ -558,6 +569,35 @@ void TouchOverlay::HandleTouch(const QList<QEventPoint>& points, QSizeF window_s
   }
 }
 
+// Stage 7: the menu button's auto-hide. Seconds it stays after a tap, and the fade at the end.
+namespace
+{
+constexpr qint64 MENU_BUTTON_SHOWN_MS = 3000;
+constexpr qint64 MENU_BUTTON_FADE_MS = 400;
+
+qint64 SteadyMs()
+{
+  return std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+}
+}  // namespace
+
+void TouchOverlay::RevealMenuButton()
+{
+  m_menu_button.shown_until_ms = SteadyMs() + MENU_BUTTON_SHOWN_MS;
+}
+
+float TouchOverlay::MenuButtonVisibility() const
+{
+  if (!OverlayLayout::MenuButtonAutoHide())
+    return 1.0f;
+  const qint64 left = m_menu_button.shown_until_ms - SteadyMs();
+  if (left <= 0)
+    return 0.0f;
+  return std::min(1.0f, static_cast<float>(left) / static_cast<float>(MENU_BUTTON_FADE_MS));
+}
+
 void TouchOverlay::HandleEditTouch(const QEventPoint& point, QPointF position)
 {
   // InputOverlay.onTouchWhileEditing: one control at a time follows the finger, and its position
@@ -572,7 +612,14 @@ void TouchOverlay::HandleEditTouch(const QEventPoint& point, QPointF position)
     }
     else if (m_drag_touch < 0)
     {
-      // The control drawn last (on top) wins.
+      // The control drawn last (on top) wins; the menu button (stage 7) is drawn over them all.
+      if (m_menu_button.rect.contains(position))
+      {
+        m_drag_control = MENU_BUTTON_DRAG;
+        m_drag_touch = id;
+        m_drag_last = position;
+        break;
+      }
       for (int i = static_cast<int>(m_controls.size()) - 1; i >= 0; --i)
       {
         if (m_controls[i].rect.contains(position))
@@ -586,7 +633,12 @@ void TouchOverlay::HandleEditTouch(const QEventPoint& point, QPointF position)
     }
     break;
   case QEventPoint::State::Updated:
-    if (id == m_drag_touch && m_drag_control >= 0)
+    if (id == m_drag_touch && m_drag_control == MENU_BUTTON_DRAG)
+    {
+      m_menu_button.rect.translate(position - m_drag_last);
+      m_drag_last = position;
+    }
+    else if (id == m_drag_touch && m_drag_control >= 0)
     {
       Control& control = m_controls[m_drag_control];
       control.rect.translate(position - m_drag_last);
@@ -600,6 +652,13 @@ void TouchOverlay::HandleEditTouch(const QEventPoint& point, QPointF position)
       m_done_touch = -1;
       if (m_done_rect.contains(position))
         m_menu = Menu::None;
+    }
+    if (id == m_drag_touch && m_drag_control == MENU_BUTTON_DRAG)
+    {
+      OverlayLayout::SavePosition(m_type, OverlayLayout::MENU_BUTTON, Portrait(),
+                                  static_cast<float>(m_menu_button.rect.x() / m_window_size.width()),
+                                  static_cast<float>(m_menu_button.rect.y() / m_window_size.height()));
+      m_drag_control = m_drag_touch = -1;
     }
     if (id == m_drag_touch && m_drag_control >= 0)
     {
@@ -934,38 +993,56 @@ void TouchOverlay::Draw()
     }
   }
 
-  const auto round_button = [&](const QRectF& rect, const char* label, bool pressed) {
+  const auto round_button = [&](const QRectF& rect, const char* label, bool pressed,
+                                float fade = 1.0f) {
+    // Stage 7: the menu button fades out when it hides; fade scales every colour's alpha.
+    const auto faded = [fade](ImU32 colour) {
+      const u32 faded_alpha = static_cast<u32>(((colour >> IM_COL32_A_SHIFT) & 0xFF) * fade);
+      return (colour & ~IM_COL32_A_MASK) | (faded_alpha << IM_COL32_A_SHIFT);
+    };
     const ImVec2 center = ToImVec2(rect.center());
     const float radius = static_cast<float>(std::min(rect.width(), rect.height()) / 2);
     if (rect.width() > rect.height() * 1.2)
     {
       const float rounding = static_cast<float>(rect.height() / 2);
       draw_list->AddRectFilled(ToImVec2(rect.topLeft()), ToImVec2(rect.bottomRight()),
-                               pressed ? IM_COL32(255, 255, 255, 170) : IM_COL32(0, 0, 0, 170),
+                               pressed ? faded(IM_COL32(255, 255, 255, 170)) : faded(IM_COL32(0, 0, 0, 170)),
                                rounding);
       draw_list->AddRect(ToImVec2(rect.topLeft()), ToImVec2(rect.bottomRight()),
-                         IM_COL32(255, 255, 255, 200), rounding, 0, 3.0f);
+                         faded(IM_COL32(255, 255, 255, 200)), rounding, 0, 3.0f);
     }
     else
     {
       draw_list->AddCircleFilled(center, radius,
-                                 pressed ? IM_COL32(255, 255, 255, 140) : IM_COL32(0, 0, 0, 90));
-      draw_list->AddCircle(center, radius, IM_COL32(255, 255, 255, 150), 0, 2.0f);
+                                 pressed ? faded(IM_COL32(255, 255, 255, 140)) : faded(IM_COL32(0, 0, 0, 90)));
+      draw_list->AddCircle(center, radius, faded(IM_COL32(255, 255, 255, 150)), 0, 2.0f);
     }
     const float font_size = std::clamp(radius * (std::strlen(label) > 4 ? 0.45f : 0.55f), 12.0f, 48.0f);
     const ImVec2 text_size = ImGui::GetFont()->CalcTextSizeA(font_size, FLT_MAX, 0.0f, label);
     draw_list->AddText(ImGui::GetFont(), font_size,
                        ImVec2(center.x - text_size.x / 2, center.y - text_size.y / 2),
-                       IM_COL32(255, 255, 255, 230), label);
+                       faded(IM_COL32(255, 255, 255, 230)), label);
   };
 
   if (editing)
   {
     round_button(m_done_rect, "Done", m_done_touch >= 0);
+    // Stage 7: the menu button can be moved too.
+    round_button(m_menu_button.rect, "Menu", m_drag_control == MENU_BUTTON_DRAG);
   }
   else if (m_menu == Menu::None)
   {
-    round_button(m_menu_button.rect, "Menu", m_menu_button.pressed);
+    // Stage 7: kept in view while the game is paused; otherwise it hides a few seconds after the
+    // last tap outside the controls (when auto-hide is on).
+    if (Core::GetState(Core::System::GetInstance()) == Core::State::Paused)
+      RevealMenuButton();
+    if (const float visibility = MenuButtonVisibility(); visibility > 0.0f)
+      round_button(m_menu_button.rect, "Menu", m_menu_button.pressed, visibility);
+  }
+  else
+  {
+    // A menu is open: the button comes back with its full time when it closes.
+    RevealMenuButton();
   }
 
   // Dolphin's messages move right of the in-game menu panel, as with the Android app's menu.
@@ -1127,6 +1204,11 @@ void TouchOverlay::DrawMenu()
       bool show = OverlayLayout::ShowOverlay();
       if (ImGui::Checkbox("Show Overlay", &show))
         ChangeSettings([show] { OverlayLayout::SetShowOverlay(show); });
+      next();
+      // Stage 7: the menu button hides during play; a tap outside the controls brings it back.
+      bool auto_hide = OverlayLayout::MenuButtonAutoHide();
+      if (ImGui::Checkbox("Auto-hide Menu Button", &auto_hide))
+        ChangeSettings([auto_hide] { OverlayLayout::SetMenuButtonAutoHide(auto_hide); });
       next();
       bool relative = OverlayLayout::JoystickRelativeCenter();
       if (ImGui::Checkbox("Relative Stick Center", &relative))
